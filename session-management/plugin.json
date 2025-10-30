@@ -1,0 +1,52 @@
+{
+  "name": "session-management",
+  "version": "2.1.0",
+  "description": "Intelligent session auto-capture with zero-latency snapshot tracking. Automatically saves your work at natural breakpoints.",
+  "author": {
+    "name": "AutomateWith.Us",
+    "email": "team@automatewith.us"
+  },
+  "keywords": [
+    "session",
+    "snapshot",
+    "auto-capture",
+    "memory",
+    "workflow",
+    "productivity"
+  ],
+  "category": "productivity",
+  "license": "MIT",
+  "commands": "./commands",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.js"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js Write"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js Edit"
+          }
+        ]
+      }
+    ]
+  }
+}

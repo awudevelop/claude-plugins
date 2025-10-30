@@ -1,0 +1,44 @@
+{
+  "name": "automatewithus-plugins",
+  "owner": {
+    "name": "AutomateWith.Us",
+    "email": "team@automatewith.us"
+  },
+  "metadata": {
+    "description": "Production-ready Claude Code plugins for workflow automation and productivity",
+    "version": "1.0.0",
+    "homepage": "https://github.com/automatewithus/claude-plugins",
+    "pluginRoot": "."
+  },
+  "plugins": [
+    {
+      "name": "session-management",
+      "source": "./session-management",
+      "version": "2.1.0",
+      "description": "Intelligent session auto-capture with zero-latency snapshot tracking. Automatically saves your work at natural breakpoints - no manual intervention needed.",
+      "author": {
+        "name": "AutomateWith.Us",
+        "email": "team@automatewith.us"
+      },
+      "homepage": "https://github.com/automatewithus/claude-plugins",
+      "repository": "https://github.com/automatewithus/claude-plugins",
+      "license": "MIT",
+      "keywords": [
+        "session",
+        "snapshot",
+        "auto-capture",
+        "memory",
+        "workflow",
+        "productivity",
+        "automation"
+      ],
+      "category": "productivity",
+      "tags": [
+        "workflow",
+        "automation",
+        "productivity",
+        "memory"
+      ]
+    }
+  ]
+}
