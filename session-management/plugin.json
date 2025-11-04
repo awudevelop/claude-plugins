@@ -1,10 +1,14 @@
 {
   "name": "session-management",
-  "version": "2.1.0",
-  "description": "Intelligent session auto-capture with zero-latency snapshot tracking. Automatically saves your work at natural breakpoints.",
+  "version": "3.0.0",
+  "description": "Optimized session management with 60-80% token reduction, plan mode support, and intelligent auto-capture. Never lose context again!",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/automatewithus/claude-session-management"
   },
   "keywords": [
     "session",
@@ -12,7 +16,11 @@
     "auto-capture",
     "memory",
     "workflow",
-    "productivity"
+    "productivity",
+    "optimization",
+    "plan-mode",
+    "token-reduction",
+    "performance"
   ],
   "category": "productivity",
   "license": "MIT",

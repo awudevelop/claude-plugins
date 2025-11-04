@@ -4,6 +4,8 @@ You are managing a session memory system. The user wants to start a new named se
 
 Parse the session name from the command arguments. The command format is: `/session start [name]`
 
+**OPTIMIZATION:** This command now updates the metadata index after creating the session.
+
 ### Step 1: Validate Session Name
 
 1. Extract the session name from the arguments
@@ -95,7 +97,17 @@ Session started on {current_timestamp}. Ready to capture context.
 1. Write the session name to `.claude/sessions/.active-session` (single line, just the name)
 2. This marks it as the currently active session
 
-### Step 7: Display Success Message
+### Step 7: Update Index (NEW - CRITICAL)
+
+Run the CLI command to add the new session to the metadata index:
+
+```bash
+node session-management/cli/session-cli.js update-index --session {name}
+```
+
+This ensures the new session appears immediately in `/session list` without requiring a full rebuild.
+
+### Step 8: Display Success Message
 
 Show this confirmation to the user:
 
@@ -108,7 +120,7 @@ Show this confirmation to the user:
 Ready to work! What would you like to accomplish in this session?
 ```
 
-### Step 8: Ask for Session Goal
+### Step 9: Ask for Session Goal
 
 After showing the success message, ask the user:
 "What is the main goal or purpose of this session? (This will be saved to session.md)"
@@ -117,4 +129,13 @@ Wait for their response, then update the "Goal" section in session.md with their
 
 ---
 
-**IMPORTANT**: Execute all steps in order. Use the Read, Write, and Bash tools to perform file operations. Do not skip any steps.
+**PERFORMANCE BENEFITS:**
+- **Before:** No index integration, sessions invisible until manual list command scans
+- **After:** Instant index update, session immediately visible in list
+- **Improvement:** Better UX, no stale index issues
+
+**IMPORTANT:**
+- Execute all steps in order
+- Use the Read, Write, and Bash tools to perform file operations
+- The CLI update-index command is fast (< 10ms) and ensures consistency
+- Do not skip any steps

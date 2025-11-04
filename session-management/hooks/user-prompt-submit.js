@@ -9,7 +9,7 @@ const path = require('path');
 // Configuration
 const SESSIONS_DIR = '.claude/sessions';
 const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
-const ANALYSIS_THRESHOLD = 8; // Queue analysis after 8 interactions (looser than old 10)
+const ANALYSIS_THRESHOLD = 15; // Queue analysis after 15 interactions (optimized to reduce token usage)
 const MIN_INTERACTIONS_BETWEEN_ANALYSIS = 3; // Don't analyze too frequently
 
 // Exit early if no active session

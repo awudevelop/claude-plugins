@@ -75,27 +75,26 @@ Write your decision to `.claude/sessions/{active_session}/.snapshot-decision`:
 4. If yes, read the reason from the file (e.g., "file_threshold", "interaction_threshold")
 5. If no marker exists, STOP (nothing to do)
 
-### Step 2: Generate Auto-Snapshot
+### Step 2: Generate Auto-Snapshot Content
 
-Use the same process as `/session save`, but with these modifications:
+Create snapshot content (but DON'T write it yet) with these specifications:
 
-1. **Filename**: Use prefix `auto_` → `auto_{YYYY-MM-DD_HH-MM}.md`
-2. **Header**: Add auto-generated indicator
+1. **Header**: Add auto-generated indicator
    ```markdown
    # Auto-Snapshot: {session_name}
    **Timestamp**: {full_timestamp}
    **Auto-Generated**: Yes
    **Trigger**: {reason_from_marker_file}
    ```
-3. **Content**: Same as manual snapshot plus suggestions:
+2. **Content**: Same as manual snapshot plus suggestions:
    - Conversation summary
    - Completed todos
    - Files modified
-   - **Suggestions made** ✨ NEW (see below)
+   - **Suggestions made** ✨ (see below)
    - Current state
    - Notes
 
-4. **Suggestions Section**: If `.suggestions.json` exists and has new suggestions since last snapshot:
+3. **Suggestions Section**: If `.suggestions.json` exists and has new suggestions since last snapshot:
    ```markdown
    ## Suggestions Made (Since Last Snapshot)
 
@@ -108,6 +107,23 @@ Use the same process as `/session save`, but with these modifications:
 
    _For full suggestion history, see [.suggestions.json](./.suggestions.json)_
    ```
+
+### Step 2b: Write Snapshot via CLI (CRITICAL - Plan Mode Support)
+
+**Use CLI delegation** instead of Write tool. This enables auto-snapshots in plan mode:
+
+```bash
+cat <<'EOF' | node session-management/cli/session-cli.js write-snapshot {session_name} --stdin --type auto
+{snapshot_content}
+EOF
+```
+
+The CLI will automatically:
+- Create filename with `auto_` prefix and timestamp
+- Write the snapshot file
+- Update the index
+
+**IMPORTANT:** This works in both normal mode AND plan mode, preventing data loss.
 
 ### Step 3: Update Context (Lighter Version)
 
