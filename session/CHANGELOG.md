@@ -112,10 +112,10 @@ None - fully backward compatible with existing sessions.
 **Recommended after upgrade:**
 ```bash
 # Rebuild index for best performance
-node session-management/cli/session-cli.js update-index --full-rebuild
+node session/cli/session-cli.js update-index --full-rebuild
 
 # Validate everything is working
-node session-management/cli/session-cli.js validate
+node session/cli/session-cli.js validate
 ```
 
 ---
@@ -141,7 +141,7 @@ node session-management/cli/session-cli.js validate
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/automatewithus/claude-session-management/issues)
+- **Issues**: [GitHub Issues](https://github.com/automatewithus/claude-session/issues)
 - **Documentation**: See `docs/` directory
 - **Email**: team@automatewith.us
 

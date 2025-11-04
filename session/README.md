@@ -5,7 +5,7 @@
 Intelligent session management with automatic context preservation, snapshot tracking, and 60-80% token reduction.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/automatewithus/claude-session-management)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/automatewithus/claude-session)
 
 ---
 
@@ -37,7 +37,7 @@ Never lose context again! This plugin provides intelligent session management fo
 
 - **Named Sessions** - Organize work by feature, bug fix, or project phase
 - **Automatic Snapshots** - Smart triggers detect natural breakpoints
-- **Manual Snapshots** - Save important milestones with `/session save`
+- **Manual Snapshots** - Save important milestones with `/session:save`
 - **Context Preservation** - Comprehensive tracking of decisions, files, and progress
 - **Optimized Performance** - Massive token savings and speed improvements
 
@@ -58,7 +58,7 @@ Never lose context again! This plugin provides intelligent session management fo
 - **Silent and non-intrusive** - just a small indicator
 
 ### 💾 Manual Snapshots
-- Save important milestones with `/session save`
+- Save important milestones with `/session:save`
 - Captures conversation summary, todos, file changes
 - Works in **plan mode** (critical feature!)
 - Comprehensive context for future reference
@@ -83,17 +83,17 @@ Never lose context again! This plugin provides intelligent session management fo
 
 ```bash
 # Copy to Claude Code plugins directory
-cp -r session-management ~/.config/claude-code/plugins/
+cp -r session ~/.config/claude-code/plugins/
 
 # Make CLI executable
-chmod +x ~/.config/claude-code/plugins/session-management/cli/session-cli.js
+chmod +x ~/.config/claude-code/plugins/session/cli/session-cli.js
 ```
 
 ### Symlink (for development)
 
 ```bash
 # Create symlink
-ln -s /path/to/session-management ~/.config/claude-code/plugins/session-management
+ln -s /path/to/session ~/.config/claude-code/plugins/session
 ```
 
 ### Verify Installation
@@ -108,7 +108,7 @@ claude
 
 In Claude, type:
 ```
-/session start test
+/session:start test
 ```
 
 If session is created → ✅ Installation successful!
@@ -121,37 +121,37 @@ If session is created → ✅ Installation successful!
 
 #### Start a New Session
 ```
-/session start feature-auth
+/session:start feature-auth
 ```
 Creates a new session with the specified name.
 
 #### List All Sessions
 ```
-/session list
+/session:list
 ```
 Shows all sessions with metadata (⚡ instant, < 200 tokens).
 
 #### Continue Existing Session
 ```
-/session continue feature-auth
+/session:continue feature-auth
 ```
 Loads full context and resumes work.
 
 #### Check Session Status
 ```
-/session status
+/session:status
 ```
 Shows current session info, token usage, and statistics (⚡ instant).
 
 #### Save Manual Snapshot
 ```
-/session save
+/session:save
 ```
 Captures current conversation state (works in plan mode!).
 
 #### Close Session
 ```
-/session close
+/session:close
 ```
 Finalizes session with summary and marks as closed.
 
@@ -169,16 +169,16 @@ The plugin includes a powerful CLI tool:
 
 ```bash
 # List sessions (instant)
-node session-management/cli/session-cli.js list
+node session/cli/session-cli.js list
 
 # Get session stats
-node session-management/cli/session-cli.js stats my-session
+node session/cli/session-cli.js stats my-session
 
 # Validate index
-node session-management/cli/session-cli.js validate --fix
+node session/cli/session-cli.js validate --fix
 
 # Get all stats
-node session-management/cli/session-cli.js stats-all
+node session/cli/session-cli.js stats-all
 ```
 
 See `cli/README.md` for complete CLI documentation.
@@ -191,10 +191,10 @@ See `cli/README.md` for complete CLI documentation.
 
 | Command | Before | After | Improvement |
 |---------|--------|-------|-------------|
-| `/session list` | 5-10K tokens, 2-5s | < 200 tokens, < 50ms | **95-98% reduction** |
-| `/session status` | 2-4K tokens, 1-2s | < 150 tokens, < 50ms | **95% reduction** |
-| `/session continue` | 10-20K tokens, 3-5s | 3-8K tokens, 1-2s | **60-70% reduction** |
-| `/session save` | 15-25K tokens, 5-8s | 8-15K tokens, 2-4s | **40-50% reduction** |
+| `/session:list` | 5-10K tokens, 2-5s | < 200 tokens, < 50ms | **95-98% reduction** |
+| `/session:status` | 2-4K tokens, 1-2s | < 150 tokens, < 50ms | **95% reduction** |
+| `/session:continue` | 10-20K tokens, 3-5s | 3-8K tokens, 1-2s | **60-70% reduction** |
+| `/session:save` | 15-25K tokens, 5-8s | 8-15K tokens, 2-4s | **40-50% reduction** |
 
 **Overall: 60-80% token reduction across the plugin**
 
@@ -235,7 +235,7 @@ This bypasses Write tool restrictions because:
 ## 📁 File Structure
 
 ```
-session-management/
+session/
 ├── plugin.json                 # Plugin metadata
 ├── README.md                   # This file
 ├── CHANGELOG.md                # Version history
@@ -319,16 +319,16 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ### Commands not found
 ```bash
 # Verify installation
-ls -la ~/.config/claude-code/plugins/session-management/
+ls -la ~/.config/claude-code/plugins/session/
 
 # Make CLI executable
-chmod +x ~/.config/claude-code/plugins/session-management/cli/session-cli.js
+chmod +x ~/.config/claude-code/plugins/session/cli/session-cli.js
 ```
 
 ### Index corruption
 ```bash
 # Rebuild index
-node session-management/cli/session-cli.js update-index --full-rebuild
+node session/cli/session-cli.js update-index --full-rebuild
 ```
 
 ### Plan mode snapshots not saving
@@ -338,7 +338,7 @@ node session-management/cli/session-cli.js update-index --full-rebuild
 ### Performance issues
 ```bash
 # Validate and fix
-node session-management/cli/session-cli.js validate --fix
+node session/cli/session-cli.js validate --fix
 ```
 
 ---
@@ -366,7 +366,7 @@ node session-management/cli/session-cli.js validate --fix
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/automatewithus/claude-session-management/issues)
+- **Issues**: [GitHub Issues](https://github.com/automatewithus/claude-session/issues)
 - **Email**: team@automatewith.us
 - **Documentation**: See `docs/` directory
 
@@ -376,7 +376,7 @@ node session-management/cli/session-cli.js validate --fix
 
 If you find this plugin useful, please star the repository!
 
-[![GitHub stars](https://img.shields.io/github/stars/automatewithus/claude-session-management.svg?style=social&label=Star)](https://github.com/automatewithus/claude-session-management)
+[![GitHub stars](https://img.shields.io/github/stars/automatewithus/claude-session.svg?style=social&label=Star)](https://github.com/automatewithus/claude-session)
 
 ---
 

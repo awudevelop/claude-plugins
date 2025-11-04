@@ -25,7 +25,7 @@ Then select "automatewithus-plugins" from the marketplace list.
 ### Install a Plugin
 
 ```bash
-/plugin install session-management
+/plugin install session
 ```
 
 ---
@@ -69,7 +69,7 @@ Automatically saves your development work at natural breakpoints - when you comp
 
 **Installation:**
 ```bash
-/plugin install session-management
+/plugin install session
 ```
 
 ---

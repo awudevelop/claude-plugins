@@ -12,7 +12,7 @@ The CLI tool is part of the session management plugin. No separate installation 
 
 ```bash
 # Make CLI executable (if needed)
-chmod +x session-management/cli/session-cli.js
+chmod +x session/cli/session-cli.js
 ```
 
 ## Architecture
@@ -326,7 +326,7 @@ Claude commands now use CLI for data operations:
 <!-- In session-list.md -->
 Run CLI to get session list:
 ```bash
-node session-management/cli/session-cli.js list
+node session/cli/session-cli.js list
 ```
 
 Parse JSON and format for user.
