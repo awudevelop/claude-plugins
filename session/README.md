@@ -5,7 +5,7 @@
 Intelligent session management with automatic context preservation, snapshot tracking, and 60-80% token reduction.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.2.1-blue.svg)](https://github.com/automatewithus/claude-session)
+[![Version](https://img.shields.io/badge/version-3.2.1-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
@@ -500,7 +500,7 @@ node session/cli/session-cli.js validate --fix
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/automatewithus/claude-session/issues)
+- **Issues**: [GitHub Issues](https://github.com/awudevelop/claude-plugins/issues)
 - **Email**: team@automatewith.us
 - **Documentation**: See `docs/` directory
 
@@ -510,7 +510,7 @@ node session/cli/session-cli.js validate --fix
 
 If you find this plugin useful, please star the repository!
 
-[![GitHub stars](https://img.shields.io/github/stars/automatewithus/claude-session.svg?style=social&label=Star)](https://github.com/automatewithus/claude-session)
+[![GitHub stars](https://img.shields.io/github/stars/awudevelop/claude-plugins.svg?style=social&label=Star)](https://github.com/awudevelop/claude-plugins)
 
 ---
 

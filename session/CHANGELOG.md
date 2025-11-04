@@ -184,7 +184,7 @@ node session/cli/session-cli.js validate
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/automatewithus/claude-session/issues)
+- **Issues**: [GitHub Issues](https://github.com/awudevelop/claude-plugins/issues)
 - **Documentation**: See `docs/` directory
 - **Email**: team@automatewith.us
 
