@@ -100,39 +100,13 @@ Never lose context again! This plugin provides intelligent session management fo
 
 ## 📦 Installation
 
-### Quick Install
+Install directly from the Claude Code marketplace:
 
-```bash
-# Copy to Claude Code plugins directory
-cp -r session ~/.config/claude-code/plugins/
-
-# Make CLI executable
-chmod +x ~/.config/claude-code/plugins/session/cli/session-cli.js
+```
+https://github.com/awudevelop/claude-plugins/tree/main/session
 ```
 
-### Symlink (for development)
-
-```bash
-# Create symlink
-ln -s /path/to/session ~/.config/claude-code/plugins/session
-```
-
-### Verify Installation
-
-```bash
-# Navigate to any project
-cd /path/to/your/project
-
-# Start Claude Code
-claude
-```
-
-In Claude, type:
-```
-/session:start test
-```
-
-If session is created → ✅ Installation successful!
+Simply paste this URL into Claude Code's plugin installation interface to get started!
 
 ---
 
