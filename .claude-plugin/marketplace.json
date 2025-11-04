@@ -12,8 +12,8 @@
   },
   "plugins": [
     {
-      "name": "session-management",
-      "source": "./session-management",
+      "name": "session",
+      "source": "./session",
       "version": "3.0.0",
       "description": "Intelligent session management with 60-80% token reduction, plan mode support, and lightning-fast performance. Auto-captures work at natural breakpoints with zero data loss.",
       "author": {
