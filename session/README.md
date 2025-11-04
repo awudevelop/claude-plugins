@@ -1,15 +1,21 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.2.0** - Delete Sessions, Enhanced List & Optimized Performance
+**Version 3.2.1** - Smart Session State Management & Auto-Cleanup
 
 Intelligent session management with automatic context preservation, snapshot tracking, and 60-80% token reduction.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/automatewithus/claude-session)
+[![Version](https://img.shields.io/badge/version-3.2.1-blue.svg)](https://github.com/automatewithus/claude-session)
 
 ---
 
 ## 🚀 What's New in v3.2 (Latest Update)
+
+### Smart Session State Management (NEW!)
+- 🔄 **Auto-cleanup on /clear** - Sessions automatically close when context is cleared
+- 💡 **Helpful messages** - Claude informs you when sessions are auto-closed and how to resume
+- ✅ **Preserves auto-resume** - Sessions still auto-resume on normal restarts
+- 🎯 **SessionStart hook** - Intelligent detection of context loss events
 
 ### Delete Session Feature (NEW!)
 - 🗑️ **Permanent deletion** - Remove sessions you no longer need
@@ -345,6 +351,7 @@ session/
 │   ├── session-auto-snapshot.md # Plan mode support
 │   └── session-snapshot-analysis.md
 ├── hooks/                      # Event hooks
+│   ├── session-start.js        # Auto-close on /clear (NEW!)
 │   ├── user-prompt-submit.js   # Auto-capture (optimized threshold)
 │   ├── post-tool-use.js        # File tracking
 │   └── suggestion-detector.js
@@ -380,6 +387,38 @@ Add to `session.md`:
 ## Configuration
 - Auto-capture: disabled
 ```
+
+### Session Lifecycle & Auto-Close Behavior
+
+The plugin includes intelligent session state management to prevent confusion when context is lost:
+
+#### When Sessions Auto-Close
+Sessions are automatically closed (marked as inactive) when:
+- **`/clear` command** is executed - The conversation context is explicitly cleared
+- The SessionStart hook detects this and clears the active session marker
+
+#### When Sessions Persist
+Sessions remain active (and auto-resume) during:
+- **Normal restarts** of Claude Code
+- **Resume operations** (`/resume`)
+- **Auto-compact** events
+
+#### What Happens When Auto-Closed
+When a session is auto-closed due to `/clear`:
+1. The `.active-session` file is removed
+2. The `.index.json` activeSession is set to `null`
+3. Claude provides a helpful message:
+   ```
+   📋 Session 'feature-name' was auto-closed due to /clear command.
+
+   To resume your work on this session, use: /session:continue feature-name
+   To view all sessions, use: /session:list
+   ```
+
+#### Why This Matters
+- **Prevents confusion**: You won't see a session marked as "active" when its context is no longer loaded
+- **Preserves history**: The session and all its data remain intact - only the "active" marker is cleared
+- **Explicit resume**: You can easily continue your work with `/session:continue session-name`
 
 ---
 
@@ -477,4 +516,4 @@ If you find this plugin useful, please star the repository!
 
 **Made with ❤️ by [AutomateWith.Us](https://automatewith.us)**
 
-**Version**: 3.2.0 | **License**: MIT | **Status**: Production Ready 🚀
+**Version**: 3.2.1 | **License**: MIT | **Status**: Production Ready 🚀

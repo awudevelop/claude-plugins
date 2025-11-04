@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.2.1] - 2025-11-04
+
+### 🔄 Smart Session State Management
+
+This patch release adds intelligent session lifecycle management to prevent confusion when context is lost.
+
+### Added
+- 🔄 **SessionStart Hook** - Auto-cleanup on context loss events
+  - Detects when `/clear` command is executed
+  - Automatically clears active session markers when context is lost
+  - Provides helpful context messages to guide users on resuming work
+  - Preserves auto-resume behavior on normal restarts
+
+### Changed
+- 📋 **Session Lifecycle Behavior**
+  - Sessions now auto-close when `/clear` is executed (context is explicitly cleared)
+  - Sessions continue to auto-resume on normal Claude Code restarts
+  - `.active-session` file and `.index.json` automatically updated when context is lost
+
+### Fixed
+- 🐛 **Stale Active Sessions** - Fixed issue where sessions appeared as "active" after `/clear` or Claude Code restart, even though context was no longer loaded
+- ⚠️ **User Confusion** - Users are now informed when sessions are auto-closed and how to resume their work
+
+### Behavior Details
+
+**When sessions auto-close:**
+- `/clear` command is executed (conversation context cleared)
+
+**When sessions persist:**
+- Normal Claude Code restarts
+- Resume operations (`/resume`)
+- Auto-compact events
+
+**What happens on auto-close:**
+1. `.active-session` file is removed
+2. `.index.json` activeSession is set to `null`
+3. Helpful message displayed: "Session 'X' was auto-closed due to /clear. Use /session:continue X to resume."
+
+### Breaking Changes
+None - Fully backward compatible. Only affects behavior after `/clear` command.
+
+---
+
 ## [3.0.0] - 2025-11-03
 
 ### 🚀 Major Release: Performance Optimization & Plan Mode Support
