@@ -183,6 +183,10 @@ Present action options using the AskUserQuestion tool:
           "description": "Finalize and close this session"
         },
         {
+          "label": "Delete Session",
+          "description": "Permanently delete this session and all its data"
+        },
+        {
           "label": "Back to List",
           "description": "Return to session list"
         }
@@ -200,6 +204,7 @@ Based on user's choice, execute the appropriate command:
 - **View Status** → Run: `/session:status` (after activating if needed)
 - **Save Snapshot** → Run: `/session:save`
 - **Close Session** → Run: `/session:close`
+- **Delete Session** → Run: `/session:delete {sessionName}`
 - **Back to List** → Run: `/session:list` (restart from Step 2)
 
 **Important:** Actually execute the command, don't just tell the user to run it.

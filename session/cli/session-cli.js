@@ -13,6 +13,7 @@
  *   list                    List all sessions
  *   get <name>              Get session details
  *   activate <name>         Activate a session
+ *   delete <name>           Delete a session permanently
  *   update-index            Update metadata index
  *   validate                Validate index integrity
  *   stats <name>            Get session statistics
@@ -40,6 +41,7 @@ const commands = {
   list: require('./lib/commands/list'),
   get: require('./lib/commands/get'),
   activate: require('./lib/commands/activate'),
+  delete: require('./lib/commands/delete'),
   'update-index': require('./lib/commands/update-index'),
   validate: require('./lib/commands/validate'),
   stats: require('./lib/commands/stats'),
@@ -68,6 +70,9 @@ Commands:
 
   activate <session-name>
       Set a session as active
+
+  delete <session-name>
+      Delete a session permanently (cannot be undone)
 
   update-index [--session <name>] [--full-rebuild]
       Update the metadata index

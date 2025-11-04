@@ -1,23 +1,30 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.0.0** - Optimized for Performance & Plan Mode Support
+**Version 3.2.0** - Delete Sessions, Enhanced List & Optimized Performance
 
 Intelligent session management with automatic context preservation, snapshot tracking, and 60-80% token reduction.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/automatewithus/claude-session)
+[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/automatewithus/claude-session)
 
 ---
 
-## 🚀 What's New in v3.0 (Major Update)
+## 🚀 What's New in v3.2 (Latest Update)
 
-### Enhanced List Command (NEW!)
+### Delete Session Feature (NEW!)
+- 🗑️ **Permanent deletion** - Remove sessions you no longer need
+- ⚠️ **Two-step confirmation** - Prevents accidental deletions
+- 🚨 **Active session warning** - Extra protection for current work
+- 📊 **Shows impact** - See what will be deleted before confirming
+- 🎯 **Integrated everywhere** - Delete from interactive menu or direct command
+
+### Enhanced List Command (v3.1)
 - 🎨 **Visual badges** (ACTIVE, HOT, CLOSED, INACTIVE) for quick status scanning
 - ⏰ **Relative timestamps** ("2h ago", "3d ago") for better readability
 - 📸 **Snapshot & file counts** displayed prominently
 - 💬 **Latest snapshot summaries** shown inline
 - 🎯 **Interactive selection** - `/session:list [number]` to select and act on sessions
-- 📋 **Action menu** with Continue, View Status, Save, Close, and more
+- 📋 **Action menu** with Continue, View Status, Save, Close, Delete
 
 ### Performance Optimizations
 - ⚡ **60-80% token reduction** across all commands
@@ -174,6 +181,7 @@ Select a session by number to open an interactive action menu:
 - 📋 View detailed status
 - 💾 Save snapshot
 - ✅ Close session
+- 🗑️ Delete session
 - ⬅️ Back to list
 
 **Example:** `/session:list 2` - Select session #2 from the list
@@ -191,6 +199,7 @@ Claude: [Shows session details and action menu]
         - View Status
         - Save Snapshot
         - Close Session
+        - Delete Session
         - Back to List
 
 You: [Select "Continue/Resume"]
@@ -222,6 +231,22 @@ Captures current conversation state (works in plan mode!).
 ```
 Finalizes session with summary and marks as closed.
 
+#### Delete Session
+```
+/session:delete [session-name]
+```
+Permanently delete a session and all its data.
+
+**Features:**
+- ⚠️ Two-step confirmation to prevent accidents
+- 📊 Shows what will be deleted (snapshots, files)
+- 🚨 Extra warning if deleting active session
+- ✅ Clean removal from index and filesystem
+
+**Example:** `/session:delete old-feature`
+
+**Warning:** This action cannot be undone. All session data, including snapshots and context, will be permanently deleted.
+
 ### Advanced Features
 
 #### Auto-Snapshot Analysis
@@ -240,6 +265,9 @@ node session/cli/session-cli.js list
 
 # Get session stats
 node session/cli/session-cli.js stats my-session
+
+# Delete a session
+node session/cli/session-cli.js delete old-session
 
 # Validate index
 node session/cli/session-cli.js validate --fix
@@ -449,4 +477,4 @@ If you find this plugin useful, please star the repository!
 
 **Made with ❤️ by [AutomateWith.Us](https://automatewith.us)**
 
-**Version**: 3.0.0 | **License**: MIT | **Status**: Production Ready 🚀
+**Version**: 3.2.0 | **License**: MIT | **Status**: Production Ready 🚀
