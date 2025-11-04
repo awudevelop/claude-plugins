@@ -6,71 +6,100 @@ This marketplace provides curated Claude Code plugins built by the AutomateWith.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Get Started
 
-### Install the Marketplace
+### Step 1: Add the AutomateWith.Us Marketplace
 
-```bash
-/plugin marketplace add automatewithus/claude-plugins
+First, add our plugin marketplace to Claude Code:
+
+```
+/plugin marketplace add awudevelop/claude-plugins
 ```
 
-### Browse Available Plugins
+Or using the full URL:
 
-```bash
+```
+/plugin marketplace add https://github.com/awudevelop/claude-plugins.git
+```
+
+### Step 2: Browse Available Plugins
+
+View all available plugins from our marketplace:
+
+```
 /plugin
 ```
 
-Then select "automatewithus-plugins" from the marketplace list.
+Then select **awudevelop-claude-plugins** from the marketplace list.
 
-### Install a Plugin
+### Step 3: Install a Plugin
 
-```bash
+Install the Session Management plugin:
+
+```
 /plugin install session
 ```
+
+Or use the interactive menu to browse and install.
+
+**That's it!** Your plugin is now installed and ready to use. Restart Claude Code if prompted.
 
 ---
 
 ## 📦 Available Plugins
 
-### Session Management (v2.1.0)
+### Session Management (v3.2.1)
 
-**Intelligent session auto-capture with zero-latency snapshot tracking**
+**Intelligent session management with 60-80% token reduction and smart state tracking**
 
-Automatically saves your development work at natural breakpoints - when you complete tasks, change topics, or finish features. Works completely in the background with zero delay.
+Never lose context again! Automatic snapshots, smart cleanup on `/clear`, and optimized performance for long-running development sessions.
 
-**Features:**
-- ✅ Zero user delay (<10ms hooks)
-- ✅ Content-aware analysis
-- ✅ Async processing
-- ✅ Smart timing (task completions, topic changes)
-- ✅ Suggestion tracking
-- ✅ 8+ commands for session management
+**Latest Features (v3.2):**
+- 🔄 **Smart state management** - Auto-cleanup when `/clear` is executed
+- 💡 **Helpful context messages** - Know when sessions are auto-closed and how to resume
+- ✅ **Auto-resume on restart** - Sessions persist across Claude Code restarts
+- ⚡ **60-80% token reduction** - Massive performance improvements
+- 🛡️ **Plan mode support** - No data loss when clearing conversations
+- 🗑️ **Delete sessions** - Remove sessions you no longer need with safety confirmations
 
-**Commands Added:**
-- `/session-start` - Start a new session
-- `/session-save` - Manually save current session
-- `/session-status` - View session information
-- `/session-list` - List all saved sessions
-- `/session-continue` - Continue a previous session
-- `/session-close` - Close and save current session
-- `/session-auto-snapshot` - Trigger snapshot analysis
-- `/session-snapshot-analysis` - View snapshot analysis details
+**Key Features:**
+- ✅ Intelligent auto-capture at natural breakpoints
+- ✅ 95-98% token reduction for list/status operations
+- ✅ < 50ms response time for metadata queries
+- ✅ Interactive session selection with action menus
+- ✅ Visual status indicators (ACTIVE, HOT, CLOSED, INACTIVE)
+- ✅ Comprehensive CLI tool for zero-token operations
 
-**Hooks Added:**
+**Commands:**
+- `/session:start` - Start a new session
+- `/session:save` - Manually save current session
+- `/session:status` - View session information (instant)
+- `/session:list` - List all sessions with visual indicators (instant)
+- `/session:continue` - Resume a previous session
+- `/session:close` - Close and finalize current session
+- `/session:delete` - Permanently delete a session (with safety checks)
+- `/session:auto-snapshot` - Trigger snapshot analysis
+
+**Hooks:**
+- `SessionStart` - Auto-cleanup on `/clear` command (NEW!)
 - `UserPromptSubmit` - Tracks interactions, queues analysis
 - `PostToolUse` - Monitors file changes (Write/Edit)
 
 **Perfect For:**
-- Multi-session development work
+- Multi-session development workflows
 - Long-running feature development
-- Team collaboration handoffs
-- Personal development memory
-- Project documentation
+- Team collaboration and handoffs
+- Context preservation across sessions
+- Project documentation and history
 
 **Installation:**
-```bash
+```
 /plugin install session
 ```
+
+**Documentation:**
+- [Full README](session/README.md)
+- [Changelog](session/CHANGELOG.md)
 
 ---
 
@@ -89,23 +118,10 @@ These plugins are designed for:
 
 Each plugin includes comprehensive documentation:
 - **README.md** - Plugin overview and features
-- **INSTALLATION_GUIDE.md** - Step-by-step setup (manual installation)
-- **AUTO-CAPTURE-DESIGN.md** - Technical architecture details
+- **CHANGELOG.md** - Version history and updates
+- **CLI documentation** - Command-line interface guides
 
-When you install via `/plugin install`, everything is configured automatically - no manual setup needed!
-
----
-
-## 🔧 Manual Installation (Advanced)
-
-If you prefer manual installation or want to customize:
-
-1. Clone this repository
-2. Copy plugin files to your project's `.claude` directory
-3. Update `.claude/settings.json` with hook configurations
-4. Restart Claude Code
-
-See individual plugin README files for detailed manual installation instructions.
+**Installation is automatic!** Plugins are installed through the marketplace with zero configuration.
 
 ---
 
@@ -147,7 +163,8 @@ AutomateWith.Us is a development studio focused on helping non-technical founder
 - And more...
 
 **Connect:**
-- GitHub: [@automatewithus](https://github.com/automatewithus)
+- GitHub: [@awudevelop](https://github.com/awudevelop)
+- Repository: [claude-plugins](https://github.com/awudevelop/claude-plugins)
 - Email: team@automatewith.us
 
 ---
@@ -167,6 +184,8 @@ Stay tuned! ⭐ Star this repo to get notified of new plugins.
 
 ---
 
-**Version:** 1.0.0
-**Last Updated:** January 2025
+**Marketplace Version:** 1.1.0
+**Latest Plugin:** Session Management v3.2.1
+**Last Updated:** November 2025
 **Maintainer:** AutomateWith.Us Team
+**Repository:** https://github.com/awudevelop/claude-plugins
