@@ -113,7 +113,7 @@ Create snapshot content (but DON'T write it yet) with these specifications:
 **Use CLI delegation** instead of Write tool. This enables auto-snapshots in plan mode:
 
 ```bash
-cat <<'EOF' | node session-management/cli/session-cli.js write-snapshot {session_name} --stdin --type auto
+cat <<'EOF' | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot {session_name} --stdin --type auto
 {snapshot_content}
 EOF
 ```

@@ -102,7 +102,7 @@ Session started on {current_timestamp}. Ready to capture context.
 Run the CLI command to add the new session to the metadata index:
 
 ```bash
-node session-management/cli/session-cli.js update-index --session {name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-index --session {name}
 ```
 
 This ensures the new session appears immediately in `/session list` without requiring a full rebuild.

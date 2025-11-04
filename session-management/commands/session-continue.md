@@ -11,7 +11,7 @@ Parse the session name from the command arguments. The command format is: `/sess
 Extract the session name from arguments, then run:
 
 ```bash
-node session-management/cli/session-cli.js get {session_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get {session_name}
 ```
 
 If this returns an error (exit code 2), the session doesn't exist. Show:
@@ -38,7 +38,7 @@ Now read the actual content files (these need full content for context synthesis
 Run the CLI command to activate the session:
 
 ```bash
-node session-management/cli/session-cli.js activate {session_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js activate {session_name}
 ```
 
 This updates both the .active-session file and the index.

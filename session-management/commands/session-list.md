@@ -11,7 +11,7 @@ Display all sessions with their metadata in a clean, organized format.
 Run the CLI command to get all session metadata:
 
 ```bash
-node session-management/cli/session-cli.js list
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js list
 ```
 
 This returns JSON with all session data from the index (no file reading needed).

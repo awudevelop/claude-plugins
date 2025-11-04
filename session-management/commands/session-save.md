@@ -118,14 +118,14 @@ This enables snapshot saves even in plan mode where Write tool is blocked.
 Run this command, piping the snapshot content via stdin:
 
 ```bash
-echo "{snapshot_content}" | node session-management/cli/session-cli.js write-snapshot {session_name} --stdin --type manual
+echo "{snapshot_content}" | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot {session_name} --stdin --type manual
 ```
 
 **IMPORTANT:** Escape any special characters in the content appropriately for the shell.
 
 Alternative approach if echo has escaping issues:
 ```bash
-cat <<'EOF' | node session-management/cli/session-cli.js write-snapshot {session_name} --stdin --type manual
+cat <<'EOF' | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot {session_name} --stdin --type manual
 {snapshot_content}
 EOF
 ```

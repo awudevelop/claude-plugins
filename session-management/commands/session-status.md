@@ -11,7 +11,7 @@ Show comprehensive session information including real-time token tracking with w
 Run the CLI command to get session list and find active session:
 
 ```bash
-node session-management/cli/session-cli.js list
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js list
 ```
 
 Parse the JSON response to get `activeSession` field.
@@ -31,7 +31,7 @@ Then STOP.
 Run the CLI stats command for the active session:
 
 ```bash
-node session-management/cli/session-cli.js stats {activeSession}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js stats {activeSession}
 ```
 
 This returns JSON with:
