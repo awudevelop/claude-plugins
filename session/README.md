@@ -327,8 +327,7 @@ session/
 ├── hooks/                      # Event hooks
 │   ├── session-start.js        # Auto-close on /clear (NEW!)
 │   ├── user-prompt-submit.js   # Auto-capture (optimized threshold)
-│   ├── post-tool-use.js        # File tracking
-│   └── suggestion-detector.js
+│   └── post-tool-use.js        # File tracking
 ├── cli/                        # CLI tool (NEW!)
 │   ├── session-cli.js          # Main entry
 │   ├── lib/                    # Core modules
