@@ -11,6 +11,14 @@ Intelligent session management with automatic context preservation, snapshot tra
 
 ## 🚀 What's New in v3.0 (Major Update)
 
+### Enhanced List Command (NEW!)
+- 🎨 **Visual badges** (ACTIVE, HOT, CLOSED, INACTIVE) for quick status scanning
+- ⏰ **Relative timestamps** ("2h ago", "3d ago") for better readability
+- 📸 **Snapshot & file counts** displayed prominently
+- 💬 **Latest snapshot summaries** shown inline
+- 🎯 **Interactive selection** - `/session:list [number]` to select and act on sessions
+- 📋 **Action menu** with Continue, View Status, Save, Close, and more
+
 ### Performance Optimizations
 - ⚡ **60-80% token reduction** across all commands
 - ⚡ **50-100x faster** list/status operations (< 50ms vs 2-5 seconds)
@@ -117,6 +125,25 @@ If session is created → ✅ Installation successful!
 
 ## 🎮 Usage
 
+### Visual Indicators
+
+The `/session:list` command uses visual badges to help you quickly identify session states:
+
+- **[ACTIVE] 🔥** - Currently active session
+- **🔥 HOT** - Updated within the last hour
+- **✅ CLOSED** - Session has been closed
+- **⚠️ INACTIVE** - No updates in over 7 days
+
+Relative timestamps make it easy to see activity at a glance:
+- "just now" - Less than 1 minute
+- "5m ago" - Minutes ago
+- "2h ago" - Hours ago
+- "3d ago" - Days ago
+- "2w ago" - Weeks ago
+- "3 months ago" - Months ago
+
+---
+
 ### Basic Commands
 
 #### Start a New Session
@@ -129,7 +156,47 @@ Creates a new session with the specified name.
 ```
 /session:list
 ```
-Shows all sessions with metadata (⚡ instant, < 200 tokens).
+Shows all sessions with enhanced metadata display (⚡ instant, < 200 tokens).
+
+**Enhanced features:**
+- 📊 Visual badges (ACTIVE, HOT, CLOSED, INACTIVE)
+- ⏰ Relative timestamps ("2h ago", "3d ago")
+- 📸 Snapshot counts and file involvement stats
+- 💬 Latest snapshot summaries
+- 🎯 Clear goal display
+
+#### Interactive Session Selection
+```
+/session:list [number]
+```
+Select a session by number to open an interactive action menu:
+- 📂 Continue/Resume session
+- 📋 View detailed status
+- 💾 Save snapshot
+- ✅ Close session
+- ⬅️ Back to list
+
+**Example:** `/session:list 2` - Select session #2 from the list
+
+**Interactive Flow:**
+```
+You: /session:list
+
+Claude: [Shows enhanced list with badges and stats]
+
+You: /session:list 2
+
+Claude: [Shows session details and action menu]
+        - Continue/Resume
+        - View Status
+        - Save Snapshot
+        - Close Session
+        - Back to List
+
+You: [Select "Continue/Resume"]
+
+Claude: [Loads session context and continues working]
+```
 
 #### Continue Existing Session
 ```

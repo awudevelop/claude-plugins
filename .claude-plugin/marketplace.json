@@ -14,7 +14,7 @@
     {
       "name": "session",
       "source": "./session",
-      "version": "3.0.0",
+      "version": "3.1.0",
       "description": "Intelligent session management with 60-80% token reduction, plan mode support, and lightning-fast performance. Auto-captures work at natural breakpoints with zero data loss.",
       "author": {
         "name": "AutomateWith.Us",

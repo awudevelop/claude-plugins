@@ -1,6 +1,6 @@
 {
   "name": "session",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Optimized session management with 60-80% token reduction, plan mode support, and intelligent auto-capture. Never lose context again!",
   "author": {
     "name": "AutomateWith.Us",
