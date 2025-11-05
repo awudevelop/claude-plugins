@@ -14,8 +14,8 @@
     {
       "name": "session",
       "source": "./session",
-      "version": "3.2.0",
-      "description": "Intelligent session management with 60-80% token reduction, plan mode support, and lightning-fast performance. Auto-captures work at natural breakpoints with zero data loss.",
+      "version": "3.3.0",
+      "description": "Session management with Living Context system - continuous context tracking every 2 interactions, automatic snapshots every 12 interactions, and 60-80% token reduction. Never lose context again!",
       "author": {
         "name": "AutomateWith.Us",
         "email": "team@automatewith.us"
@@ -30,7 +30,9 @@
         "memory",
         "workflow",
         "productivity",
-        "automation"
+        "automation",
+        "context-tracking",
+        "living-context"
       ],
       "category": "productivity",
       "tags": [
