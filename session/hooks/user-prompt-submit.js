@@ -9,8 +9,10 @@ const path = require('path');
 // Configuration
 const SESSIONS_DIR = '.claude/sessions';
 const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
-const ANALYSIS_THRESHOLD = 15; // Queue analysis after 15 interactions (optimized to reduce token usage)
-const MIN_INTERACTIONS_BETWEEN_ANALYSIS = 3; // Don't analyze too frequently
+
+// Living Context Configuration
+const CONTEXT_UPDATE_THRESHOLD = 2; // Update context every 2 interactions (lightweight)
+const SNAPSHOT_THRESHOLD = 12; // Full snapshot every 12 interactions (heavier)
 
 // Exit early if no active session
 if (!fs.existsSync(ACTIVE_SESSION_FILE)) {
@@ -49,28 +51,27 @@ if (fs.existsSync(sessionMd)) {
 
 // File paths
 const stateFile = path.join(sessionDir, '.auto-capture-state');
-const analysisQueueFile = path.join(sessionDir, '.analysis-queue');
-const snapshotDecisionFile = path.join(sessionDir, '.snapshot-decision');
-const analysisMarkerFile = path.join(sessionDir, '.pending-analysis');
+const contextUpdateMarkerFile = path.join(sessionDir, '.pending-context-update');
+const snapshotMarkerFile = path.join(sessionDir, '.pending-auto-snapshot');
 
 // Initialize state if doesn't exist
 let state = {
   file_count: 0,
   interaction_count: 0,
-  interactions_since_last_analysis: 0,
-  user_requested_suggestions: 0,
-  suggestions_since_snapshot: 0,
-  last_snapshot: '',
-  last_reason: '',
-  last_analysis_timestamp: ''
+  interactions_since_context_update: 0,
+  interactions_since_snapshot: 0,
+  last_context_update: '',
+  last_snapshot_timestamp: ''
 };
 
 if (fs.existsSync(stateFile)) {
   try {
     state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    // Ensure new fields exist
-    state.user_requested_suggestions = state.user_requested_suggestions || 0;
-    state.suggestions_since_snapshot = state.suggestions_since_snapshot || 0;
+    // Ensure Living Context fields exist
+    state.interactions_since_context_update = state.interactions_since_context_update || 0;
+    state.interactions_since_snapshot = state.interactions_since_snapshot || 0;
+    state.last_context_update = state.last_context_update || '';
+    state.last_snapshot_timestamp = state.last_snapshot_timestamp || '';
   } catch (err) {
     // Use default state if parse fails
   }
@@ -78,93 +79,58 @@ if (fs.existsSync(stateFile)) {
 
 // Increment interaction count
 state.interaction_count++;
-state.interactions_since_last_analysis = (state.interactions_since_last_analysis || 0) + 1;
+state.interactions_since_context_update++;
+state.interactions_since_snapshot++;
 
-// STEP 1: Check if there's a snapshot decision from previous analysis
-if (fs.existsSync(snapshotDecisionFile)) {
-  try {
-    const decision = JSON.parse(fs.readFileSync(snapshotDecisionFile, 'utf8'));
+// LIVING CONTEXT SYSTEM: Check for context update and snapshot thresholds
+let shouldUpdateContext = false;
+let shouldSnapshot = false;
 
-    if (decision.decision === 'yes') {
-      // Create snapshot marker - Claude will process it
-      const markerFile = path.join(sessionDir, '.pending-auto-snapshot');
-      fs.writeFileSync(markerFile, 'natural_breakpoint');
-
-      // Reset counters
-      state.file_count = 0;
-      state.interaction_count = 0;
-      state.interactions_since_last_analysis = 0;
-      state.last_snapshot = new Date().toISOString();
-      state.last_reason = decision.reason || 'natural_breakpoint';
-    } else if (decision.decision === 'defer') {
-      // Keep counters, will check again soon
-      // Don't reset interaction_count, but reset analysis counter
-      state.interactions_since_last_analysis = 0;
-    } else {
-      // Decision was 'no' - reset analysis counter but keep interaction count
-      state.interactions_since_last_analysis = 0;
-    }
-
-    // Delete decision file (consumed)
-    fs.unlinkSync(snapshotDecisionFile);
-
-  } catch (err) {
-    // Failed to process decision, delete and continue
-    try {
-      fs.unlinkSync(snapshotDecisionFile);
-    } catch {}
-  }
+// Context update every N interactions (lightweight, fast)
+if (state.interactions_since_context_update >= CONTEXT_UPDATE_THRESHOLD) {
+  shouldUpdateContext = true;
 }
 
-// STEP 2: Check if there's a queued analysis ready to process
-if (fs.existsSync(analysisQueueFile)) {
-  // Create marker to tell Claude to run analysis
-  fs.writeFileSync(analysisMarkerFile, 'process');
-  state.last_analysis_timestamp = new Date().toISOString();
+// Full snapshot every N interactions (heavier, less frequent)
+if (state.interactions_since_snapshot >= SNAPSHOT_THRESHOLD) {
+  shouldSnapshot = true;
 }
 
-// STEP 3: Check if we should queue a NEW analysis
-let shouldQueueAnalysis = false;
-
-// Queue analysis if:
-// - Interaction count >= threshold
-// - Haven't analyzed too recently
-// - No analysis already queued
-if (
-  state.interaction_count >= ANALYSIS_THRESHOLD &&
-  state.interactions_since_last_analysis >= MIN_INTERACTIONS_BETWEEN_ANALYSIS &&
-  !fs.existsSync(analysisQueueFile) &&
-  !fs.existsSync(analysisMarkerFile)
-) {
-  shouldQueueAnalysis = true;
+// Also trigger snapshot if significant file changes
+if (state.file_count >= 3 && state.interactions_since_snapshot >= 5) {
+  shouldSnapshot = true;
 }
 
-// Also queue if significant file changes + enough interactions
-if (
-  state.file_count >= 2 &&
-  state.interaction_count >= 5 &&
-  state.interactions_since_last_analysis >= MIN_INTERACTIONS_BETWEEN_ANALYSIS &&
-  !fs.existsSync(analysisQueueFile) &&
-  !fs.existsSync(analysisMarkerFile)
-) {
-  shouldQueueAnalysis = true;
+// Create context update marker (lightweight, frequent)
+if (shouldUpdateContext) {
+  const contextUpdateData = {
+    timestamp: new Date().toISOString(),
+    interaction_count: state.interaction_count,
+    trigger: 'periodic_update'
+  };
+
+  fs.writeFileSync(contextUpdateMarkerFile, JSON.stringify(contextUpdateData, null, 2));
+
+  // Reset counter
+  state.interactions_since_context_update = 0;
+  state.last_context_update = new Date().toISOString();
 }
 
-// Queue analysis with context
-if (shouldQueueAnalysis) {
-  const analysisQueue = {
+// Create snapshot marker (heavier, less frequent)
+if (shouldSnapshot) {
+  const snapshotData = {
     timestamp: new Date().toISOString(),
     interaction_count: state.interaction_count,
     file_count: state.file_count,
-    interactions_since_last_snapshot: state.interaction_count,
-    trigger_reason: state.interaction_count >= ANALYSIS_THRESHOLD ? 'interaction_threshold' : 'file_activity',
-    suggestions: {
-      count_since_snapshot: state.suggestions_since_snapshot || 0,
-      detect_suggestions: true  // Flag for Claude to detect suggestions during analysis
-    }
+    trigger: state.file_count >= 3 ? 'file_threshold' : 'interaction_threshold'
   };
 
-  fs.writeFileSync(analysisQueueFile, JSON.stringify(analysisQueue, null, 2));
+  fs.writeFileSync(snapshotMarkerFile, JSON.stringify(snapshotData, null, 2));
+
+  // Reset counters
+  state.interactions_since_snapshot = 0;
+  state.file_count = 0;
+  state.last_snapshot_timestamp = new Date().toISOString();
 }
 
 // Update state file

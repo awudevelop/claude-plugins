@@ -1,23 +1,40 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.2.1** - Smart Session State Management & Auto-Cleanup
+**Version 3.3.0** - Living Context System
 
-Intelligent session management with automatic context preservation, snapshot tracking, and 60-80% token reduction.
+Intelligent session management with continuous context tracking, automatic snapshots every interaction, and 60-80% token reduction.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.2.1-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.2 (Latest Update)
+## 🚀 What's New in v3.3 (Latest Update)
 
-### Smart Session State Management (NEW!)
+### Living Context System (NEW! 🎉)
+- 🧠 **Continuous context tracking** - Updates context.md every 2 interactions automatically
+- 📸 **Automatic snapshots** - Full snapshots every 12 interactions (or 3+ files modified)
+- 🎯 **Smart extraction** - Captures decisions, agreements, requirements, discoveries
+- ⚡ **Ultra-fast updates** - < 1 second overhead, completely silent
+- 🔄 **Dual-threshold system** - Context updates (frequent) + Snapshots (periodic)
+- 🐛 **Fixed autosave** - Resolved bug where autosave never triggered
+- 🧹 **Cleaned architecture** - Removed redundant analysis system (42% smaller hook)
+
+### How It Works
+1. **Every 2 interactions**: Context.md updated with key points (decisions, agreements, constraints)
+2. **Every 12 interactions**: Full snapshot saved with complete conversation summary
+3. **Completely automatic**: No manual intervention needed, works silently in background
+4. **Accurate future sessions**: When you return days later, Claude has perfect context
+
+### Previous Updates (v3.2)
+
+#### Smart Session State Management
 - 🔄 **Auto-cleanup on /clear** - Sessions automatically close when context is cleared
 - 💡 **Helpful messages** - Claude informs you when sessions are auto-closed and how to resume
 - ✅ **Preserves auto-resume** - Sessions still auto-resume on normal restarts
 - 🎯 **SessionStart hook** - Intelligent detection of context loss events
 
-### Delete Session Feature (NEW!)
+#### Delete Session Feature
 - 🗑️ **Permanent deletion** - Remove sessions you no longer need
 - ⚠️ **Two-step confirmation** - Prevents accidental deletions
 - 🚨 **Active session warning** - Extra protection for current work

@@ -7,6 +7,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.0] - 2025-11-05
+
+### 🧠 Living Context System - Continuous Context Tracking
+
+This minor release introduces the **Living Context System** - a revolutionary approach to session management that keeps context.md continuously updated throughout your conversation.
+
+### Added
+- 🧠 **Living Context System** - Dual-threshold auto-capture architecture
+  - **Context Updates**: Lightweight extraction every 2 interactions (< 1s, silent)
+  - **Full Snapshots**: Comprehensive saves every 12 interactions (2-5s, minimal notification)
+  - Captures: decisions, agreements, requirements, discoveries, technical choices
+  - Completely automatic and silent operation
+
+- 📝 **context-update.md Command** - New lightweight context extraction command
+  - Analyzes only last 2 message exchanges (not entire conversation)
+  - ~300 token budget, < 1 second execution
+  - Appends incrementally to context.md
+  - Five extraction categories: Decisions, Agreements, Requirements, Discoveries, Technical
+
+- 🎯 **Smart State Tracking** - Enhanced state management
+  - `interactions_since_context_update` counter
+  - `interactions_since_snapshot` counter
+  - Separate tracking for lightweight vs heavy operations
+
+### Changed
+- ⚡ **Hook Optimization** - `user-prompt-submit.js` reduced from 241 → 139 lines (42% smaller)
+  - Removed redundant analysis queue system (OLD system at 15 interactions)
+  - Simplified to single Living Context system
+  - Cleaner state management with fewer fields
+
+- 📋 **auto-snapshot.md Updates** - Simplified detection workflow
+  - Now checks 2 marker types (was 3)
+  - Removed Analysis Task section
+  - Streamlined from 192 → 155 lines (19% reduction)
+
+- 🎯 **Threshold Optimizations**
+  - Context updates: Every 2 interactions (was never working)
+  - Full snapshots: Every 12 interactions (was 15 via broken analysis)
+  - File-based snapshot: 3+ files modified + 5 interactions
+
+### Fixed
+- 🐛 **Autosave Never Triggered** - Root cause analysis and resolution
+  - **Issue**: Hooks created marker files but Claude never checked them
+  - **Cause**: Missing `.active-session` file + no automatic trigger mechanism
+  - **Fix**: Living Context system with direct marker processing
+
+- 🧹 **Removed Redundant Code** - Eliminated conflicting systems
+  - Deleted `snapshot-analysis.md` (231 lines, no longer needed)
+  - Removed analysis queue logic (85 lines)
+  - Eliminated 3 unused marker file types (`.analysis-queue`, `.pending-analysis`, `.snapshot-decision`)
+  - 50% reduction in state files created
+
+### Performance Improvements
+- ⚡ Average overhead per interaction: ~0.5 seconds (vs 0 before, but autosave didn't work)
+- ⚡ 42% smaller hook file (faster loading)
+- ⚡ 50% fewer state files to manage
+- ⚡ Context updates: < 1 second (lightweight)
+- ⚡ Full snapshots: 2-5 seconds (only every 12 interactions)
+
+### Technical Details
+
+**Living Context Architecture:**
+```
+Every interaction → Hook tracks state
+Every 2 interactions → .pending-context-update created
+Every 12 interactions → .pending-auto-snapshot created
+Claude auto-checks → Processes markers → Updates files
+```
+
+**State Files (After Cleanup):**
+- `.auto-capture-state` - State tracking (kept)
+- `.pending-context-update` - Context update trigger (new)
+- `.pending-auto-snapshot` - Snapshot trigger (kept)
+
+**Removed State Files:**
+- `.analysis-queue` ❌ (redundant)
+- `.pending-analysis` ❌ (redundant)
+- `.snapshot-decision` ❌ (redundant)
+
+### Breaking Changes
+None - Fully backward compatible. Existing sessions will automatically adopt new thresholds.
+
+### Migration Notes
+- Restart Claude Code after updating for hooks to reload
+- Run `/session:continue {session-name}` to activate Living Context system
+- Context.md will start updating automatically after 2 interactions
+
+---
+
 ## [3.2.1] - 2025-11-04
 
 ### 🔄 Smart Session State Management

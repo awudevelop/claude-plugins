@@ -1,7 +1,7 @@
 {
   "name": "session",
-  "version": "3.2.1",
-  "description": "Optimized session management with 60-80% token reduction, plan mode support, and intelligent auto-capture. Never lose context again!",
+  "version": "3.3.0",
+  "description": "Session management with Living Context system - continuous context tracking every 2 interactions, automatic snapshots, and 60-80% token reduction. Never lose context again!",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"

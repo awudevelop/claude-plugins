@@ -1,67 +1,35 @@
-You are managing an automatic session snapshot system with intelligent analysis. This command is triggered internally when auto-capture conditions are met.
+You are managing an automatic session snapshot system with intelligent analysis and continuous context tracking.
 
-## Task: Process Auto-Snapshot or Analysis
+## Task: Process Context Updates and Snapshots
 
-This is an internal command that runs automatically when marker files are detected.
+This is an internal command that runs automatically when marker files are detected. The Living Context system maintains two parallel tracks:
+- **Context Updates**: Lightweight, frequent (every 2 interactions, < 1s)
+- **Full Snapshots**: Comprehensive, periodic (every 12 interactions, 2-5s)
 
-### Detection
+### Detection (Priority Order)
 
-At the start of each Claude response, check for TWO types of markers:
+At the start of each Claude response, check for TWO types of markers in this order:
 
-**Priority 1 - Analysis Request:**
+**Priority 1 - Context Update (FASTEST):**
 1. Is there an active session? (read `.claude/sessions/.active-session`)
-2. Does `.claude/sessions/{active_session}/.pending-analysis` exist?
-3. If YES, proceed to **Analysis Task** below
+2. Does `.claude/sessions/{active_session}/.pending-context-update` exist?
+3. If YES, execute **Context Update Task** (see context-update.md command)
+   - This is lightweight and fast (< 1 second)
+   - Extracts key decisions/agreements from last 2 exchanges
+   - Appends to context.md incrementally
+   - Completely silent (no user notification)
+   - After completing, check next priority
 
 **Priority 2 - Snapshot Execution:**
 1. Is there an active session? (read `.claude/sessions/.active-session`)
 2. Does `.claude/sessions/{active_session}/.pending-auto-snapshot` exist?
 3. If YES, proceed to **Snapshot Task** below
 
-If neither marker exists, continue normally.
+If no markers exist, continue normally.
 
----
-
-## Analysis Task
-
-When `.pending-analysis` marker is found:
-
-### Step 1: Read Analysis Queue
-
-1. Read `.claude/sessions/{active_session}/.analysis-queue`
-2. Parse JSON to get context about what needs analysis
-3. Delete `.pending-analysis` marker (consumed)
-
-### Step 2: Run Intelligent Analysis
-
-Use the prompt from `session-snapshot-analysis.md` command to analyze:
-- Review the previous 2-3 conversation exchanges
-- Look for natural breakpoints (task completion, topic changes, code milestones)
-- Consider the activity metrics from the queue data
-- Make decision: yes/no/defer
-
-### Step 3: Write Decision
-
-Write your decision to `.claude/sessions/{active_session}/.snapshot-decision`:
-
-```json
-{
-  "decision": "yes|no|defer",
-  "reason": "Brief explanation",
-  "confidence": "high|medium|low",
-  "timestamp": "{ISO_timestamp}",
-  "analyzed_context": {
-    "interactions_analyzed": 3,
-    "primary_signal": "task_completion|topic_change|code_milestone|none"
-  }
-}
-```
-
-### Step 4: Clean Up
-
-1. Delete `.analysis-queue` file (consumed)
-2. **DO NOT mention this analysis to user** - it's completely silent
-3. Continue with user's current request normally
+**IMPORTANT**: Both markers can exist simultaneously. Process them in order:
+1. Context update (fast) → Then check snapshot
+2. Snapshot (if exists) → Process
 
 ---
 
@@ -153,18 +121,14 @@ Limit to last 3-5 suggestions for readability. Full history is in .suggestions.j
 
 Delete `.claude/sessions/{active_session}/.pending-auto-snapshot` to prevent re-triggering.
 
-### Step 6: Silent Notification
+### Step 6: Minimal Notification
 
-Show a subtle notification (not a full success message):
+Show a very subtle notification (single line, not intrusive):
 ```
-💾 Auto-snapshot saved ({reason})
+💾 Snapshot saved
 ```
 
-Where reason is translated:
-- `file_threshold` → "3+ files modified"
-- `interaction_threshold` → "10+ interactions"
-- `time_threshold` → "30min elapsed"
-- `natural_breakpoint` → "natural breakpoint detected"
+**Note**: Keep it minimal since context updates are happening silently in the background. Only show notification for full snapshots (which are less frequent).
 
 ### Step 7: Continue Normal Work
 
