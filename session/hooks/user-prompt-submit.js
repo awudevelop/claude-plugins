@@ -127,6 +127,23 @@ if (shouldSnapshot) {
 
   fs.writeFileSync(snapshotMarkerFile, JSON.stringify(snapshotData, null, 2));
 
+  // NEW: Process auto-captured files and update session.md
+  try {
+    const { execSync } = require('child_process');
+    const pluginRoot = path.dirname(__dirname);
+    const processorPath = path.join(pluginRoot, 'cli', 'process-auto-capture.js');
+
+    if (fs.existsSync(processorPath)) {
+      execSync(`node "${processorPath}" "${activeSession}"`, {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        stdio: 'ignore'  // Silent execution, don't block
+      });
+    }
+  } catch (err) {
+    // Silent failure - don't block hook execution
+  }
+
   // Reset counters
   state.interactions_since_snapshot = 0;
   state.file_count = 0;

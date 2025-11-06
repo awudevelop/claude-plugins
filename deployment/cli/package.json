@@ -1,0 +1,17 @@
+{
+  "name": "deployment-cli",
+  "version": "1.0.0",
+  "description": "CLI tool for Claude Code deployment plugin",
+  "main": "deploy-cli.js",
+  "bin": {
+    "deploy-cli": "./deploy-cli.js"
+  },
+  "scripts": {
+    "test": "node --test tests/**/*.test.js"
+  },
+  "keywords": ["deployment", "cicd", "cli"],
+  "author": "AutomateWith.Us",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}

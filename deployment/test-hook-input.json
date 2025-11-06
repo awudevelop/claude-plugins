@@ -1,0 +1,7 @@
+{
+  "tool_input": {
+    "command": "git push origin deploy_dev",
+    "description": "Push deployment to dev environment"
+  },
+  "cwd": "/Users/prajyot/Documents/Work/Matt/claude-plugins"
+}

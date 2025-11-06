@@ -13,6 +13,22 @@ if (toolName !== 'Write' && toolName !== 'Edit') {
   process.exit(0);
 }
 
+// Read tool operation data from stdin to get file path
+let filePath = null;
+try {
+  const input = fs.readFileSync(0, 'utf8').trim();
+  if (input) {
+    const eventData = JSON.parse(input);
+    // Extract file path from tool input
+    if (eventData.tool_input && eventData.tool_input.file_path) {
+      filePath = eventData.tool_input.file_path;
+    }
+  }
+} catch (err) {
+  // If we can't read stdin or parse it, just count the file
+  // This maintains backward compatibility
+}
+
 // Configuration
 const SESSIONS_DIR = '.claude/sessions';
 const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
@@ -62,7 +78,8 @@ let state = {
   interactions_since_last_analysis: 0,
   last_snapshot: '',
   last_reason: '',
-  last_analysis_timestamp: ''
+  last_analysis_timestamp: '',
+  modified_files: []  // NEW: Track actual file paths
 };
 
 if (fs.existsSync(stateFile)) {
@@ -75,6 +92,31 @@ if (fs.existsSync(stateFile)) {
 
 // Increment file count
 state.file_count++;
+
+// Track the modified file path if we captured it
+if (filePath) {
+  // Initialize modified_files array if it doesn't exist (backward compatibility)
+  if (!state.modified_files) {
+    state.modified_files = [];
+  }
+
+  // Add file to list if not already tracked
+  const fileEntry = {
+    path: filePath,
+    operation: toolName.toLowerCase(),
+    timestamp: new Date().toISOString()
+  };
+
+  // Avoid duplicates - check if file already in list
+  const existingIndex = state.modified_files.findIndex(f => f.path === filePath);
+  if (existingIndex >= 0) {
+    // Update existing entry with latest operation
+    state.modified_files[existingIndex] = fileEntry;
+  } else {
+    // Add new file
+    state.modified_files.push(fileEntry);
+  }
+}
 
 // Update state
 // Note: We no longer immediately create snapshot markers here

@@ -1,0 +1,7 @@
+{
+  "tool_input": {
+    "command": "ls -la",
+    "description": "List directory contents"
+  },
+  "cwd": "/Users/prajyot/Documents/Work/Matt/claude-plugins"
+}
