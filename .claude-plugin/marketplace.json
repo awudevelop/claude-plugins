@@ -41,6 +41,37 @@
         "productivity",
         "memory"
       ]
+    },
+    {
+      "name": "deployment",
+      "source": "./deployment",
+      "version": "1.0.0",
+      "description": "Safe deployment automation with CICD integration. Manages branch-based deployments to dev/uat/prod environments with safety checks and build validation.",
+      "author": {
+        "name": "AutomateWith.Us",
+        "email": "team@automatewith.us"
+      },
+      "homepage": "https://github.com/automatewithus/claude-plugins",
+      "repository": "https://github.com/automatewithus/claude-plugins",
+      "license": "MIT",
+      "keywords": [
+        "deployment",
+        "cicd",
+        "netlify",
+        "automation",
+        "git",
+        "branch-management",
+        "safety-checks",
+        "build-validation",
+        "environment-progression"
+      ],
+      "category": "productivity",
+      "tags": [
+        "deployment",
+        "automation",
+        "cicd",
+        "workflow"
+      ]
     }
   ]
 }
