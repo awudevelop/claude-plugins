@@ -7,10 +7,24 @@ const fs = require('fs');
 const path = require('path');
 const LockManager = require('../cli/lib/lock-manager');
 
+// DEBUG: Log hook execution
+const debugLog = path.join(require('os').tmpdir(), 'claude-session-hook-debug.log');
+try {
+  fs.appendFileSync(debugLog, `\n=== Hook called at ${new Date().toISOString()} ===\n`);
+  fs.appendFileSync(debugLog, `CWD: ${process.cwd()}\n`);
+  fs.appendFileSync(debugLog, `PLUGIN_ROOT: ${process.env.CLAUDE_PLUGIN_ROOT}\n`);
+} catch (e) { /* ignore */ }
+
 // Configuration
 const SESSIONS_DIR = '.claude/sessions';
 const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
 const lockManager = new LockManager(SESSIONS_DIR);
+
+// DEBUG: Log session detection
+try {
+  fs.appendFileSync(debugLog, `Looking for: ${path.resolve(ACTIVE_SESSION_FILE)}\n`);
+  fs.appendFileSync(debugLog, `Exists: ${fs.existsSync(ACTIVE_SESSION_FILE)}\n`);
+} catch (e) { /* ignore */ }
 
 // Living Context Configuration
 const CONTEXT_UPDATE_THRESHOLD = 2; // Update context every 2 interactions (lightweight)
