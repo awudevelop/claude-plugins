@@ -443,7 +443,7 @@ class IndexManager {
    * @returns {Object} Validation result
    */
   validate() {
-    const index = this.read();
+    const index = this.read({ skipValidation: true });
     const issues = [];
 
     // Check if active session exists
@@ -493,7 +493,7 @@ class IndexManager {
       return { fixed: 0, issues: [] };
     }
 
-    const index = this.read();
+    const index = this.read({ skipValidation: true });
     const fixed = [];
 
     // Remove orphaned entries
