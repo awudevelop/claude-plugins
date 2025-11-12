@@ -25,5 +25,5 @@
   "category": "productivity",
   "license": "MIT",
   "commands": "./commands",
-  "hooks": "./hooks"
+  "hooks": "./hooks/hooks.json"
 }
