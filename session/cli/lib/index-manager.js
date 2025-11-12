@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const LockManager = require('./lock-manager');
 
 class IndexManager {
   /**
@@ -15,6 +16,8 @@ class IndexManager {
   constructor(sessionsDir = '.claude/sessions') {
     this.sessionsDir = sessionsDir;
     this.indexPath = path.join(sessionsDir, '.index.json');
+    this.backupPath = path.join(sessionsDir, '.index.json.backup');
+    this.lockManager = new LockManager(sessionsDir);
   }
 
   /**
@@ -49,27 +52,86 @@ class IndexManager {
 
       return index;
     } catch (error) {
-      console.error('Warning: Index corrupted, rebuilding...');
+      // Improved error logging with specific error types
+      if (error.code === 'ENOENT') {
+        // File doesn't exist - this is expected on first run
+        console.log('Index not found, creating new index...');
+      } else if (error.code === 'EACCES') {
+        console.error('Warning: Permission denied reading index file');
+      } else if (error instanceof SyntaxError) {
+        console.error('Warning: Index file contains invalid JSON, rebuilding...');
+      } else {
+        console.error(`Warning: Error reading index (${error.message}), rebuilding...`);
+      }
+
       return this.rebuild();
     }
   }
 
   /**
-   * Write index to disk
+   * Write index to disk with atomic operation and locking
    * @param {Object} index - Index data
    */
   write(index) {
-    // Ensure sessions directory exists
-    if (!fs.existsSync(this.sessionsDir)) {
-      fs.mkdirSync(this.sessionsDir, { recursive: true });
-    }
+    return this.lockManager.withLock('index', () => {
+      // Ensure sessions directory exists
+      if (!fs.existsSync(this.sessionsDir)) {
+        fs.mkdirSync(this.sessionsDir, { recursive: true });
+      }
 
-    index.lastIndexUpdate = new Date().toISOString();
-    fs.writeFileSync(
-      this.indexPath,
-      JSON.stringify(index, null, 2),
-      'utf8'
-    );
+      // Create backup of existing index before overwriting
+      if (fs.existsSync(this.indexPath)) {
+        try {
+          fs.copyFileSync(this.indexPath, this.backupPath);
+        } catch (backupError) {
+          // Log but don't fail - backup is nice-to-have
+          console.warn('Warning: Could not create index backup:', backupError.message);
+        }
+      }
+
+      index.lastIndexUpdate = new Date().toISOString();
+
+      // Atomic write: write to temp file, then rename
+      const tempPath = `${this.indexPath}.tmp.${Date.now()}`;
+      try {
+        // Write to temp file
+        fs.writeFileSync(
+          tempPath,
+          JSON.stringify(index, null, 2),
+          'utf8'
+        );
+
+        // Verify the written file is valid JSON
+        const verification = JSON.parse(fs.readFileSync(tempPath, 'utf8'));
+        if (!verification || typeof verification !== 'object') {
+          throw new Error('Written index verification failed');
+        }
+
+        // Atomic rename (overwrites existing file on same filesystem)
+        fs.renameSync(tempPath, this.indexPath);
+      } catch (writeError) {
+        // Clean up temp file if it exists
+        if (fs.existsSync(tempPath)) {
+          try {
+            fs.unlinkSync(tempPath);
+          } catch (cleanupError) {
+            // Ignore cleanup errors
+          }
+        }
+
+        // Attempt to restore from backup if write failed
+        if (fs.existsSync(this.backupPath)) {
+          console.error('Write failed, restoring from backup...');
+          try {
+            fs.copyFileSync(this.backupPath, this.indexPath);
+          } catch (restoreError) {
+            console.error('Failed to restore from backup:', restoreError.message);
+          }
+        }
+
+        throw new Error(`Failed to write index: ${writeError.message}`);
+      }
+    }, { timeout: 2000 });
   }
 
   /**

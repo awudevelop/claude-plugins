@@ -5,10 +5,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const LockManager = require('../cli/lib/lock-manager');
 
 // Configuration
 const SESSIONS_DIR = '.claude/sessions';
 const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
+const lockManager = new LockManager(SESSIONS_DIR);
 
 // Living Context Configuration
 const CONTEXT_UPDATE_THRESHOLD = 2; // Update context every 2 interactions (lightweight)
@@ -54,103 +56,134 @@ const stateFile = path.join(sessionDir, '.auto-capture-state');
 const contextUpdateMarkerFile = path.join(sessionDir, '.pending-context-update');
 const snapshotMarkerFile = path.join(sessionDir, '.pending-auto-snapshot');
 
-// Initialize state if doesn't exist
-let state = {
-  file_count: 0,
-  interaction_count: 0,
-  interactions_since_context_update: 0,
-  interactions_since_snapshot: 0,
-  last_context_update: '',
-  last_snapshot_timestamp: ''
-};
+// Use lock to prevent race conditions during state read-modify-write
+const lock = lockManager.acquireLock(`auto-capture-${activeSession}`, {
+  timeout: 1000,
+  wait: true
+});
 
-if (fs.existsSync(stateFile)) {
-  try {
-    state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    // Ensure Living Context fields exist
-    state.interactions_since_context_update = state.interactions_since_context_update || 0;
-    state.interactions_since_snapshot = state.interactions_since_snapshot || 0;
-    state.last_context_update = state.last_context_update || '';
-    state.last_snapshot_timestamp = state.last_snapshot_timestamp || '';
-  } catch (err) {
-    // Use default state if parse fails
-  }
+if (!lock.acquired) {
+  // Could not acquire lock - skip this update to avoid blocking
+  // The next interaction will pick up the count
+  process.exit(0);
 }
 
-// Increment interaction count
-state.interaction_count++;
-state.interactions_since_context_update++;
-state.interactions_since_snapshot++;
-
-// LIVING CONTEXT SYSTEM: Check for context update and snapshot thresholds
-let shouldUpdateContext = false;
-let shouldSnapshot = false;
-
-// Context update every N interactions (lightweight, fast)
-if (state.interactions_since_context_update >= CONTEXT_UPDATE_THRESHOLD) {
-  shouldUpdateContext = true;
-}
-
-// Full snapshot every N interactions (heavier, less frequent)
-if (state.interactions_since_snapshot >= SNAPSHOT_THRESHOLD) {
-  shouldSnapshot = true;
-}
-
-// Also trigger snapshot if significant file changes
-if (state.file_count >= 3 && state.interactions_since_snapshot >= 5) {
-  shouldSnapshot = true;
-}
-
-// Create context update marker (lightweight, frequent)
-if (shouldUpdateContext) {
-  const contextUpdateData = {
-    timestamp: new Date().toISOString(),
-    interaction_count: state.interaction_count,
-    trigger: 'periodic_update'
+try {
+  // Initialize state if doesn't exist
+  let state = {
+    file_count: 0,
+    interaction_count: 0,
+    interactions_since_context_update: 0,
+    interactions_since_snapshot: 0,
+    last_context_update: '',
+    last_snapshot_timestamp: ''
   };
 
-  fs.writeFileSync(contextUpdateMarkerFile, JSON.stringify(contextUpdateData, null, 2));
-
-  // Reset counter
-  state.interactions_since_context_update = 0;
-  state.last_context_update = new Date().toISOString();
-}
-
-// Create snapshot marker (heavier, less frequent)
-if (shouldSnapshot) {
-  const snapshotData = {
-    timestamp: new Date().toISOString(),
-    interaction_count: state.interaction_count,
-    file_count: state.file_count,
-    trigger: state.file_count >= 3 ? 'file_threshold' : 'interaction_threshold'
-  };
-
-  fs.writeFileSync(snapshotMarkerFile, JSON.stringify(snapshotData, null, 2));
-
-  // NEW: Process auto-captured files and update session.md
-  try {
-    const { execSync } = require('child_process');
-    const pluginRoot = path.dirname(__dirname);
-    const processorPath = path.join(pluginRoot, 'cli', 'process-auto-capture.js');
-
-    if (fs.existsSync(processorPath)) {
-      execSync(`node "${processorPath}" "${activeSession}"`, {
-        cwd: process.cwd(),
-        encoding: 'utf8',
-        stdio: 'ignore'  // Silent execution, don't block
-      });
+  if (fs.existsSync(stateFile)) {
+    try {
+      state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+      // Ensure Living Context fields exist
+      state.interactions_since_context_update = state.interactions_since_context_update || 0;
+      state.interactions_since_snapshot = state.interactions_since_snapshot || 0;
+      state.last_context_update = state.last_context_update || '';
+      state.last_snapshot_timestamp = state.last_snapshot_timestamp || '';
+    } catch (err) {
+      // Use default state if parse fails
     }
-  } catch (err) {
-    // Silent failure - don't block hook execution
   }
 
-  // Reset counters
-  state.interactions_since_snapshot = 0;
-  state.file_count = 0;
-  state.last_snapshot_timestamp = new Date().toISOString();
-}
+  // Increment interaction count
+  state.interaction_count++;
+  state.interactions_since_context_update++;
+  state.interactions_since_snapshot++;
 
-// Update state file
-fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
+  // LIVING CONTEXT SYSTEM: Check for context update and snapshot thresholds
+  let shouldUpdateContext = false;
+  let shouldSnapshot = false;
+
+  // Context update every N interactions (lightweight, fast)
+  if (state.interactions_since_context_update >= CONTEXT_UPDATE_THRESHOLD) {
+    shouldUpdateContext = true;
+  }
+
+  // Full snapshot every N interactions (heavier, less frequent)
+  if (state.interactions_since_snapshot >= SNAPSHOT_THRESHOLD) {
+    shouldSnapshot = true;
+  }
+
+  // Also trigger snapshot if significant file changes
+  if (state.file_count >= 3 && state.interactions_since_snapshot >= 5) {
+    shouldSnapshot = true;
+  }
+
+  // Create context update marker (lightweight, frequent)
+  if (shouldUpdateContext) {
+    const contextUpdateData = {
+      timestamp: new Date().toISOString(),
+      interaction_count: state.interaction_count,
+      trigger: 'periodic_update'
+    };
+
+    fs.writeFileSync(contextUpdateMarkerFile, JSON.stringify(contextUpdateData, null, 2));
+
+    // Reset counter
+    state.interactions_since_context_update = 0;
+    state.last_context_update = new Date().toISOString();
+  }
+
+  // Create snapshot marker (heavier, less frequent)
+  if (shouldSnapshot) {
+    const snapshotData = {
+      timestamp: new Date().toISOString(),
+      interaction_count: state.interaction_count,
+      file_count: state.file_count,
+      trigger: state.file_count >= 3 ? 'file_threshold' : 'interaction_threshold'
+    };
+
+    fs.writeFileSync(snapshotMarkerFile, JSON.stringify(snapshotData, null, 2));
+
+    // NEW: Process auto-captured files and update session.md
+    try {
+      const { execSync } = require('child_process');
+      const pluginRoot = path.dirname(__dirname);
+      const processorPath = path.join(pluginRoot, 'cli', 'process-auto-capture.js');
+
+      if (fs.existsSync(processorPath)) {
+        execSync(`node "${processorPath}" "${activeSession}"`, {
+          cwd: process.cwd(),
+          encoding: 'utf8',
+          stdio: 'ignore'  // Silent execution, don't block
+        });
+      }
+    } catch (err) {
+      // Silent failure - don't block hook execution
+    }
+
+    // Reset counters
+    state.interactions_since_snapshot = 0;
+    state.file_count = 0;
+    state.last_snapshot_timestamp = new Date().toISOString();
+  }
+
+  // Update state file atomically
+  const tempPath = `${stateFile}.tmp.${Date.now()}`;
+  try {
+    fs.writeFileSync(tempPath, JSON.stringify(state, null, 2));
+    fs.renameSync(tempPath, stateFile);
+  } catch (writeError) {
+    // Clean up temp file
+    if (fs.existsSync(tempPath)) {
+      try {
+        fs.unlinkSync(tempPath);
+      } catch (cleanupError) {
+        // Ignore
+      }
+    }
+    throw writeError;
+  }
+} finally {
+  // Always release lock
+  lock.release();
+}
 
 process.exit(0);

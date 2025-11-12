@@ -16,10 +16,13 @@
 const fs = require('fs');
 const path = require('path');
 
+// Import IndexManager for safe index updates
+const IndexManager = require('../cli/lib/index-manager');
+
 // Constants
 const SESSIONS_DIR = '.claude/sessions';
 const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
-const INDEX_FILE = path.join(SESSIONS_DIR, '.index.json');
+const indexManager = new IndexManager(SESSIONS_DIR);
 
 try {
   // Read input from stdin (provided by Claude Code)
@@ -57,20 +60,15 @@ try {
       }
     }
 
-    // Update the index.json to clear activeSession
-    if (fs.existsSync(INDEX_FILE)) {
-      try {
-        const indexContent = fs.readFileSync(INDEX_FILE, 'utf8');
-        const index = JSON.parse(indexContent);
-
-        // Clear the active session marker
-        index.activeSession = null;
-
-        // Write back to index
-        fs.writeFileSync(INDEX_FILE, JSON.stringify(index, null, 2) + '\n');
-      } catch (indexError) {
-        // Continue even if index update fails
-      }
+    // Update the index.json to clear activeSession using IndexManager
+    // This uses proper locking and atomic writes to prevent corruption
+    try {
+      const index = indexManager.read({ skipValidation: true });
+      index.activeSession = null;
+      indexManager.write(index);
+    } catch (indexError) {
+      // Continue even if index update fails
+      // This prevents blocking the hook if index is temporarily locked
     }
 
     // Inject helpful context message to Claude

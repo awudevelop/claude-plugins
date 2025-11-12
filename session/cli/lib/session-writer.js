@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const LockManager = require('./lock-manager');
 
 class SessionWriter {
   /**
@@ -14,6 +15,7 @@ class SessionWriter {
    */
   constructor(sessionsDir = '.claude/sessions') {
     this.sessionsDir = sessionsDir;
+    this.lockManager = new LockManager(sessionsDir);
   }
 
   /**
@@ -93,6 +95,7 @@ class SessionWriter {
 
   /**
    * Update specific fields in auto-capture state
+   * Protected against race conditions with file locking
    * @param {string} sessionName
    * @param {Object} updates - Fields to update
    */
@@ -101,22 +104,39 @@ class SessionWriter {
 
     const filePath = path.join(this.getSessionDir(sessionName), '.auto-capture-state');
 
-    // Read existing state
-    let state = {};
-    if (fs.existsSync(filePath)) {
-      try {
-        const content = fs.readFileSync(filePath, 'utf8');
-        state = JSON.parse(content);
-      } catch (error) {
-        console.error('Error reading existing state, creating new:', error.message);
+    // Use lock to prevent race conditions during read-modify-write
+    return this.lockManager.withLock(`auto-capture-${sessionName}`, () => {
+      // Read existing state
+      let state = {};
+      if (fs.existsSync(filePath)) {
+        try {
+          const content = fs.readFileSync(filePath, 'utf8');
+          state = JSON.parse(content);
+        } catch (error) {
+          console.error('Error reading existing state, creating new:', error.message);
+        }
       }
-    }
 
-    // Merge updates
-    state = { ...state, ...updates };
+      // Merge updates
+      state = { ...state, ...updates };
 
-    // Write back
-    fs.writeFileSync(filePath, JSON.stringify(state, null, 2), 'utf8');
+      // Write back atomically
+      const tempPath = `${filePath}.tmp.${Date.now()}`;
+      try {
+        fs.writeFileSync(tempPath, JSON.stringify(state, null, 2), 'utf8');
+        fs.renameSync(tempPath, filePath);
+      } catch (error) {
+        // Clean up temp file if it exists
+        if (fs.existsSync(tempPath)) {
+          try {
+            fs.unlinkSync(tempPath);
+          } catch (cleanupError) {
+            // Ignore cleanup errors
+          }
+        }
+        throw error;
+      }
+    }, { timeout: 1000 });
   }
 
   /**

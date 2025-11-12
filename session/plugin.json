@@ -1,6 +1,6 @@
 {
   "name": "session",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "Session management with Living Context system - continuous context tracking every 2 interactions, automatic snapshots, and 60-80% token reduction. Never lose context again!",
   "author": {
     "name": "AutomateWith.Us",
@@ -52,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js Write"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js"
           }
         ]
       },
@@ -61,7 +61,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js Edit"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js"
+          }
+        ]
+      },
+      {
+        "matcher": "NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js"
           }
         ]
       }
