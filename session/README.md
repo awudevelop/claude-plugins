@@ -1,15 +1,35 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.6.0** - Zero-Blocking Auto-Snapshots with FREE Claude Inline Analysis + Git Context
+**Version 3.6.2** - Self-Contained Conversation Logs with Full Response Capture
 
-Intelligent session management with incremental logging, Claude inline analysis at session boundaries, and automatic git history capture. 99.9% faster snapshot creation with zero cost, plus full repository awareness.
+Intelligent session management with complete conversation capture (user prompts + Claude responses), incremental logging, Claude inline analysis at session boundaries, and automatic git history capture. 99.9% faster snapshot creation with zero cost, plus full repository awareness.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-3.6.2-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.6.0 (Latest Update)
+## 🚀 What's New in v3.6.2 (Latest Update)
+
+### 📝 Self-Contained Conversation Logs
+- 🎯 **Complete Capture** - Both user prompts AND Claude's full responses
+- 🔄 **Stop Hook** - New hook captures responses automatically after each turn
+- 📊 **Rich Context** - Includes text, tool uses, and message metadata
+- ⚡ **Minimal Overhead** - ~10-50ms per response, runs in background
+- 🔍 **No Transcript Dependency** - Logs are fully self-contained
+- 🧠 **Better Snapshots** - Claude has full conversation for inline analysis
+- ♻️ **Backward Compatible** - Still works with v3.6.1 logs (transcript fallback)
+
+### How Self-Contained Logs Work
+1. **User sends prompt**: UserPromptSubmit hook logs it to conversation-log.jsonl
+2. **Claude responds**: Stop hook captures the complete response (text + tools)
+3. **Fully logged**: Both sides of conversation stored in single JSONL file
+4. **Session resume**: Claude reads complete conversation, creates intelligent snapshot
+5. **No external files**: Everything needed is in conversation-log.jsonl
+
+### Previous Update: v3.6.0
+
+## 🚀 What's New in v3.6.0
 
 ### 🔍 Automatic Git History Capture
 - 📊 **Repository Context** - Last 50 commits captured automatically at session boundaries
@@ -232,6 +252,12 @@ The session plugin uses Claude Code's hook system to automatically track your wo
    - Track which files were changed
    - Count file modifications
    - Contribute to snapshot trigger logic
+
+4. **Stop Hook**: Runs after Claude completes each response to:
+   - Capture Claude's full response text
+   - Extract tools used in the response
+   - Log to conversation-log.jsonl for self-contained logs
+   - Enable complete conversation context (~10-50ms overhead)
 
 All hooks:
 - ✅ Run silently in the background
@@ -459,8 +485,8 @@ Configure session plugin hooks in `.claude/settings.json` for automatic tracking
 - **Dry Run**: `/session:setup --dry-run` - Preview changes
 
 **What it does:**
-- ✅ Adds SessionStart, UserPromptSubmit, and PostToolUse hooks
-- ✅ Enables automatic session state tracking
+- ✅ Adds SessionStart, UserPromptSubmit, PostToolUse, and Stop hooks
+- ✅ Enables automatic session state tracking and full response capture
 - ✅ Creates backup before modifications
 - ✅ Idempotent (safe to run multiple times)
 - ✅ Includes orphan detection and auto-cleanup

@@ -69,10 +69,12 @@ Parse the JSON response and display user-friendly output based on the action:
   ✓ SessionStart - Auto-clears session on /clear
   ✓ UserPromptSubmit - Tracks user interactions
   ✓ PostToolUse (Write, Edit, NotebookEdit) - Tracks file changes
+  ✓ Stop - Captures Claude's responses for self-contained logs
 
 🎯 Sessions now automatically track:
   • Session state changes
   • User prompts and interactions
+  • Claude's full responses
   • File modifications
 
 💾 Backup saved: {backupPath}
@@ -92,6 +94,7 @@ Current hooks:
   ✓ SessionStart - Active
   ✓ UserPromptSubmit - Active
   ✓ PostToolUse - Active
+  ✓ Stop - Active
 
 💡 To reinstall: /session:setup --remove, then /session:setup
 💡 To view details: /session:setup --status
@@ -105,6 +108,7 @@ Current hooks:
   ✓ SessionStart
   ✓ UserPromptSubmit
   ✓ PostToolUse
+  ✓ Stop
 
 💾 Backup saved: {backupPath}
 
@@ -141,6 +145,9 @@ Session plugin hooks are not currently configured in settings.json
     → Edit: node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js
     → NotebookEdit: node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js
 
+  ✓ Stop
+    → node ${CLAUDE_PLUGIN_ROOT}/hooks/stop.js
+
 🎯 Plugin Status: Installed & Configured
 ✅ All hooks pointing to valid scripts
 
@@ -164,6 +171,9 @@ Session plugin hooks are not currently configured in settings.json
 
   ⚠️  PostToolUse (3 matchers)
     ❌ All scripts not found
+
+  ⚠️  Stop
+    ❌ Script not found
 
 🔍 Plugin Status: Not Found
 ❌ Hooks are orphaned (pointing to missing files)
