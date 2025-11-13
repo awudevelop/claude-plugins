@@ -1,15 +1,28 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.6.3** - Hybrid Session Cleanup System + Self-Contained Conversation Logs
+**Version 3.6.4** - Hybrid Session Cleanup System + Self-Contained Conversation Logs
 
 Intelligent session management with multi-layer cleanup ensuring 100% session state reliability, complete conversation capture (user prompts + Claude responses), incremental logging, Claude inline analysis at session boundaries, and automatic git history capture. 99.9% faster snapshot creation with zero cost, plus full repository awareness.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.6.3-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-3.6.4-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.6.3 (Latest Update)
+## 🚀 What's New in v3.6.4 (Latest Update)
+
+### 🐛 Stop Hook Reliability Improvements
+- **Fixed Critical Bug** - Stop hook now correctly reads Claude's responses from transcript
+  - Changed from `entry.role` to `entry.type` format to match Claude Code's transcript structure
+  - Impact: Self-contained conversation logs now work reliably
+- **Exponential Backoff Retry** - Added smart retry mechanism (0-400ms delays, 750ms max)
+  - Handles race conditions where transcript isn't immediately available
+  - Fast success path (0-50ms typical), patient for edge cases
+- **Production Quality** - Removed debug logging for cleaner deployments
+
+---
+
+## 🚀 What's in v3.6.3
 
 ### 🧹 Hybrid Session Cleanup System
 - 🎯 **SessionEnd Hook** - Automatic cleanup on ALL Claude Code terminations (exit, logout, crash)

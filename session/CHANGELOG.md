@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.4] - 2025-11-13
+
+### Fixed
+- **Stop Hook Transcript Parsing** - Fixed critical bug where Stop hook couldn't read Claude's responses from transcript
+  - Changed from `entry.role === 'assistant'` to `entry.type === 'assistant'` to match Claude Code transcript structure
+  - Returns `entry.message` which contains the actual content
+  - Impact: Self-contained conversation logs now work correctly, capturing both user prompts and Claude responses
+
+### Added
+- **Exponential Backoff Retry** - Added smart retry mechanism to Stop hook for improved reliability
+  - 5 attempts with delays: 0ms, 50ms, 100ms, 200ms, 400ms (750ms max total)
+  - Fast success path: 0-50ms typical response time
+  - Patient for edge cases: Handles race conditions where transcript isn't immediately available
+  - Performance: Typically finds response on first attempt (~5ms)
+
+### Changed
+- **Production Quality** - Removed extensive debug logging from hooks for cleaner production deployments
+  - Removed 48 debug statements from `stop.js`
+  - Removed 12 debug statements from `session-end.js`
+  - Removed 5 debug statements from `user-prompt-submit.js`
+  - Total: 65 debug log statements removed
+  - Result: Slightly faster hook execution, cleaner code, reduced disk I/O
+
+---
+
 ## [3.6.3] - 2025-11-13
 
 ### 🧹 Hybrid Session Cleanup System
