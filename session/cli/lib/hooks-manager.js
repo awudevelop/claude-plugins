@@ -150,8 +150,8 @@ class HooksManager {
       const content = fs.readFileSync(hooksJsonPath, 'utf8');
       const hooks = JSON.parse(content);
 
-      // Replace paths with ${CLAUDE_PLUGIN_ROOT} variable
-      const processedHooks = this.processPluginHooks(hooks);
+      // Replace paths with absolute paths (${CLAUDE_PLUGIN_ROOT} doesn't expand properly)
+      const processedHooks = this.processPluginHooks(hooks, pluginRoot);
 
       return processedHooks;
     } catch (error) {
@@ -160,9 +160,12 @@ class HooksManager {
   }
 
   /**
-   * Process plugin hooks to use ${CLAUDE_PLUGIN_ROOT} variable
+   * Process plugin hooks to use absolute paths
+   *
+   * NOTE: ${CLAUDE_PLUGIN_ROOT} variable expansion doesn't work reliably in Claude Code,
+   * so we resolve to absolute paths during setup. This requires Claude Code restart after setup.
    */
-  processPluginHooks(hooks) {
+  processPluginHooks(hooks, pluginRoot) {
     const processed = {};
 
     for (const [hookType, entries] of Object.entries(hooks)) {
@@ -170,13 +173,16 @@ class HooksManager {
         return {
           ...entry,
           hooks: entry.hooks.map(hook => {
-            // Command should already use ${CLAUDE_PLUGIN_ROOT}, verify/ensure it
             if (hook.type === 'command' && hook.command) {
-              // If it doesn't use the variable, add it (though it should from hooks.json)
-              if (!hook.command.includes('${CLAUDE_PLUGIN_ROOT}')) {
-                // This is a fallback, hooks.json should already have it
-                console.warn('Hook command missing ${CLAUDE_PLUGIN_ROOT}, adding it');
+              // Replace ${CLAUDE_PLUGIN_ROOT} with absolute path
+              let command = hook.command;
+              if (command.includes('${CLAUDE_PLUGIN_ROOT}')) {
+                command = command.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginRoot);
               }
+              return {
+                ...hook,
+                command: command
+              };
             }
             return hook;
           })
@@ -251,7 +257,7 @@ class HooksManager {
 
   /**
    * Remove plugin hooks from settings
-   * Removes entries that contain commands with ${CLAUDE_PLUGIN_ROOT}/hooks/
+   * Removes entries that contain commands matching plugin paths (variable or absolute)
    */
   removePluginHooks(existingSettings, pluginRoot) {
     const cleaned = { ...existingSettings };
@@ -261,13 +267,17 @@ class HooksManager {
     }
 
     const pluginHookPattern = '${CLAUDE_PLUGIN_ROOT}/hooks/';
+    const absoluteHookPattern = path.join(pluginRoot, 'hooks') + path.sep;
 
     for (const [hookType, entries] of Object.entries(cleaned.hooks)) {
       // Filter out entries that contain plugin hook commands
       const filtered = entries.filter(entry => {
         // Check if any hook in this entry is a plugin hook
         const hasPluginHook = entry.hooks.some(hook =>
-          hook.command && hook.command.includes(pluginHookPattern)
+          hook.command && (
+            hook.command.includes(pluginHookPattern) ||
+            hook.command.includes(absoluteHookPattern)
+          )
         );
 
         // Keep entries that DON'T have plugin hooks
@@ -296,20 +306,33 @@ class HooksManager {
     }
 
     const pluginHookPattern = '${CLAUDE_PLUGIN_ROOT}/hooks/';
+    const absoluteHookPattern = path.join(pluginRoot, 'hooks') + path.sep;
 
     for (const [hookType, entries] of Object.entries(settings.hooks)) {
       for (const entry of entries) {
         for (const hook of entry.hooks) {
-          if (hook.command && hook.command.includes(pluginHookPattern)) {
-            // Extract the script path
-            const scriptPath = hook.command
-              .replace('node ${CLAUDE_PLUGIN_ROOT}/', '')
-              .split(' ')[0]; // Get just the file path, ignore arguments
+          if (hook.command && (
+            hook.command.includes(pluginHookPattern) ||
+            hook.command.includes(absoluteHookPattern)
+          )) {
+            let fullPath;
 
-            const fullPath = path.join(pluginRoot, scriptPath);
+            // Extract the script path based on format
+            if (hook.command.includes(pluginHookPattern)) {
+              const scriptPath = hook.command
+                .replace('node ${CLAUDE_PLUGIN_ROOT}/', '')
+                .split(' ')[0];
+              fullPath = path.join(pluginRoot, scriptPath);
+            } else {
+              // Absolute path - extract the file path after 'node '
+              const match = hook.command.match(/node\s+(.+?)(?:\s|$)/);
+              if (match) {
+                fullPath = match[1];
+              }
+            }
 
             // Check if file exists
-            if (!fs.existsSync(fullPath)) {
+            if (fullPath && !fs.existsSync(fullPath)) {
               orphaned.push({
                 hookType,
                 matcher: entry.matcher,
@@ -337,11 +360,15 @@ class HooksManager {
       // Check which plugin hooks are configured
       const configured = {};
       const pluginHookPattern = '${CLAUDE_PLUGIN_ROOT}/hooks/';
+      const absoluteHookPattern = path.join(pluginRoot, 'hooks') + path.sep;
 
       for (const [hookType, entries] of Object.entries(settings.hooks || {})) {
         const pluginEntries = entries.filter(entry =>
           entry.hooks.some(hook =>
-            hook.command && hook.command.includes(pluginHookPattern)
+            hook.command && (
+              hook.command.includes(pluginHookPattern) ||
+              hook.command.includes(absoluteHookPattern)
+            )
           )
         );
 

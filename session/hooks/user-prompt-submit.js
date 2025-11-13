@@ -155,6 +155,9 @@ try {
 
     fs.writeFileSync(contextUpdateMarkerFile, JSON.stringify(contextUpdateData, null, 2));
 
+    // Inject system reminder to trigger automatic processing
+    console.log('<system-reminder>Session auto-capture: Context update pending. Process markers before responding.</system-reminder>');
+
     // Reset counter
     state.interactions_since_context_update = 0;
     state.last_context_update = new Date().toISOString();
@@ -170,6 +173,9 @@ try {
     };
 
     fs.writeFileSync(snapshotMarkerFile, JSON.stringify(snapshotData, null, 2));
+
+    // Inject system reminder to trigger automatic snapshot processing
+    console.log('<system-reminder>Session auto-capture: Full snapshot pending. Process markers before responding.</system-reminder>');
 
     // NEW: Process auto-captured files and update session.md
     try {
