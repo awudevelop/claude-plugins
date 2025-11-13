@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Intelligent Auto-Capture Hook - Triggers intelligent snapshot analysis
-// This hook manages async analysis queue and smart snapshot decisions
-// Note: Suggestion detection happens during analysis phase, not in hooks
+// Truly Automatic Auto-Capture Hook - Creates snapshots automatically
+// This hook creates snapshot files directly via CLI with NO manual intervention
+// Snapshots are created every N interactions or when file thresholds are met
 //
 // SAFETY: Includes graceful failure handling to avoid blocking Claude Code
 // if plugin is uninstalled or dependencies are missing.
@@ -43,7 +43,7 @@ try {
 
 // Living Context Configuration
 const CONTEXT_UPDATE_THRESHOLD = 2; // Update context every 2 interactions (lightweight)
-const SNAPSHOT_THRESHOLD = 12; // Full snapshot every 12 interactions (heavier)
+const SNAPSHOT_THRESHOLD = 5; // Full snapshot every 5 interactions (heavier)
 
 // Exit early if no active session
 if (!fs.existsSync(ACTIVE_SESSION_FILE)) {
@@ -82,8 +82,6 @@ if (fs.existsSync(sessionMd)) {
 
 // File paths
 const stateFile = path.join(sessionDir, '.auto-capture-state');
-const contextUpdateMarkerFile = path.join(sessionDir, '.pending-context-update');
-const snapshotMarkerFile = path.join(sessionDir, '.pending-auto-snapshot');
 
 // Use lock to prevent race conditions during state read-modify-write
 const lock = lockManager.acquireLock(`auto-capture-${activeSession}`, {
@@ -145,39 +143,64 @@ try {
     shouldSnapshot = true;
   }
 
-  // Create context update marker (lightweight, frequent)
+  // Context update - currently disabled (snapshots contain all needed info)
+  // Can be re-enabled later if needed for more frequent lightweight updates
   if (shouldUpdateContext) {
-    const contextUpdateData = {
-      timestamp: new Date().toISOString(),
-      interaction_count: state.interaction_count,
-      trigger: 'periodic_update'
-    };
-
-    fs.writeFileSync(contextUpdateMarkerFile, JSON.stringify(contextUpdateData, null, 2));
-
-    // Inject system reminder to trigger automatic processing
-    console.log('<system-reminder>Session auto-capture: Context update pending. Process markers before responding.</system-reminder>');
-
-    // Reset counter
+    // Reset counter to prevent continuous triggering
     state.interactions_since_context_update = 0;
     state.last_context_update = new Date().toISOString();
+
+    // Future: Could add lightweight context updates here if needed
+    // For now, auto-snapshots (every 5 interactions) are sufficient
   }
 
-  // Create snapshot marker (heavier, less frequent)
+  // Create snapshot automatically (heavier, less frequent)
   if (shouldSnapshot) {
-    const snapshotData = {
-      timestamp: new Date().toISOString(),
-      interaction_count: state.interaction_count,
-      file_count: state.file_count,
-      trigger: state.file_count >= 3 ? 'file_threshold' : 'interaction_threshold'
-    };
+    const timestamp = new Date().toISOString();
+    const trigger = state.file_count >= 3 ? 'file_threshold' : 'interaction_threshold';
 
-    fs.writeFileSync(snapshotMarkerFile, JSON.stringify(snapshotData, null, 2));
+    // Generate snapshot content
+    const modifiedFilesList = (state.modified_files || [])
+      .map(f => `- ${f.path} (${f.operation}) - ${f.timestamp}`)
+      .join('\n');
 
-    // Inject system reminder to trigger automatic snapshot processing
-    console.log('<system-reminder>Session auto-capture: Full snapshot pending. Process markers before responding.</system-reminder>');
+    const snapshotContent = `# Auto-Snapshot: ${activeSession}
+**Timestamp**: ${timestamp}
+**Auto-Generated**: Yes
+**Trigger**: ${trigger}
 
-    // NEW: Process auto-captured files and update session.md
+## State
+- Interaction count: ${state.interaction_count}
+- Files modified: ${state.file_count}
+- Interactions since last snapshot: ${state.interactions_since_snapshot}
+
+## Modified Files
+${modifiedFilesList || 'None'}
+
+## Notes
+Auto-generated snapshot created by session hooks. For detailed context with conversation summaries, use manual snapshots with \`/session save\`.
+`;
+
+    // Write snapshot directly via CLI (truly automatic, no manual intervention)
+    try {
+      const { execSync } = require('child_process');
+      const pluginRoot = path.dirname(__dirname);
+      const cliPath = path.join(pluginRoot, 'cli', 'session-cli.js');
+
+      if (fs.existsSync(cliPath)) {
+        execSync(`node "${cliPath}" write-snapshot "${activeSession}" --stdin --type auto`, {
+          input: snapshotContent,
+          cwd: process.cwd(),
+          encoding: 'utf8',
+          stdio: ['pipe', 'ignore', 'ignore'],  // Silent execution
+          timeout: 5000  // 5 second timeout
+        });
+      }
+    } catch (err) {
+      // Silent failure - don't block hook execution
+    }
+
+    // Process auto-captured files and update session.md
     try {
       const { execSync } = require('child_process');
       const pluginRoot = path.dirname(__dirname);
@@ -197,7 +220,8 @@ try {
     // Reset counters
     state.interactions_since_snapshot = 0;
     state.file_count = 0;
-    state.last_snapshot_timestamp = new Date().toISOString();
+    state.modified_files = [];  // Clear modified files list after snapshot
+    state.last_snapshot_timestamp = timestamp;
   }
 
   // Update state file atomically
