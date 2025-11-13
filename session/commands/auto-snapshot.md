@@ -4,7 +4,7 @@ You are managing an automatic session snapshot system with intelligent analysis 
 
 This is an internal command that runs automatically when marker files are detected. The Living Context system maintains two parallel tracks:
 - **Context Updates**: Lightweight, frequent (every 2 interactions, < 1s)
-- **Full Snapshots**: Comprehensive, periodic (every 12 interactions, 2-5s)
+- **Full Snapshots**: Comprehensive, periodic (every 5 interactions, 2-5s)
 
 ### Detection (Priority Order)
 

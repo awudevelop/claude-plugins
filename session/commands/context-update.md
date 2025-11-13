@@ -45,7 +45,7 @@ Review ONLY the **last 2 message exchanges** (1 user message + 1 Claude response
 **5. Technical Decisions**
 - Look for: Architecture choices, library selections, design patterns
 - Format: `- [timestamp] Technical: {what} | Rationale: {why}`
-- Example: `- [2025-11-05 15:45] Technical: Dual-threshold system (context every 2, snapshot every 12) | Rationale: Balance between freshness and overhead`
+- Example: `- [2025-11-05 15:45] Technical: Dual-threshold system (context every 2, snapshot every 5) | Rationale: Balance between freshness and overhead`
 
 ---
 
@@ -94,7 +94,7 @@ For each extracted item, append to the appropriate section:
 
 - [15:42] Decision: Implement Living Context system over frequent snapshots | Reasoning: User needs accurate context, not full conversation dumps
 - [15:43] Agreed: 1-2s overhead acceptable if not every message
-- [15:45] Technical: Dual-threshold architecture (context: 2 interactions, snapshot: 12 interactions) | Rationale: Balance freshness with performance
+- [15:45] Technical: Dual-threshold architecture (context: 2 interactions, snapshot: 5 interactions) | Rationale: Balance freshness with performance
 
 ## Important Discoveries
 

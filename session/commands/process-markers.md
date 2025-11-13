@@ -12,7 +12,7 @@
 
 The session plugin hooks inject system reminders when auto-capture thresholds are met:
 - Context update markers (every 2 interactions)
-- Snapshot markers (every 12 interactions or 3+ files)
+- Snapshot markers (every 5 interactions or 3+ files)
 
 This command detects which markers exist and processes them automatically.
 
@@ -78,7 +78,7 @@ Snapshots are comprehensive (2-5s) and should be processed after context updates
 ### Snapshot Processing
 
 **Read marker file** to determine trigger reason:
-- `interaction_threshold`: 12 interactions reached
+- `interaction_threshold`: 5 interactions reached
 - `file_threshold`: 3+ files modified
 
 **Generate snapshot content** with:
@@ -168,7 +168,7 @@ If any errors occur during processing:
 8. Command continues with user's request
 9. **User sees only the normal response** (no indication processing happened)
 
-**Scenario**: User sends message, hook detects 12 interactions elapsed
+**Scenario**: User sends message, hook detects 5 interactions elapsed
 
 1. Hook creates `.pending-auto-snapshot` marker
 2. Hook injects system reminder

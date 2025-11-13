@@ -13,7 +13,7 @@ Intelligent session management with continuous context tracking, automatic snaps
 
 ### Living Context System (NEW! 🎉)
 - 🧠 **Continuous context tracking** - Updates context.md every 2 interactions automatically
-- 📸 **Automatic snapshots** - Full snapshots every 12 interactions (or 3+ files modified)
+- 📸 **Automatic snapshots** - Full snapshots every 5 interactions (or 3+ files modified)
 - 🎯 **Smart extraction** - Captures decisions, agreements, requirements, discoveries
 - ⚡ **Ultra-fast updates** - < 1 second overhead, completely silent
 - 🔄 **Dual-threshold system** - Context updates (frequent) + Snapshots (periodic)
@@ -22,7 +22,7 @@ Intelligent session management with continuous context tracking, automatic snaps
 
 ### How It Works
 1. **Every 2 interactions**: Context.md updated with key points (decisions, agreements, constraints)
-2. **Every 12 interactions**: Full snapshot saved with complete conversation summary
+2. **Every 5 interactions**: Full snapshot saved with complete conversation summary
 3. **Completely automatic**: No manual intervention needed, works silently in background
 4. **Accurate future sessions**: When you return days later, Claude has perfect context
 
@@ -188,7 +188,7 @@ The session plugin uses Claude Code's hook system to automatically track your wo
 2. **UserPromptSubmit Hook**: Runs after each user prompt to:
    - Track interaction count
    - Trigger context updates every 2 interactions
-   - Trigger snapshots every 12 interactions
+   - Trigger snapshots every 5 interactions
    - Auto-detect and cleanup orphaned hooks (every 20 prompts)
 
 3. **PostToolUse Hook**: Runs after file modifications to:

@@ -15,7 +15,7 @@
       "name": "session",
       "source": "./session",
       "version": "3.3.0",
-      "description": "Session management with Living Context system - continuous context tracking every 2 interactions, automatic snapshots every 12 interactions, and 60-80% token reduction. Never lose context again!",
+      "description": "Session management with Living Context system - continuous context tracking every 2 interactions, automatic snapshots every 5 interactions, and 60-80% token reduction. Never lose context again!",
       "author": {
         "name": "AutomateWith.Us",
         "email": "team@automatewith.us"

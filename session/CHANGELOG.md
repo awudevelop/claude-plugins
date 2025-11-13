@@ -16,7 +16,7 @@ This minor release introduces the **Living Context System** - a revolutionary ap
 ### Added
 - 🧠 **Living Context System** - Dual-threshold auto-capture architecture
   - **Context Updates**: Lightweight extraction every 2 interactions (< 1s, silent)
-  - **Full Snapshots**: Comprehensive saves every 12 interactions (2-5s, minimal notification)
+  - **Full Snapshots**: Comprehensive saves every 5 interactions (2-5s, minimal notification)
   - Captures: decisions, agreements, requirements, discoveries, technical choices
   - Completely automatic and silent operation
 
@@ -44,7 +44,7 @@ This minor release introduces the **Living Context System** - a revolutionary ap
 
 - 🎯 **Threshold Optimizations**
   - Context updates: Every 2 interactions (was never working)
-  - Full snapshots: Every 12 interactions (was 15 via broken analysis)
+  - Full snapshots: Every 5 interactions (was 15 via broken analysis)
   - File-based snapshot: 3+ files modified + 5 interactions
 
 ### Fixed
@@ -64,7 +64,7 @@ This minor release introduces the **Living Context System** - a revolutionary ap
 - ⚡ 42% smaller hook file (faster loading)
 - ⚡ 50% fewer state files to manage
 - ⚡ Context updates: < 1 second (lightweight)
-- ⚡ Full snapshots: 2-5 seconds (only every 12 interactions)
+- ⚡ Full snapshots: 2-5 seconds (only every 5 interactions)
 
 ### Technical Details
 
@@ -72,7 +72,7 @@ This minor release introduces the **Living Context System** - a revolutionary ap
 ```
 Every interaction → Hook tracks state
 Every 2 interactions → .pending-context-update created
-Every 12 interactions → .pending-auto-snapshot created
+Every 5 interactions → .pending-auto-snapshot created
 Claude auto-checks → Processes markers → Updates files
 ```
 
