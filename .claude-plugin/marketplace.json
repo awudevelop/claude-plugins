@@ -14,8 +14,8 @@
     {
       "name": "session",
       "source": "./session",
-      "version": "3.6.2",
-      "description": "Session management with Zero-Blocking + FREE Intelligent Analysis + Git Context - Logs conversations in <2ms, analyzes with Claude at session boundaries (1-3s), captures git history automatically. Never lose context!",
+      "version": "3.6.3",
+      "description": "v3.6.3 - Session management with Hybrid Cleanup System + Zero-Blocking + FREE Intelligent Analysis + Git Context. Logs conversations in <2ms, analyzes with Claude at session boundaries (1-3s), auto-cleanup on ALL exit paths. Never lose context!",
       "author": {
         "name": "AutomateWith.Us",
         "email": "team@automatewith.us"
