@@ -7,6 +7,153 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.2] - 2025-11-13
+
+### ✨ Self-Contained Conversation Logs
+
+This patch release enhances v3.6.1 by capturing Claude's responses directly in conversation logs, making them fully self-contained without external dependencies.
+
+### Added
+- **Stop Hook** (`session/hooks/stop.js`)
+  - Fires after Claude completes each response
+  - Reads transcript file to extract Claude's response text
+  - Logs response to conversation-log.jsonl via ConversationLogger
+  - ~10-50ms overhead per response (acceptable at response boundaries)
+
+- **logAssistantResponse() Method** in ConversationLogger
+  - Stores Claude's response text, tools used, and message ID
+  - JSONL entry type: `assistant_response`
+  - Performance target: <5ms
+
+### Changed
+- **plugin.json** - Added Stop hook configuration
+- **continue.md** - Simplified consolidation logic (no transcript reading needed)
+- **Conversation Log Format**:
+  ```jsonl
+  {"type":"interaction","user_prompt":"...","transcript_path":"...","...}
+  {"type":"assistant_response","response_text":"...","tools_used":[...],"...}
+  ```
+
+### Benefits
+
+**Self-Contained Logs:**
+- ✅ Full conversation in conversation-log.jsonl (user prompts + Claude responses)
+- ✅ No dependency on external transcript files
+- ✅ Complete context for intelligent analysis
+- ✅ All data in one place
+
+**Consolidation Simplification:**
+- No need to read transcript file at session boundaries
+- Faster consolidation (one file instead of two)
+- More reliable (no transcript expiration concerns)
+
+**Storage:**
+- ~2-10KB per interaction (includes full response text)
+- Not an issue - logs cleared after consolidation anyway
+- Temporary storage during active session only
+
+### Backward Compatibility
+
+- v3.6.1 logs (transcript_path only) still supported
+- Falls back to reading transcript file if response_text missing
+- Graceful degradation for older log formats
+
+### Technical Details
+
+**Stop Hook Lifecycle:**
+```
+Claude completes response
+    ↓
+Stop hook fires
+    ↓
+Read transcript file
+    ↓
+Extract last assistant message
+    ↓
+Log to conversation-log.jsonl
+    ↓
+Done (~10-50ms total)
+```
+
+**Log Entry Structure:**
+```json
+{
+  "type": "assistant_response",
+  "timestamp": "2025-11-13T...",
+  "response_text": "Claude's full response text here...",
+  "tools_used": [
+    {"tool": "Write", "input": {...}, "id": "..."}
+  ],
+  "message_id": "msg_abc123"
+}
+```
+
+### Migration
+
+No migration needed! v3.6.2 captures both:
+- `transcript_path` (for backward compatibility)
+- `response_text` (new self-contained approach)
+
+Consolidation will use `response_text` if available, fall back to `transcript_path` otherwise.
+
+---
+
+## [3.6.1] - 2025-11-13
+
+### 🔧 Critical Fix: Full Conversation Capture
+
+This patch release fixes a critical gap in the v3.5.1/v3.6.0 architecture where conversation logs only captured metadata (timestamps, file paths) without actual conversation content, making intelligent analysis impossible.
+
+### Fixed
+- **Conversation Logging Now Captures Full Context**
+  - UserPromptSubmit hook now reads stdin to extract `transcript_path`
+  - Stores transcript path in conversation-log.jsonl entries
+  - Enables access to full conversation history (user messages, Claude responses, tool calls)
+  - **Result**: Claude can now perform TRUE intelligent analysis at session boundaries
+
+- **Updated Consolidation Logic** (`continue.md`)
+  - Now reads transcript file for full conversation context
+  - Falls back gracefully to metadata-only for older logs (pre-v3.6.1)
+  - Provides actual conversation understanding instead of just file patterns
+
+### Changed
+- **user-prompt-submit.js** - Reads stdin to capture transcript_path and user_prompt
+- **conversation-logger.js** - Stores transcript_path and user_prompt fields (v3.6.1+)
+- **continue.md** - Updated to read transcript file for intelligent analysis
+
+### Impact
+
+**Before v3.6.1 (Broken):**
+- Logs contained only: timestamps, file_count, file paths
+- Claude had NO conversation content to analyze
+- System fell back to pattern-based heuristics ("Refactoring focus detected")
+- Could not extract decisions, reasoning, or context
+
+**After v3.6.1 (Fixed):**
+- Logs contain transcript_path to full conversation JSONL
+- Claude reads actual user messages and responses
+- TRUE intelligent analysis with full understanding
+- Can extract decisions, reasoning, and "why" behind changes
+
+### Technical Details
+
+**Transcript Path Storage:**
+- Minimal overhead: ~50 bytes per interaction (just the path)
+- Leverages Claude Code's existing transcript system
+- No duplication of conversation data
+- Graceful degradation for older logs
+
+**Backward Compatibility:**
+- Pre-v3.6.1 logs (metadata only) still work
+- Falls back to heuristic analysis if transcript unavailable
+- No breaking changes to existing sessions
+
+### Acknowledgment
+
+Thanks to the user for catching this critical gap between documentation promises ("intelligent AI-powered analysis") and actual implementation (metadata-only pattern detection). This fix completes the v3.5.1 architecture vision.
+
+---
+
 ## [3.6.0] - 2025-11-13
 
 ### 🔍 Automatic Git History Capture

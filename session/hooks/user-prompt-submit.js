@@ -128,6 +128,21 @@ try {
   // This replaces the blocking snapshot system with fast (~1-2ms) logging
   const timestamp = new Date().toISOString();
 
+  // Read stdin to get transcript path and user prompt
+  let transcriptPath = null;
+  let userPrompt = null;
+  try {
+    const stdinData = fs.readFileSync(0, 'utf8').trim();
+    if (stdinData) {
+      const eventData = JSON.parse(stdinData);
+      transcriptPath = eventData.transcript_path || null;
+      userPrompt = eventData.prompt || null;
+    }
+  } catch (stdinErr) {
+    // If we can't read stdin, continue without transcript path
+    // This ensures hook doesn't fail if stdin format changes
+  }
+
   // Log interaction incrementally (non-blocking, ~1-2ms)
   try {
     const ConversationLogger = require('../cli/lib/conversation-logger');
@@ -136,6 +151,8 @@ try {
     logger.logInteraction({
       num: state.interaction_count,
       timestamp: timestamp,
+      transcript_path: transcriptPath,
+      user_prompt: userPrompt,
       state: state,
       modified_files: state.modified_files || []
     });

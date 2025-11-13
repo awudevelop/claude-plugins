@@ -115,17 +115,27 @@ When resuming a session, check if the previous session left unconsolidated logs:
    - Show brief message: "📊 Analyzing previous session... (this may take 1-3 seconds)"
    - Read the conversation log file
    - Parse interactions from JSONL format
+   - **Parse self-contained conversation log (v3.6.2+):**
+     - Each entry has type: 'interaction' (user prompt) or 'assistant_response' (Claude's response)
+     - Extract full conversation from log entries:
+       - User prompts: `user_prompt` field in 'interaction' entries
+       - Claude responses: `response_text` field in 'assistant_response' entries
+       - Tools used: `tools_used` field in 'assistant_response' entries
+       - File modifications: `modified_files` field in 'interaction' entries
+     - Log is self-contained - NO need to read transcript file!
+     - **Backward compatibility**: If `transcript_path` exists but no `response_text`, fall back to reading transcript file (for v3.6.1 logs)
    - **Capture git history (if available):**
      - Run: `node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{name}"`
      - This creates `.claude/sessions/{name}/git-history.json` (~2-3KB compressed)
      - Contains: last 50 commits, uncommitted changes, branch status, hotspots
      - Performance: ~60-90ms (acceptable at session boundary)
      - If no git repo, command returns success: false (silent skip, no error)
-   - Analyze the conversation with Claude inline:
+   - **Analyze the conversation with Claude inline:**
+     - Use the full conversation from log entries (user prompts + Claude responses)
      - Extract conversation summary (2-3 paragraphs covering what happened)
      - Identify key decisions made with rationale
      - List completed todos/tasks
-     - Document files modified with context about what changed and why
+     - Document files modified with context about what changed and why (from conversation, not just file paths)
      - Assess current state, what's next, and any blockers
    - Create consolidated snapshot via CLI:
      ```bash

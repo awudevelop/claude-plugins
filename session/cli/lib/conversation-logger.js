@@ -28,6 +28,8 @@ class ConversationLogger {
    * @param {object} interaction - Interaction data
    * @param {number} interaction.num - Interaction number
    * @param {string} interaction.timestamp - ISO timestamp
+   * @param {string} interaction.transcript_path - Path to Claude Code transcript file (v3.6.1+)
+   * @param {string} interaction.user_prompt - User's message text (v3.6.1+)
    * @param {object} interaction.state - Session state (interaction_count, file_count, etc.)
    * @param {Array} interaction.modified_files - Files modified since last snapshot
    */
@@ -37,9 +39,42 @@ class ConversationLogger {
         type: 'interaction',
         num: interaction.num,
         timestamp: interaction.timestamp || new Date().toISOString(),
+        transcript_path: interaction.transcript_path || null,
+        user_prompt: interaction.user_prompt || null,
         interaction_count: interaction.state?.interaction_count || interaction.num,
         file_count: interaction.state?.file_count || 0,
         modified_files: interaction.modified_files || interaction.state?.modified_files || []
+      };
+
+      // Append to log file (JSONL format - one JSON object per line)
+      const line = JSON.stringify(entry) + '\n';
+      fs.appendFileSync(this.logFile, line, 'utf8');
+
+      return true;
+    } catch (error) {
+      // Silent failure - don't block hook execution
+      return false;
+    }
+  }
+
+  /**
+   * Log Claude's assistant response (called from Stop hook)
+   * Performance target: <5ms
+   *
+   * @param {object} response - Response data
+   * @param {string} response.timestamp - ISO timestamp
+   * @param {string} response.response_text - Claude's response text
+   * @param {Array} response.tools_used - Tools used in response [{tool, input, id}]
+   * @param {string} response.message_id - Message ID from transcript
+   */
+  logAssistantResponse(response) {
+    try {
+      const entry = {
+        type: 'assistant_response',
+        timestamp: response.timestamp || new Date().toISOString(),
+        response_text: response.response_text || '',
+        tools_used: response.tools_used || [],
+        message_id: response.message_id || null
       };
 
       // Append to log file (JSONL format - one JSON object per line)

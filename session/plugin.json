@@ -1,6 +1,6 @@
 {
   "name": "session",
-  "version": "3.6.0",
+  "version": "3.6.2",
   "description": "Session management with Zero-Blocking + FREE Intelligent Analysis + Git Context - Logs conversations in <2ms, analyzes with Claude at session boundaries (1-3s), captures git history automatically. Never lose context!",
   "author": {
     "name": "AutomateWith.Us",
@@ -47,10 +47,6 @@
           {
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.js"
-          },
-          {
-            "type": "command",
-            "command": "osascript -e 'display notification \"Plugin Hook triggered!\" with title \"Claude Code Plugin\"'"
           }
         ]
       }
@@ -80,6 +76,16 @@
           {
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/stop.js"
           }
         ]
       }
