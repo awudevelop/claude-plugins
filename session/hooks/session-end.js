@@ -37,12 +37,6 @@ try {
   const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
   const indexManager = new IndexManager(SESSIONS_DIR);
 
-  // DEBUG: Log hook execution
-  const debugLog = path.join(require('os').tmpdir(), 'claude-session-hook-debug.log');
-  try {
-    fs.appendFileSync(debugLog, `\n=== SessionEnd Hook called at ${new Date().toISOString()} ===\n`);
-  } catch (e) { /* ignore */ }
-
   try {
     // Read input from stdin (provided by Claude Code)
     const input = fs.readFileSync(0, 'utf8').trim();
@@ -56,26 +50,12 @@ try {
       process.exit(0);
     }
 
-    const { reason, session_id } = eventData;
-
-    // DEBUG: Log event details
-    try {
-      fs.appendFileSync(debugLog, `Reason: ${reason}\n`);
-      fs.appendFileSync(debugLog, `Session ID: ${session_id}\n`);
-      fs.appendFileSync(debugLog, `Active session file exists: ${fs.existsSync(ACTIVE_SESSION_FILE)}\n`);
-    } catch (e) { /* ignore */ }
-
     // Clean up active session marker
     let sessionName = null;
 
     if (fs.existsSync(ACTIVE_SESSION_FILE)) {
       try {
         sessionName = fs.readFileSync(ACTIVE_SESSION_FILE, 'utf8').trim();
-
-        // DEBUG: Log session name
-        try {
-          fs.appendFileSync(debugLog, `Cleaning up session: ${sessionName}\n`);
-        } catch (e) { /* ignore */ }
       } catch (readError) {
         // Continue even if read fails
       }
@@ -83,16 +63,8 @@ try {
       // Delete the .active-session file
       try {
         fs.unlinkSync(ACTIVE_SESSION_FILE);
-
-        // DEBUG: Log deletion
-        try {
-          fs.appendFileSync(debugLog, `Deleted .active-session file\n`);
-        } catch (e) { /* ignore */ }
       } catch (unlinkError) {
         // File may already be deleted, continue
-        try {
-          fs.appendFileSync(debugLog, `Failed to delete .active-session: ${unlinkError.message}\n`);
-        } catch (e) { /* ignore */ }
       }
     }
 
@@ -102,41 +74,16 @@ try {
       const index = indexManager.read({ skipValidation: true });
       index.activeSession = null;
       indexManager.write(index);
-
-      // DEBUG: Log index update
-      try {
-        fs.appendFileSync(debugLog, `Updated index.json to clear activeSession\n`);
-      } catch (e) { /* ignore */ }
     } catch (indexError) {
       // Continue even if index update fails
       // This prevents blocking the hook if index is temporarily locked
-      try {
-        fs.appendFileSync(debugLog, `Failed to update index: ${indexError.message}\n`);
-      } catch (e) { /* ignore */ }
     }
-
-    // Log successful cleanup
-    try {
-      const reasonText = reason === 'exit' ? 'normal exit' :
-                        reason === 'clear' ? '/clear command' :
-                        reason === 'logout' ? 'user logout' :
-                        reason === 'prompt_input_exit' ? 'prompt exit' : reason;
-
-      fs.appendFileSync(debugLog, `✓ SessionEnd cleanup complete (${reasonText})\n`);
-
-      if (sessionName) {
-        fs.appendFileSync(debugLog, `  Session '${sessionName}' cleaned up successfully\n`);
-      }
-    } catch (e) { /* ignore */ }
 
     // Exit successfully
     process.exit(0);
 
   } catch (error) {
     // Exit silently on any errors to avoid blocking Claude Code shutdown
-    try {
-      fs.appendFileSync(debugLog, `Error in SessionEnd hook: ${error.message}\n`);
-    } catch (e) { /* ignore */ }
     process.exit(0);
   }
 } catch (error) {

@@ -19,16 +19,11 @@ try {
 
   const LockManager = require('../cli/lib/lock-manager');
 
-// DEBUG: Log hook execution
-const debugLog = path.join(require('os').tmpdir(), 'claude-session-hook-debug.log');
-try {
-  fs.appendFileSync(debugLog, `\n=== Stop Hook called at ${new Date().toISOString()} ===\n`);
-} catch (e) { /* ignore */ }
-
 // Read stdin to get transcript path
 let stdinData;
 try {
   const stdinInput = fs.readFileSync(0, 'utf8').trim();
+
   if (!stdinInput) {
     process.exit(0);
   }
@@ -45,32 +40,62 @@ if (!transcriptPath || !fs.existsSync(transcriptPath)) {
   process.exit(0);
 }
 
-// Read transcript file to get Claude's last response
-let lastAssistantMessage = null;
-try {
-  const transcriptContent = fs.readFileSync(transcriptPath, 'utf8');
-  const lines = transcriptContent.trim().split('\n');
+// Read transcript file to get Claude's last response (with exponential backoff retry)
+// Uses smart retry strategy: fast success path (0-50ms), patient for edge cases (750ms max)
+const MAX_RETRIES = 5;
+const RETRY_DELAYS = [0, 50, 100, 200, 400]; // Exponential backoff in milliseconds
 
-  // Find last assistant message (search backwards for efficiency)
-  for (let i = lines.length - 1; i >= 0; i--) {
-    try {
-      const entry = JSON.parse(lines[i]);
-      if (entry.role === 'assistant' && entry.content) {
-        lastAssistantMessage = entry;
-        break;
+function tryFindAssistantMessage() {
+  try {
+    const transcriptContent = fs.readFileSync(transcriptPath, 'utf8');
+    const lines = transcriptContent.trim().split('\n');
+
+    // Find last assistant message (search backwards for efficiency)
+    for (let i = lines.length - 1; i >= 0; i--) {
+      try {
+        const entry = JSON.parse(lines[i]);
+        // Claude Code transcript format: {type: 'assistant', message: {role, content}}
+        if (entry.type === 'assistant' && entry.message) {
+          return entry.message; // Return the message object which has role and content
+        }
+      } catch (parseErr) {
+        // Skip malformed lines
+        continue;
       }
-    } catch (parseErr) {
-      // Skip malformed lines
-      continue;
     }
+    return null;
+  } catch (readErr) {
+    return null;
   }
-} catch (readErr) {
-  // Cannot read transcript file
-  process.exit(0);
+}
+
+// Sleep function for retry delays
+function sleep(ms) {
+  const start = Date.now();
+  while (Date.now() - start < ms) {
+    // Busy wait (acceptable for short delays in hooks)
+  }
+}
+
+// Try to find assistant message with exponential backoff retries
+let lastAssistantMessage = null;
+
+for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  lastAssistantMessage = tryFindAssistantMessage();
+
+  if (lastAssistantMessage) {
+    break;
+  }
+
+  // If not found and not last attempt, wait with exponential backoff
+  if (attempt < MAX_RETRIES) {
+    const nextDelay = RETRY_DELAYS[attempt]; // Next delay for next attempt
+    sleep(nextDelay);
+  }
 }
 
 if (!lastAssistantMessage) {
-  // No assistant message found
+  // No assistant message found after all retries
   process.exit(0);
 }
 
@@ -96,12 +121,14 @@ if (!activeSession) {
 }
 
 const sessionDir = path.join(SESSIONS_DIR, activeSession);
+
 if (!fs.existsSync(sessionDir)) {
   process.exit(0);
 }
 
 // Check if auto-capture is enabled
 const sessionMd = path.join(sessionDir, 'session.md');
+
 if (fs.existsSync(sessionMd)) {
   try {
     const content = fs.readFileSync(sessionMd, 'utf8');
@@ -154,27 +181,21 @@ try {
     return '';
   }
 
+  const responseText = extractTextContent(lastAssistantMessage.content);
+
   // Log Claude's response
   const ConversationLogger = require('../cli/lib/conversation-logger');
   const logger = new ConversationLogger(sessionDir);
 
   logger.logAssistantResponse({
     timestamp: new Date().toISOString(),
-    response_text: extractTextContent(lastAssistantMessage.content),
+    response_text: responseText,
     tools_used: toolUses,
     message_id: lastAssistantMessage.id || null
   });
 
-  // DEBUG: Log success
-  try {
-    fs.appendFileSync(debugLog, `Successfully logged assistant response\n`);
-  } catch (e) { /* ignore */ }
-
 } catch (error) {
   // Silent failure - don't block hook execution
-  try {
-    fs.appendFileSync(debugLog, `Error in stop hook: ${error.message}\n`);
-  } catch (e) { /* ignore */ }
 } finally {
   // Always release lock
   lock.release();
