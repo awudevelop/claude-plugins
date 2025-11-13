@@ -1,155 +1,261 @@
-You are managing an automatic session snapshot system with intelligent analysis and continuous context tracking.
+# Intelligent Auto-Snapshot System (Technical Reference)
 
-## Task: Process Context Updates and Snapshots
+**Version**: 3.4.0 - Marker-Based Intelligent Snapshots
 
-This is an internal command that runs automatically when marker files are detected. The Living Context system maintains two parallel tracks:
-- **Context Updates**: Lightweight, frequent (every 2 interactions, < 1s)
-- **Full Snapshots**: Comprehensive, periodic (every 5 interactions, 2-5s)
-
-### Detection (Priority Order)
-
-At the start of each Claude response, check for TWO types of markers in this order:
-
-**Priority 1 - Context Update (FASTEST):**
-1. Is there an active session? (read `.claude/sessions/.active-session`)
-2. Does `.claude/sessions/{active_session}/.pending-context-update` exist?
-3. If YES, execute **Context Update Task** (see context-update.md command)
-   - This is lightweight and fast (< 1 second)
-   - Extracts key decisions/agreements from last 2 exchanges
-   - Appends to context.md incrementally
-   - Completely silent (no user notification)
-   - After completing, check next priority
-
-**Priority 2 - Snapshot Execution:**
-1. Is there an active session? (read `.claude/sessions/.active-session`)
-2. Does `.claude/sessions/{active_session}/.pending-auto-snapshot` exist?
-3. If YES, proceed to **Snapshot Task** below
-
-If no markers exist, continue normally.
-
-**IMPORTANT**: Both markers can exist simultaneously. Process them in order:
-1. Context update (fast) → Then check snapshot
-2. Snapshot (if exists) → Process
+This document describes how the intelligent auto-snapshot system works. This is **NOT a command** - the logic is embedded directly in `/session:start` and `/session:continue` commands.
 
 ---
 
-## Snapshot Task
+## System Architecture
 
-### Step 1: Read Marker File
+### Overview
 
-1. Check if `.claude/sessions/.active-session` exists
-2. If yes, read active session name
-3. Check if `.claude/sessions/{active_session}/.pending-auto-snapshot` exists
-4. If yes, read the reason from the file (e.g., "file_threshold", "interaction_threshold")
-5. If no marker exists, STOP (nothing to do)
+The intelligent auto-snapshot system uses a **marker-based architecture** where:
 
-### Step 2: Generate Auto-Snapshot Content
+1. **Hooks create markers** when thresholds are met (every 5 interactions)
+2. **Claude checks for markers** before each response (via session command instructions)
+3. **Claude analyzes conversation** and creates intelligent snapshots
+4. **Markers are deleted** after processing
 
-Create snapshot content (but DON'T write it yet) with these specifications:
+### Components
 
-1. **Header**: Add auto-generated indicator
-   ```markdown
-   # Auto-Snapshot: {session_name}
-   **Timestamp**: {full_timestamp}
-   **Auto-Generated**: Yes
-   **Trigger**: {reason_from_marker_file}
-   ```
-2. **Content**: Same as manual snapshot plus suggestions:
-   - Conversation summary
-   - Completed todos
-   - Files modified
-   - **Suggestions made** ✨ (see below)
-   - Current state
-   - Notes
+**Hook**: `session/hooks/user-prompt-submit.js`
+- Tracks interaction count and file modifications
+- Creates `.pending-auto-snapshot` marker when threshold reached (5 interactions OR 3+ files modified)
+- Stores metadata in marker file (timestamp, trigger reason, file list, etc.)
 
-3. **Suggestions Section**: If `.suggestions.json` exists and has new suggestions since last snapshot:
-   ```markdown
-   ## Suggestions Made (Since Last Snapshot)
+**Session Commands**: `start.md` and `continue.md`
+- Inject persistent instruction to check for markers before EVERY response
+- Claude processes markers automatically and transparently
 
-   ### Architecture
-   - Consider using Redis for session caching to improve performance
+**CLI**: `session-cli.js write-snapshot`
+- Receives intelligent snapshot content from Claude
+- Writes snapshot file with `auto_` prefix
+- Updates metadata index
 
-   ### Security
-   - Implement JWT with refresh tokens for authentication
-   - Use bcrypt for password hashing (minimum 12 rounds)
+---
 
-   _For full suggestion history, see [.suggestions.json](./.suggestions.json)_
-   ```
+## Marker File Format
 
-### Step 2b: Write Snapshot via CLI (CRITICAL - Plan Mode Support)
+**Location**: `.claude/sessions/{session_name}/.pending-auto-snapshot`
 
-**Use CLI delegation** instead of Write tool. This enables auto-snapshots in plan mode:
+**Content** (JSON):
+```json
+{
+  "timestamp": "2025-11-13T12:00:00.000Z",
+  "trigger": "interaction_threshold|file_threshold",
+  "interaction_count": 25,
+  "last_snapshot_timestamp": "2025-11-13T11:30:00.000Z",
+  "interactions_since_last": 5,
+  "file_count": 0,
+  "modified_files": [
+    {
+      "path": "src/auth.js",
+      "operation": "edit",
+      "timestamp": "2025-11-13T11:35:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+## Processing Logic (Embedded in Session Commands)
+
+### Step 1: Detection
+
+Before EVERY response, Claude checks:
+```
+Does .claude/sessions/{active_session}/.pending-auto-snapshot exist?
+```
+
+If NO → Continue normally
+If YES → Process marker
+
+### Step 2: Read Marker Metadata
+
+```javascript
+const marker = JSON.parse(fs.readFileSync('.pending-auto-snapshot'));
+// marker.last_snapshot_timestamp tells us where to analyze from
+// marker.trigger tells us why (interaction_threshold vs file_threshold)
+// marker.modified_files lists what changed
+```
+
+### Step 3: Intelligent Analysis
+
+Analyze conversation **since `last_snapshot_timestamp`** (or session start if first snapshot):
+
+**Extract:**
+- **Conversation Summary**: 2-3 paragraphs of what was discussed and accomplished
+- **Decisions Made**: Technical choices, agreements, conclusions
+- **Completed Todos**: Tasks finished since last snapshot
+- **Files Modified**: What changed and why (from marker + conversation context)
+- **Current State**: Where things stand, next steps, blockers
+
+### Step 4: Create Intelligent Snapshot
+
+**Format:**
+```markdown
+# Auto-Snapshot: {session_name}
+**Timestamp**: {ISO timestamp}
+**Auto-Generated**: Yes
+**Trigger**: {interaction_threshold|file_threshold}
+
+## Conversation Summary
+{2-3 paragraph summary of what happened since last snapshot}
+
+Example:
+"Continued work on implementing the intelligent auto-snapshot system.
+Modified the user-prompt-submit.js hook to create marker files instead
+of directly generating snapshots. This allows Claude to perform
+intelligent analysis of the conversation before creating snapshots,
+rather than just dumping metadata.
+
+Updated both start.md and continue.md commands to inject persistent
+instructions for marker checking. These instructions tell Claude to
+check for .pending-auto-snapshot files before every response and
+process them transparently.
+
+The new architecture is more reliable than the old system because it
+doesn't rely on Claude proactively checking markers - instead, the
+session commands explicitly instruct this behavior."
+
+## Decisions Made
+- Use marker-based architecture instead of direct snapshot creation
+- Embed marker-checking logic in session commands (not separate command file)
+- Store file modification metadata in marker for context
+
+## Completed Todos
+- Modified /session:start command to add marker-checking instruction
+- Modified /session:continue command to add marker-checking instruction
+- Updated user-prompt-submit.js hook to create markers
+
+## Files Modified
+- session/commands/start.md: Added CRITICAL section for marker monitoring
+- session/commands/continue.md: Added CRITICAL section for marker monitoring
+- session/hooks/user-prompt-submit.js: Replaced direct snapshot creation with marker creation
+
+## Current State
+System architecture complete. Need to update documentation to reflect
+intelligent snapshots. All core functionality implemented and working.
+
+## Notes
+Auto-generated intelligent snapshot. Captures conversation context automatically.
+```
+
+### Step 5: Write Snapshot via CLI
+
+Use CLI delegation for plan mode support:
 
 ```bash
-cat <<'EOF' | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot {session_name} --stdin --type auto
-{snapshot_content}
-EOF
+echo "{snapshot_content}" | node /Users/prajyot/.claude/plugins/marketplaces/automatewithus-plugins/session/cli/session-cli.js write-snapshot "{session_name}" --stdin --type auto
 ```
 
-The CLI will automatically:
-- Create filename with `auto_` prefix and timestamp
-- Write the snapshot file
-- Update the index
+### Step 6: Cleanup
 
-**IMPORTANT:** This works in both normal mode AND plan mode, preventing data loss.
+```bash
+# Delete marker to prevent reprocessing
+rm .claude/sessions/{session_name}/.pending-auto-snapshot
 
-### Step 3: Update Context (Lighter Version)
-
-For auto-snapshots, update context.md more lightly:
-- Don't add to "Key Decisions" unless genuinely important
-- Do add to "Summary" section briefly
-- Keep it concise
-
-### Step 4: Update session.md
-
-Update "Last Updated" timestamp to current time.
-
-**Also update Suggestions section** ✨ NEW:
-If not already present, add to session.md:
-```markdown
-## Suggestions
-Track of recommendations and suggestions: [.suggestions.json](./.suggestions.json)
-
-### Recent Suggestions (Last 3-5)
-- [2025-10-24 15:30] Architecture: Consider Redis for caching
-- [2025-10-24 14:20] Security: Implement rate limiting on API
+# Update state file if needed (usually hook handles this)
+# Reset counters already done by hook when marker was created
 ```
 
-Limit to last 3-5 suggestions for readability. Full history is in .suggestions.json.
+### Step 7: Continue Normally
 
-### Step 5: Delete Marker File
-
-Delete `.claude/sessions/{active_session}/.pending-auto-snapshot` to prevent re-triggering.
-
-### Step 6: Minimal Notification
-
-Show a very subtle notification (single line, not intrusive):
-```
-💾 Snapshot saved
-```
-
-**Note**: Keep it minimal since context updates are happening silently in the background. Only show notification for full snapshots (which are less frequent).
-
-### Step 7: Continue Normal Work
-
-After the auto-snapshot, continue with the user's request as normal.
+After processing, continue with user's request. The snapshot creation is **completely transparent** to the user.
 
 ---
 
-**IMPORTANT**:
-- This should be SILENT and NON-INTRUSIVE
-- Don't interrupt user's workflow
-- Just show a small indicator line
-- All snapshot logic is same as `/session save`
-- Delete marker file after processing
-- Handle errors gracefully (if fails, just log and continue)
+## Differences from Old System
 
-**Usage**:
-This command is NOT meant to be called by users directly. It's triggered automatically by the hook system when conditions are met.
+**Old System (v3.3.0 and earlier):**
+- Hooks created snapshots directly with minimal metadata
+- No conversation analysis
+- No decision extraction
+- Just counters and file lists
 
-**Example Flow**:
-1. User: "Add authentication to the API"
-2. Hook detects: 3 files modified
-3. Hook creates: `.pending-auto-snapshot` with reason "file_threshold"
-4. Next Claude response: Detects marker, runs auto-snapshot, continues with response
-5. User sees: "💾 Auto-snapshot saved (3+ files modified)" + normal response
+**New System (v3.4.0):**
+- Hooks create markers (lightweight)
+- Claude analyzes conversation intelligently
+- Extracts decisions, todos, summaries
+- Full context preservation
+- Works reliably (embedded in commands, not separate detection)
+
+---
+
+## Triggers
+
+Auto-snapshots are created when:
+
+1. **Interaction Threshold**: 5 user messages since last snapshot
+2. **File Threshold**: 3+ files modified (and at least 5 interactions)
+
+Configuration in `session/hooks/user-prompt-submit.js`:
+```javascript
+const SNAPSHOT_THRESHOLD = 5;  // Every 5 interactions
+```
+
+---
+
+## User Experience
+
+**User's Perspective:**
+1. User works normally in session
+2. Every 5 interactions, snapshot automatically created
+3. No interruption or notification (completely silent)
+4. Context preserved for future session resumption
+
+**Behind the Scenes:**
+```
+Interaction 5 → Hook creates marker →
+Next response → Claude detects marker →
+Analyzes last 5 interactions →
+Creates intelligent snapshot →
+Deletes marker → Continues with response
+```
+
+---
+
+## Troubleshooting
+
+**Markers not being processed:**
+- Ensure session was started with `/session:start` (not manually)
+- Check that session was resumed with `/session:continue`
+- Verify markers have correct JSON format
+
+**Snapshots not appearing:**
+- Check `.auto-capture-state` for interaction counts
+- Verify hook is firing (check debug log if enabled)
+- Ensure CLI write-snapshot command is accessible
+
+**Missing conversation context:**
+- Check `last_snapshot_timestamp` in marker
+- Verify Claude is analyzing correct time range
+- Review snapshot content for completeness
+
+---
+
+## Performance
+
+- **Marker creation**: < 10ms (lightweight JSON write)
+- **Marker detection**: < 5ms (file existence check)
+- **Intelligent analysis**: 2-5 seconds (AI-powered)
+- **Total overhead**: ~2-5 seconds every 5 interactions
+
+**Impact**: Minimal - 2-5 seconds every 5 interactions = ~0.4-1 second per interaction average
+
+---
+
+## Future Enhancements
+
+Potential improvements:
+- Configurable thresholds per session
+- Different analysis depth based on session complexity
+- Automatic topic/milestone detection
+- Cross-session pattern analysis
+- Suggestion integration (track recommendations)
+
+---
+
+**Note**: This is a technical reference document. The actual marker-processing logic is embedded in `/session:start` and `/session:continue` commands, not in this file.

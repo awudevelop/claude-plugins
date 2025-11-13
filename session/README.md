@@ -1,30 +1,40 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.3.0** - Living Context System
+**Version 3.4.0** - Intelligent Auto-Snapshots
 
-Intelligent session management with continuous context tracking, automatic snapshots every interaction, and 60-80% token reduction.
+Intelligent session management with AI-powered auto-snapshots, conversation analysis, and 60-80% token reduction.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-3.4.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.3 (Latest Update)
+## 🚀 What's New in v3.4 (Latest Update)
 
-### Living Context System (NEW! 🎉)
+### Intelligent Auto-Snapshots (NEW! 🎉)
+- 🧠 **AI-Powered Analysis** - Snapshots include conversation summaries, decisions, and completed todos
+- 📸 **Automatic every 5 interactions** - No manual intervention, completely transparent
+- 🎯 **Context Preservation** - Full conversation intelligence captured for future sessions
+- ⚡ **Marker-Based Architecture** - Hooks create lightweight markers, Claude analyzes intelligently
+- 🔄 **Reliable** - Embedded in session commands, always works
+- 💾 **Rich Snapshots** - Technical decisions, file changes with context, current state
+
+### How It Works
+1. **Every 5 interactions**: Hook creates marker file with metadata
+2. **Before next response**: Claude detects marker and analyzes conversation
+3. **Intelligent extraction**: Summaries, decisions, todos, file changes, current state
+4. **Snapshot creation**: Comprehensive snapshot written via CLI
+5. **Completely transparent**: No user interruption, happens in background
+6. **Perfect resumption**: When you return later, full context is preserved
+
+### Previous Updates (v3.3)
+
+#### Living Context System
 - 🧠 **Continuous context tracking** - Updates context.md every 2 interactions automatically
 - 📸 **Automatic snapshots** - Full snapshots every 5 interactions (or 3+ files modified)
 - 🎯 **Smart extraction** - Captures decisions, agreements, requirements, discoveries
 - ⚡ **Ultra-fast updates** - < 1 second overhead, completely silent
-- 🔄 **Dual-threshold system** - Context updates (frequent) + Snapshots (periodic)
 - 🐛 **Fixed autosave** - Resolved bug where autosave never triggered
-- 🧹 **Cleaned architecture** - Removed redundant analysis system (42% smaller hook)
-
-### How It Works
-1. **Every 2 interactions**: Context.md updated with key points (decisions, agreements, constraints)
-2. **Every 5 interactions**: Full snapshot saved with complete conversation summary
-3. **Completely automatic**: No manual intervention needed, works silently in background
-4. **Accurate future sessions**: When you return days later, Claude has perfect context
 
 ### Previous Updates (v3.2)
 

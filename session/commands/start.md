@@ -139,3 +139,60 @@ Wait for their response, then update the "Goal" section in session.md with their
 - Use the Read, Write, and Bash tools to perform file operations
 - The CLI update-index command is fast (< 10ms) and ensures consistency
 - Do not skip any steps
+
+---
+
+## CRITICAL: Active Session Monitoring (Auto-Snapshot System)
+
+**YOU MUST FOLLOW THIS INSTRUCTION THROUGHOUT THE ENTIRE SESSION:**
+
+Before EVERY response while this session is active, check for pending auto-snapshot markers:
+
+1. Check if `.claude/sessions/{name}/.pending-auto-snapshot` exists
+2. If the file exists:
+   - Read the marker file to get metadata (timestamp, trigger, last_snapshot_timestamp, etc.)
+   - Analyze the conversation since `last_snapshot_timestamp` (or since session start if no prior snapshot)
+   - Extract key information:
+     - Conversation summary: What was discussed and accomplished
+     - Decisions made: Technical choices, agreements, conclusions
+     - Completed todos: Tasks finished since last snapshot
+     - Files modified: Changes made with brief descriptions
+     - Current state: Where things stand now
+   - Create an intelligent auto-snapshot using the CLI:
+     ```bash
+     node /Users/prajyot/.claude/plugins/marketplaces/automatewithus-plugins/session/cli/session-cli.js write-snapshot "{name}" --stdin --type auto
+     ```
+   - Pass the comprehensive snapshot content via stdin
+   - Delete the `.pending-auto-snapshot` marker file
+   - Update `.auto-capture-state` to reset counters
+3. Then continue with the user's request normally (completely transparent to user)
+
+**This happens automatically every 5 interactions via hooks. Your job is to detect the marker and create intelligent snapshots.**
+
+**Format for intelligent auto-snapshots:**
+```markdown
+# Auto-Snapshot: {session_name}
+**Timestamp**: {ISO timestamp}
+**Auto-Generated**: Yes
+**Trigger**: {interaction_threshold|file_threshold}
+
+## Conversation Summary
+{2-3 paragraph summary of what happened since last snapshot}
+
+## Decisions Made
+- {Key decision 1}
+- {Key decision 2}
+
+## Completed Todos
+- {Completed task 1}
+- {Completed task 2}
+
+## Files Modified
+- {file path}: {what changed and why}
+
+## Current State
+{Where things stand, what's next, any blockers}
+
+## Notes
+Auto-generated intelligent snapshot. Captures conversation context automatically.
+```
