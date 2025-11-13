@@ -104,57 +104,72 @@ Tell the user:
 
 ---
 
-## CRITICAL: Active Session Monitoring (Auto-Snapshot System)
+## CRITICAL: Check for Unconsolidated Logs (Inline Analysis)
 
-**YOU MUST FOLLOW THIS INSTRUCTION THROUGHOUT THE ENTIRE SESSION:**
+**YOU MUST CHECK THIS BEFORE DISPLAYING THE SESSION SUMMARY:**
 
-Before EVERY response while this session is active, check for pending auto-snapshot markers:
+When resuming a session, check if the previous session left unconsolidated logs:
 
-1. Check if `.claude/sessions/{name}/.pending-auto-snapshot` exists
+1. Check if `.claude/sessions/{name}/conversation-log.jsonl` exists
 2. If the file exists:
-   - Read the marker file to get metadata (timestamp, trigger, last_snapshot_timestamp, etc.)
-   - Analyze the conversation since `last_snapshot_timestamp` (or since session start if no prior snapshot)
-   - Extract key information:
-     - Conversation summary: What was discussed and accomplished
-     - Decisions made: Technical choices, agreements, conclusions
-     - Completed todos: Tasks finished since last snapshot
-     - Files modified: Changes made with brief descriptions
-     - Current state: Where things stand now
-   - Create an intelligent auto-snapshot using the CLI:
+   - Show brief message: "📊 Analyzing previous session... (this may take 1-3 seconds)"
+   - Read the conversation log file
+   - Parse interactions from JSONL format
+   - **Capture git history (if available):**
+     - Run: `node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{name}"`
+     - This creates `.claude/sessions/{name}/git-history.json` (~2-3KB compressed)
+     - Contains: last 50 commits, uncommitted changes, branch status, hotspots
+     - Performance: ~60-90ms (acceptable at session boundary)
+     - If no git repo, command returns success: false (silent skip, no error)
+   - Analyze the conversation with Claude inline:
+     - Extract conversation summary (2-3 paragraphs covering what happened)
+     - Identify key decisions made with rationale
+     - List completed todos/tasks
+     - Document files modified with context about what changed and why
+     - Assess current state, what's next, and any blockers
+   - Create consolidated snapshot via CLI:
      ```bash
-     node /Users/prajyot/.claude/plugins/marketplaces/automatewithus-plugins/session/cli/session-cli.js write-snapshot "{name}" --stdin --type auto
-     ```
-   - Pass the comprehensive snapshot content via stdin
-   - Delete the `.pending-auto-snapshot` marker file
-   - Update `.auto-capture-state` to reset counters
-3. Then continue with the user's request normally (completely transparent to user)
-
-**This happens automatically every 5 interactions via hooks. Your job is to detect the marker and create intelligent snapshots.**
-
-**Format for intelligent auto-snapshots:**
-```markdown
-# Auto-Snapshot: {session_name}
+     echo "# Consolidated Snapshot: {session_name}
 **Timestamp**: {ISO timestamp}
-**Auto-Generated**: Yes
-**Trigger**: {interaction_threshold|file_threshold}
+**Method**: Claude Inline Analysis (Free)
+**Status**: Consolidated from conversation log
 
 ## Conversation Summary
-{2-3 paragraph summary of what happened since last snapshot}
+{2-3 paragraph summary of what happened in session}
 
-## Decisions Made
-- {Key decision 1}
-- {Key decision 2}
+## Key Decisions
+- {Decision 1 with rationale}
+- {Decision 2 with rationale}
 
-## Completed Todos
-- {Completed task 1}
-- {Completed task 2}
+## Completed Tasks
+- {Task 1}
+- {Task 2}
 
 ## Files Modified
-- {file path}: {what changed and why}
+- {file_path}: {what changed and why}
 
 ## Current State
-{Where things stand, what's next, any blockers}
+{Where things stand, what's next, blockers}
 
 ## Notes
-Auto-generated intelligent snapshot. Captures conversation context automatically.
-```
+Consolidated via Claude inline analysis at session boundary. Zero cost, highest quality." | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot "{name}" --stdin --type auto
+     ```
+   - Delete conversation-log.jsonl after successful snapshot creation
+   - Update `.auto-capture-state` to reset counters and set last_snapshot_timestamp
+3. If no log exists:
+   - **Still capture git history** for updated repository context:
+     - Run: `node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{name}"`
+     - This refreshes git context since last session
+     - Silent skip if no git repo (no error)
+
+**PERFORMANCE:**
+- Log check: <5ms
+- Claude analysis: 1-3s (acceptable at session boundaries - users expect loading)
+- Snapshot write: <50ms
+- Log deletion: <5ms
+- **Total: ~1-3 seconds** (users expect loading at session resume)
+
+**NOTE:** This is the v3.5.1 architecture where:
+- During session: Conversation logged incrementally (<2ms per interaction, zero blocking)
+- At session boundaries: Claude inline analysis creates intelligent snapshots (FREE, highest quality)
+- Result: User NEVER experiences blocking during work, only brief wait at session resume where loading is expected

@@ -1,7 +1,7 @@
 {
   "name": "session",
-  "version": "3.3.1",
-  "description": "Session management with Living Context system - continuous context tracking every 2 interactions, automatic snapshots, and 60-80% token reduction. Never lose context again!",
+  "version": "3.6.0",
+  "description": "Session management with Zero-Blocking + FREE Intelligent Analysis + Git Context - Logs conversations in <2ms, analyzes with Claude at session boundaries (1-3s), captures git history automatically. Never lose context!",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"
@@ -20,7 +20,10 @@
     "optimization",
     "plan-mode",
     "token-reduction",
-    "performance"
+    "performance",
+    "git-history",
+    "repository-context",
+    "context-tracking"
   ],
   "category": "productivity",
   "license": "MIT",

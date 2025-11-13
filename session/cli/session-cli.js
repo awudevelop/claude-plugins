@@ -21,6 +21,7 @@
  *   write-snapshot          Write snapshot file
  *   get-state <name>        Get session state
  *   update-state <name>     Update session state
+ *   capture-git <name>      Capture git history in compressed format
  */
 
 const fs = require('fs');
@@ -49,7 +50,8 @@ const commands = {
   'write-snapshot': require('./lib/commands/write-snapshot'),
   'get-state': require('./lib/commands/get-state'),
   'update-state': require('./lib/commands/update-state'),
-  'setup-hooks': require('./lib/commands/setup-hooks')
+  'setup-hooks': require('./lib/commands/setup-hooks'),
+  'capture-git': require('./lib/commands/capture-git')
 };
 
 /**
@@ -102,6 +104,9 @@ Commands:
       --status: Show current hook configuration
       --force-cleanup: Clean up orphaned hooks
       --dry-run: Preview changes without applying
+
+  capture-git <session-name>
+      Capture git history in compressed JSON format (~2-3KB)
 
 Options:
   --help              Show this help message

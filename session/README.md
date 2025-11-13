@@ -1,31 +1,58 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.4.0** - Intelligent Auto-Snapshots
+**Version 3.6.0** - Zero-Blocking Auto-Snapshots with FREE Claude Inline Analysis + Git Context
 
-Intelligent session management with AI-powered auto-snapshots, conversation analysis, and 60-80% token reduction.
+Intelligent session management with incremental logging, Claude inline analysis at session boundaries, and automatic git history capture. 99.9% faster snapshot creation with zero cost, plus full repository awareness.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.4.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.4 (Latest Update)
+## 🚀 What's New in v3.6.0 (Latest Update)
 
-### Intelligent Auto-Snapshots (NEW! 🎉)
-- 🧠 **AI-Powered Analysis** - Snapshots include conversation summaries, decisions, and completed todos
-- 📸 **Automatic every 5 interactions** - No manual intervention, completely transparent
-- 🎯 **Context Preservation** - Full conversation intelligence captured for future sessions
-- ⚡ **Marker-Based Architecture** - Hooks create lightweight markers, Claude analyzes intelligently
-- 🔄 **Reliable** - Embedded in session commands, always works
-- 💾 **Rich Snapshots** - Technical decisions, file changes with context, current state
+### 🔍 Automatic Git History Capture
+- 📊 **Repository Context** - Last 50 commits captured automatically at session boundaries
+- 🔄 **Uncommitted Changes** - Tracks staged/unstaged/new/deleted/conflicted files
+- 🌿 **Branch Awareness** - Shows ahead/behind upstream status
+- 🔥 **Development Hotspots** - Identifies active development areas
+- ⚡ **Ultra-Compact** - 70-75% token savings vs markdown (2-15KB per session)
+- 🚀 **Fast** - 60-90ms overhead at session boundaries
+- 🔕 **Silent Skip** - No errors if not a git repository
+
+### How Git Context Works
+1. **Session start/continue**: Git history captured automatically (60-90ms)
+2. **Claude gets context**: Recent commits, uncommitted work, branch state
+3. **Better decisions**: Claude understands project evolution and current state
+4. **Token efficient**: Compressed JSON format uses 70-75% fewer tokens
+5. **Human readable**: `/session:git-decompress` for debugging
+
+### Previous Update: v3.5.1
+
+### Claude Inline Analysis at Session Boundaries
+- ⚡ **Zero Blocking During Work** - Conversations logged in <2ms per interaction
+- 🧠 **FREE Intelligent Analysis** - Claude analyzes at session boundaries (1-3s)
+- 🎯 **Acceptable Wait Times** - Users expect loading at session start/continue
+- 💾 **Auto-Cleanup** - Raw logs deleted after consolidation (98% space savings)
+- 🔄 **Same Quality as v3.4** - Full conversation understanding, zero cost
+- ✅ **No Setup Required** - Works out of the box with your Claude instance
 
 ### How It Works
-1. **Every 5 interactions**: Hook creates marker file with metadata
-2. **Before next response**: Claude detects marker and analyzes conversation
-3. **Intelligent extraction**: Summaries, decisions, todos, file changes, current state
-4. **Snapshot creation**: Comprehensive snapshot written via CLI
-5. **Completely transparent**: No user interruption, happens in background
-6. **Perfect resumption**: When you return later, full context is preserved
+1. **During session**: Each interaction logged to conversation-log.jsonl (~1-2ms)
+2. **User continues working**: No interruptions, completely smooth
+3. **Session end**: User closes laptop, logs remain on disk
+4. **Session resume**: Claude analyzes log inline (1-3s, acceptable)
+5. **Intelligent snapshot**: Full AI analysis with summaries, decisions, context
+6. **Log deleted**: Raw log removed, disk space freed
+7. **User ready**: Full context restored, ready to work
+
+### Performance Comparison
+| Operation | v3.4.0 | v3.5.1 | Improvement |
+|-----------|--------|--------|-------------|
+| During active work | 10-15s freeze every 5 interactions | <2ms per interaction | **99.9% faster** |
+| Session start/continue | ~70ms | ~70ms + 1-3s analysis | **Acceptable** |
+| Analysis quality | Full AI | Full AI | **Same** |
+| Cost | FREE | FREE | **Same** |
 
 ### Previous Updates (v3.3)
 
@@ -457,6 +484,16 @@ Configure session plugin hooks in `.claude/settings.json` for automatic tracking
 ```
 Manually trigger snapshot analysis (usually automatic).
 
+#### Git History Decompression
+```
+/session:git-decompress [session-name]
+```
+Decompress and display git history in human-readable markdown format. Useful for:
+- Debugging git capture
+- Verifying captured commits
+- Inspecting uncommitted changes
+- Human inspection of repository context
+
 ### CLI Commands
 
 The plugin includes a powerful CLI tool:
@@ -476,6 +513,9 @@ node session/cli/session-cli.js validate --fix
 
 # Get all stats
 node session/cli/session-cli.js stats-all
+
+# Capture git history
+node session/cli/session-cli.js capture-git my-session
 ```
 
 See `cli/README.md` for complete CLI documentation.

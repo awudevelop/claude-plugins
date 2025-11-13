@@ -124,105 +124,29 @@ try {
   state.interactions_since_context_update++;
   state.interactions_since_snapshot++;
 
-  // LIVING CONTEXT SYSTEM: Check for context update and snapshot thresholds
-  let shouldUpdateContext = false;
-  let shouldSnapshot = false;
+  // INCREMENTAL LOGGING SYSTEM: Log conversation for later consolidation
+  // This replaces the blocking snapshot system with fast (~1-2ms) logging
+  const timestamp = new Date().toISOString();
 
-  // Context update every N interactions (lightweight, fast)
-  if (state.interactions_since_context_update >= CONTEXT_UPDATE_THRESHOLD) {
-    shouldUpdateContext = true;
+  // Log interaction incrementally (non-blocking, ~1-2ms)
+  try {
+    const ConversationLogger = require('../cli/lib/conversation-logger');
+    const logger = new ConversationLogger(sessionDir);
+
+    logger.logInteraction({
+      num: state.interaction_count,
+      timestamp: timestamp,
+      state: state,
+      modified_files: state.modified_files || []
+    });
+  } catch (err) {
+    // Silent failure - don't block hook execution
+    // Consolidation will work with whatever data is available
   }
 
-  // Full snapshot every N interactions (heavier, less frequent)
-  if (state.interactions_since_snapshot >= SNAPSHOT_THRESHOLD) {
-    shouldSnapshot = true;
-  }
-
-  // Also trigger snapshot if significant file changes
-  if (state.file_count >= 3 && state.interactions_since_snapshot >= 5) {
-    shouldSnapshot = true;
-  }
-
-  // Context update - currently disabled (snapshots contain all needed info)
-  // Can be re-enabled later if needed for more frequent lightweight updates
-  if (shouldUpdateContext) {
-    // Reset counter to prevent continuous triggering
-    state.interactions_since_context_update = 0;
-    state.last_context_update = new Date().toISOString();
-
-    // Future: Could add lightweight context updates here if needed
-    // For now, auto-snapshots (every 5 interactions) are sufficient
-  }
-
-  // Create snapshot automatically (heavier, less frequent)
-  if (shouldSnapshot) {
-    const timestamp = new Date().toISOString();
-    const trigger = state.file_count >= 3 ? 'file_threshold' : 'interaction_threshold';
-
-    // Generate snapshot content
-    const modifiedFilesList = (state.modified_files || [])
-      .map(f => `- ${f.path} (${f.operation}) - ${f.timestamp}`)
-      .join('\n');
-
-    const snapshotContent = `# Auto-Snapshot: ${activeSession}
-**Timestamp**: ${timestamp}
-**Auto-Generated**: Yes
-**Trigger**: ${trigger}
-
-## State
-- Interaction count: ${state.interaction_count}
-- Files modified: ${state.file_count}
-- Interactions since last snapshot: ${state.interactions_since_snapshot}
-
-## Modified Files
-${modifiedFilesList || 'None'}
-
-## Notes
-Auto-generated snapshot created by session hooks. For detailed context with conversation summaries, use manual snapshots with \`/session save\`.
-`;
-
-    // Write snapshot directly via CLI (truly automatic, no manual intervention)
-    try {
-      const { execSync } = require('child_process');
-      const pluginRoot = path.dirname(__dirname);
-      const cliPath = path.join(pluginRoot, 'cli', 'session-cli.js');
-
-      if (fs.existsSync(cliPath)) {
-        execSync(`node "${cliPath}" write-snapshot "${activeSession}" --stdin --type auto`, {
-          input: snapshotContent,
-          cwd: process.cwd(),
-          encoding: 'utf8',
-          stdio: ['pipe', 'ignore', 'ignore'],  // Silent execution
-          timeout: 5000  // 5 second timeout
-        });
-      }
-    } catch (err) {
-      // Silent failure - don't block hook execution
-    }
-
-    // Process auto-captured files and update session.md
-    try {
-      const { execSync } = require('child_process');
-      const pluginRoot = path.dirname(__dirname);
-      const processorPath = path.join(pluginRoot, 'cli', 'process-auto-capture.js');
-
-      if (fs.existsSync(processorPath)) {
-        execSync(`node "${processorPath}" "${activeSession}"`, {
-          cwd: process.cwd(),
-          encoding: 'utf8',
-          stdio: 'ignore'  // Silent execution, don't block
-        });
-      }
-    } catch (err) {
-      // Silent failure - don't block hook execution
-    }
-
-    // Reset counters
-    state.interactions_since_snapshot = 0;
-    state.file_count = 0;
-    state.modified_files = [];  // Clear modified files list after snapshot
-    state.last_snapshot_timestamp = timestamp;
-  }
+  // Note: Snapshot consolidation now happens at session start/continue
+  // via consolidate-worker.js running in background
+  // This eliminates the 10-15 second blocking issue
 
   // Update state file atomically
   const tempPath = `${stateFile}.tmp.${Date.now()}`;

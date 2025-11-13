@@ -1,7 +1,7 @@
 {
   "name": "session-cli",
-  "version": "1.0.0",
-  "description": "Lightweight CLI tool for Claude Code session management",
+  "version": "1.1.0",
+  "description": "Lightweight CLI tool for Claude Code session management with git history capture",
   "main": "session-cli.js",
   "bin": {
     "session-cli": "./session-cli.js"
