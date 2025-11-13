@@ -48,19 +48,21 @@ Or use the interactive menu to browse and install.
 
 ## 📦 Available Plugins
 
-### Session Management (v3.2.1)
+### Session Management (v3.6.3)
 
-**Intelligent session management with 60-80% token reduction and smart state tracking**
+**Intelligent session management with hybrid cleanup system, 60-80% token reduction, and smart state tracking**
 
 Never lose context again! Automatic snapshots, smart cleanup on `/clear`, and optimized performance for long-running development sessions.
 
-**Latest Features (v3.2):**
-- 🔄 **Smart state management** - Auto-cleanup when `/clear` is executed
-- 💡 **Helpful context messages** - Know when sessions are auto-closed and how to resume
-- ✅ **Auto-resume on restart** - Sessions persist across Claude Code restarts
+**Latest Features (v3.6.3):**
+- 🧹 **Hybrid Cleanup System** - SessionEnd hook + transition handling + orphan detection
+- 🎯 **100% Coverage** - All exit paths handled (exit, logout, crash, transitions)
+- 🔄 **Session Transitions** - Clean handoffs when switching sessions
+- 💡 **User Feedback** - Clear messages on all state changes
 - ⚡ **60-80% token reduction** - Massive performance improvements
 - 🛡️ **Plan mode support** - No data loss when clearing conversations
 - 🗑️ **Delete sessions** - Remove sessions you no longer need with safety confirmations
+- 📝 **Self-contained logs** - Full conversation capture (user + Claude responses)
 
 **Key Features:**
 - ✅ Intelligent auto-capture at natural breakpoints
@@ -81,9 +83,11 @@ Never lose context again! Automatic snapshots, smart cleanup on `/clear`, and op
 - `/session:auto-snapshot` - Trigger snapshot analysis
 
 **Hooks:**
-- `SessionStart` - Auto-cleanup on `/clear` command (NEW!)
+- `SessionStart` - Auto-cleanup on `/clear` command
+- `SessionEnd` - Auto-cleanup on Claude Code exit/crash (NEW v3.6.3!)
 - `UserPromptSubmit` - Tracks interactions, queues analysis
 - `PostToolUse` - Monitors file changes (Write/Edit)
+- `Stop` - Captures Claude's full responses
 
 **Perfect For:**
 - Multi-session development workflows
@@ -184,8 +188,8 @@ Stay tuned! ⭐ Star this repo to get notified of new plugins.
 
 ---
 
-**Marketplace Version:** 1.1.0
-**Latest Plugin:** Session Management v3.2.1
+**Marketplace Version:** 1.2.0
+**Latest Plugin:** Session Management v3.6.3
 **Last Updated:** November 2025
 **Maintainer:** AutomateWith.Us Team
 **Repository:** https://github.com/awudevelop/claude-plugins

@@ -1,7 +1,7 @@
 {
   "name": "deployment",
   "version": "1.0.0",
-  "description": "Safe deployment automation with CICD integration. Manages branch-based deployments to dev/uat/prod environments with safety checks and build validation.",
+  "description": "v1.0.0 - Safe deployment automation with CICD integration. Manages branch-based deployments to dev/uat/prod environments with safety checks and build validation.",
   "author": "AutomateWith.Us",
   "commands": {
     "/deploy:init": "commands/init.md",

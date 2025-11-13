@@ -33,7 +33,21 @@ Now read the actual content files (these need full content for context synthesis
 3. Get latest snapshot filename from the CLI JSON response (`latestSnapshot` field)
 4. If `latestSnapshot` exists, read `.claude/sessions/{name}/{latestSnapshot}`
 
-### Step 3: Activate Session (CLI)
+### Step 3: Check for Active Session and Transition (NEW - Session Cleanup)
+
+Before activating the new session, check if there's already a different active session:
+
+1. Check if `.claude/sessions/.active-session` exists
+2. If it exists, read the current active session name
+3. If the current active session is **different** from the session being continued:
+   - Show: "📋 Closing previous session '{previous_session_name}'..."
+   - Update the previous session's `session.md` "Last Updated" timestamp to current time
+   - This provides clean transition tracking
+4. If it's the **same** session, skip this step (just updating timestamp)
+
+**Note:** The SessionEnd hook will handle final cleanup on Claude Code termination.
+
+### Step 4: Activate Session (CLI)
 
 Run the CLI command to activate the session:
 
@@ -43,11 +57,11 @@ node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js activate {session_name}
 
 This updates both the .active-session file and the index.
 
-### Step 4: Update Last Updated Timestamp
+### Step 5: Update Last Updated Timestamp
 
 Update the "Last Updated" line in session.md to current time using the Edit tool.
 
-### Step 5: Synthesize and Display Context Summary
+### Step 6: Synthesize and Display Context Summary
 
 Using the data from CLI JSON + file contents, show a comprehensive summary:
 
@@ -80,7 +94,7 @@ Using the data from CLI JSON + file contents, show a comprehensive summary:
 Ready to continue! How would you like to proceed?
 ```
 
-### Step 6: Prepare for Work
+### Step 7: Prepare for Work
 
 Tell the user:
 "I've loaded the full context for session '{name}'. All previous work, decisions, and progress have been restored. What would you like to work on next?"

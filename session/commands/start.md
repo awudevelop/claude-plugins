@@ -34,12 +34,26 @@ Parse the session name from the command arguments. The command format is: `/sess
    ```
    Then STOP.
 
-### Step 3: Create Session Folder
+### Step 3: Check for Active Session and Transition (NEW - Session Cleanup)
+
+Before creating the new session, check if there's already an active session:
+
+1. Check if `.claude/sessions/.active-session` exists
+2. If it exists:
+   - Read the current active session name
+   - Show: "📋 Closing previous session '{previous_session_name}'..."
+   - Update the previous session's `session.md` "Last Updated" timestamp to current time
+   - This provides clean transition tracking
+3. Continue to next step (the new session activation will overwrite `.active-session`)
+
+**Note:** The SessionEnd hook will handle final cleanup on Claude Code termination.
+
+### Step 4: Create Session Folder
 
 1. Create directory: `.claude/sessions/{name}/`
 2. Verify creation was successful
 
-### Step 4: Initialize session.md
+### Step 5: Initialize session.md
 
 Create `.claude/sessions/{name}/session.md` with this content:
 
@@ -69,7 +83,7 @@ Working on: {name}
 Session started. Use /session save to capture important milestones.
 ```
 
-### Step 5: Initialize context.md
+### Step 6: Initialize context.md
 
 Create `.claude/sessions/{name}/context.md` with this content:
 
@@ -92,12 +106,12 @@ Create `.claude/sessions/{name}/context.md` with this content:
 Session started on {current_timestamp}. Ready to capture context.
 ```
 
-### Step 6: Update Active Session Tracker
+### Step 7: Update Active Session Tracker
 
 1. Write the session name to `.claude/sessions/.active-session` (single line, just the name)
 2. This marks it as the currently active session
 
-### Step 7: Update Index (NEW - CRITICAL)
+### Step 8: Update Index (NEW - CRITICAL)
 
 Run the CLI command to add the new session to the metadata index:
 
@@ -107,7 +121,7 @@ node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-index --session {name}
 
 This ensures the new session appears immediately in `/session list` without requiring a full rebuild.
 
-### Step 8: Display Success Message
+### Step 9: Display Success Message
 
 Show this confirmation to the user:
 
@@ -120,7 +134,7 @@ Show this confirmation to the user:
 Ready to work! What would you like to accomplish in this session?
 ```
 
-### Step 9: Ask for Session Goal
+### Step 10: Ask for Session Goal
 
 After showing the success message, ask the user:
 "What is the main goal or purpose of this session? (This will be saved to session.md)"
