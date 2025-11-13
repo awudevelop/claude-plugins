@@ -48,7 +48,8 @@ const commands = {
   'stats-all': require('./lib/commands/stats-all'),
   'write-snapshot': require('./lib/commands/write-snapshot'),
   'get-state': require('./lib/commands/get-state'),
-  'update-state': require('./lib/commands/update-state')
+  'update-state': require('./lib/commands/update-state'),
+  'setup-hooks': require('./lib/commands/setup-hooks')
 };
 
 /**
@@ -94,6 +95,13 @@ Commands:
 
   update-state <session-name> <json-data>
       Update session state with JSON data
+
+  setup-hooks [--remove] [--status] [--force-cleanup] [--dry-run]
+      Manage session plugin hooks in .claude/settings.json
+      --remove: Remove hooks instead of installing
+      --status: Show current hook configuration
+      --force-cleanup: Clean up orphaned hooks
+      --dry-run: Preview changes without applying
 
 Options:
   --help              Show this help message

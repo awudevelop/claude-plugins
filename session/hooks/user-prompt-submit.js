@@ -2,10 +2,25 @@
 // Intelligent Auto-Capture Hook - Triggers intelligent snapshot analysis
 // This hook manages async analysis queue and smart snapshot decisions
 // Note: Suggestion detection happens during analysis phase, not in hooks
+//
+// SAFETY: Includes graceful failure handling to avoid blocking Claude Code
+// if plugin is uninstalled or dependencies are missing.
+//
+// ORPHAN DETECTION: Periodically checks for orphaned hooks and auto-cleans them
 
 const fs = require('fs');
 const path = require('path');
-const LockManager = require('../cli/lib/lock-manager');
+
+// Graceful failure wrapper - protect against plugin uninstallation
+try {
+  // Check if critical dependencies exist (indicates plugin is installed)
+  const cliLibPath = path.join(__dirname, '../cli/lib');
+  if (!fs.existsSync(cliLibPath)) {
+    // Plugin likely uninstalled, exit silently
+    process.exit(0);
+  }
+
+  const LockManager = require('../cli/lib/lock-manager');
 
 // DEBUG: Log hook execution
 const debugLog = path.join(require('os').tmpdir(), 'claude-session-hook-debug.log');
@@ -195,9 +210,60 @@ try {
     }
     throw writeError;
   }
-} finally {
-  // Always release lock
-  lock.release();
-}
+  } finally {
+    // Always release lock
+    lock.release();
+  }
 
-process.exit(0);
+  // ORPHAN DETECTION: Check for orphaned hooks every 20 prompts
+  // This auto-cleans up hooks if plugin was uninstalled without cleanup
+  try {
+    const orphanCheckFile = path.join(SESSIONS_DIR, '.orphan-check-counter');
+    let checkCounter = 0;
+
+    if (fs.existsSync(orphanCheckFile)) {
+      try {
+        checkCounter = parseInt(fs.readFileSync(orphanCheckFile, 'utf8').trim(), 10) || 0;
+      } catch (e) {
+        // Use default
+      }
+    }
+
+    checkCounter++;
+
+    // Check every 20 prompts
+    if (checkCounter >= 20) {
+      const HooksManager = require('../cli/lib/hooks-manager');
+      const pluginRoot = path.dirname(__dirname);
+      const manager = new HooksManager(process.cwd());
+
+      // Detect orphaned hooks
+      const settings = manager.readSettings();
+      const orphaned = manager.detectOrphanedHooks(settings, pluginRoot);
+
+      if (orphaned.length > 0) {
+        // Auto-cleanup orphaned hooks
+        const cleaned = manager.removePluginHooks(settings, pluginRoot);
+        manager.createBackup();
+        manager.writeSettings(cleaned);
+
+        // NOTE: We cannot inject context here as this is UserPromptSubmit hook
+        // The cleanup happens silently in the background
+      }
+
+      checkCounter = 0; // Reset counter
+    }
+
+    // Write counter back
+    fs.writeFileSync(orphanCheckFile, checkCounter.toString());
+  } catch (orphanError) {
+    // Silent failure - don't block hook execution
+  }
+
+  process.exit(0);
+
+} catch (error) {
+  // Outer catch: Handle plugin missing/uninstalled
+  // Exit silently to avoid blocking Claude Code
+  process.exit(0);
+}

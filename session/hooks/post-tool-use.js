@@ -1,17 +1,30 @@
 #!/usr/bin/env node
 // Intelligent Post-Tool-Use Hook - Tracks file modifications for smart analysis
 // Works with async analysis system for intelligent snapshots
+//
+// SAFETY: Includes graceful failure handling to avoid blocking Claude Code
+// if plugin is uninstalled or dependencies are missing.
 
 const fs = require('fs');
 const path = require('path');
-const LockManager = require('../cli/lib/lock-manager');
 
-// Read tool operation data from stdin (Claude Code provides this as JSON)
-// NOTE: Do NOT use process.env.CLAUDE_TOOL_NAME - it's always "unknown" due to Claude Code bug
-let toolName = 'unknown';
-let filePath = null;
-
+// Graceful failure wrapper - protect against plugin uninstallation
 try {
+  // Check if critical dependencies exist (indicates plugin is installed)
+  const cliLibPath = path.join(__dirname, '../cli/lib');
+  if (!fs.existsSync(cliLibPath)) {
+    // Plugin likely uninstalled, exit silently
+    process.exit(0);
+  }
+
+  const LockManager = require('../cli/lib/lock-manager');
+
+  // Read tool operation data from stdin (Claude Code provides this as JSON)
+  // NOTE: Do NOT use process.env.CLAUDE_TOOL_NAME - it's always "unknown" due to Claude Code bug
+  let toolName = 'unknown';
+  let filePath = null;
+
+  try {
   const input = fs.readFileSync(0, 'utf8').trim();
   if (input) {
     const eventData = JSON.parse(input);
@@ -161,9 +174,15 @@ try {
     }
     throw writeError;
   }
-} finally {
-  // Always release lock
-  lock.release();
-}
+  } finally {
+    // Always release lock
+    lock.release();
+  }
 
-process.exit(0);
+  process.exit(0);
+
+} catch (error) {
+  // Outer catch: Handle plugin missing/uninstalled
+  // Exit silently to avoid blocking Claude Code
+  process.exit(0);
+}

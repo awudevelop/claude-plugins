@@ -11,20 +11,32 @@
  * - session_id: string
  * - cwd: string
  * - permission_mode: string
+ *
+ * SAFETY: Includes graceful failure handling to avoid blocking Claude Code
+ * if plugin is uninstalled or dependencies are missing.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// Import IndexManager for safe index updates
-const IndexManager = require('../cli/lib/index-manager');
-
-// Constants
-const SESSIONS_DIR = '.claude/sessions';
-const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
-const indexManager = new IndexManager(SESSIONS_DIR);
-
+// Graceful failure wrapper - protect against plugin uninstallation
 try {
+  // Check if critical dependencies exist (indicates plugin is installed)
+  const cliLibPath = path.join(__dirname, '../cli/lib');
+  if (!fs.existsSync(cliLibPath)) {
+    // Plugin likely uninstalled, exit silently
+    process.exit(0);
+  }
+
+  // Import IndexManager for safe index updates
+  const IndexManager = require('../cli/lib/index-manager');
+
+  // Constants
+  const SESSIONS_DIR = '.claude/sessions';
+  const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
+  const indexManager = new IndexManager(SESSIONS_DIR);
+
+  try {
   // Read input from stdin (provided by Claude Code)
   const input = fs.readFileSync(0, 'utf8').trim();
 
@@ -87,7 +99,12 @@ try {
   // Exit successfully
   process.exit(0);
 
+  } catch (error) {
+    // Exit silently on any errors to avoid blocking Claude Code startup
+    process.exit(0);
+  }
 } catch (error) {
-  // Exit silently on any errors to avoid blocking Claude Code startup
+  // Outer catch: Handle plugin missing/uninstalled
+  // Exit silently to avoid blocking Claude Code
   process.exit(0);
 }

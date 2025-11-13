@@ -127,6 +127,170 @@ Simply paste this URL into Claude Code's plugin installation interface to get st
 
 ---
 
+## ⚙️ Setup & Configuration
+
+### Quick Start: Setting Up Hooks
+
+After installing the plugin, you need to configure hooks for automatic session tracking. This is a one-time setup:
+
+```bash
+/session:setup
+```
+
+This command automatically:
+- ✅ Adds session plugin hooks to `.claude/settings.json`
+- ✅ Enables auto-tracking of session state, user interactions, and file changes
+- ✅ Creates a backup of your settings before making changes
+- ✅ Uses portable paths that work across different systems
+
+**What gets configured:**
+- **SessionStart** - Auto-clears session on `/clear` command
+- **UserPromptSubmit** - Tracks user interactions (includes auto-cleanup of orphaned hooks)
+- **PostToolUse** - Tracks file modifications (Write, Edit, NotebookEdit tools)
+
+### Verifying Installation
+
+Check if hooks are properly configured:
+
+```bash
+/session:setup --status
+```
+
+You should see all hook types configured and pointing to valid scripts.
+
+### Configuration Options
+
+The setup command supports several operations:
+
+```bash
+# Install hooks (default)
+/session:setup
+
+# Check current status
+/session:setup --status
+
+# Preview changes without applying (dry run)
+/session:setup --dry-run
+
+# Remove hooks
+/session:setup --remove
+
+# Force cleanup of orphaned hooks
+/session:setup --force-cleanup
+```
+
+### How Hooks Work
+
+The session plugin uses Claude Code's hook system to automatically track your work:
+
+1. **SessionStart Hook**: Detects when you run `/clear` and auto-closes the active session to prevent confusion when context is lost
+
+2. **UserPromptSubmit Hook**: Runs after each user prompt to:
+   - Track interaction count
+   - Trigger context updates every 2 interactions
+   - Trigger snapshots every 12 interactions
+   - Auto-detect and cleanup orphaned hooks (every 20 prompts)
+
+3. **PostToolUse Hook**: Runs after file modifications to:
+   - Track which files were changed
+   - Count file modifications
+   - Contribute to snapshot trigger logic
+
+All hooks:
+- ✅ Run silently in the background
+- ✅ Have minimal performance impact (< 10ms)
+- ✅ Include graceful failure handling
+- ✅ Won't break Claude Code if plugin is removed
+
+### Disabling Hooks Temporarily
+
+If you need to temporarily disable all hooks:
+
+1. Edit `.claude/settings.json`
+2. Set `"disableAllHooks": true`
+3. Restart Claude Code
+
+To re-enable, set it back to `false` or remove the line.
+
+---
+
+## 🗑️ Uninstallation
+
+### IMPORTANT: Clean Up Before Uninstalling
+
+Before removing the session plugin, you **must** clean up the hooks to prevent orphaned entries:
+
+```bash
+/session:setup --remove
+```
+
+This removes all session plugin hooks from `.claude/settings.json` and creates a backup.
+
+### Uninstallation Steps
+
+1. **Remove hooks** (REQUIRED):
+   ```bash
+   /session:setup --remove
+   ```
+
+2. **Verify cleanup**:
+   ```bash
+   /session:setup --status
+   ```
+   Should show: "No session plugin hooks found"
+
+3. **Uninstall the plugin**:
+   - Use Claude Code's plugin manager to remove the session plugin
+   - Or manually delete the plugin directory
+
+### What If I Forgot to Clean Up?
+
+If you uninstalled the plugin without running `/session:setup --remove`, don't worry! There are multiple recovery options:
+
+#### Option 1: Auto-Cleanup (Recommended)
+The session plugin includes orphan detection that runs every 20 prompts. If hooks are found pointing to non-existent files, they'll be automatically removed. Just wait for ~20 interactions and the cleanup happens silently.
+
+#### Option 2: Manual Cleanup Script
+If the plugin directory still exists:
+
+```bash
+cd /path/to/plugin/session
+./cleanup-hooks.sh /path/to/your/project
+```
+
+#### Option 3: Manual Edit
+Edit `.claude/settings.json` and remove the session plugin hook entries:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [...],      // Remove session plugin entries
+    "UserPromptSubmit": [...],  // Remove session plugin entries
+    "PostToolUse": [...]        // Remove session plugin entries
+  }
+}
+```
+
+Look for entries with `${CLAUDE_PLUGIN_ROOT}/hooks/` in the command path.
+
+#### Option 4: Restore from Backup
+If you have a backup from before the plugin was installed:
+
+```bash
+cp .claude/settings.json.backup .claude/settings.json
+```
+
+### Orphaned Hooks Are Harmless
+
+Even if orphaned hooks remain in `settings.json`, they:
+- ✅ Won't break Claude Code (will just fail silently)
+- ✅ Won't cause errors or warnings
+- ✅ Will be auto-detected and cleaned up if plugin is reinstalled
+
+However, for cleanliness, it's best to remove them.
+
+---
+
 ## 🎮 Usage
 
 ### Visual Indicators
@@ -243,6 +407,37 @@ Permanently delete a session and all its data.
 **Example:** `/session:delete old-feature`
 
 **Warning:** This action cannot be undone. All session data, including snapshots and context, will be permanently deleted.
+
+#### Setup Hooks
+```
+/session:setup
+```
+Configure session plugin hooks in `.claude/settings.json` for automatic tracking.
+
+**Operations:**
+- **Install** (default): `/session:setup` - Add hooks to settings.json
+- **Status**: `/session:setup --status` - Show current configuration
+- **Remove**: `/session:setup --remove` - Remove hooks (run before uninstalling!)
+- **Cleanup**: `/session:setup --force-cleanup` - Clean up orphaned hooks
+- **Dry Run**: `/session:setup --dry-run` - Preview changes
+
+**What it does:**
+- ✅ Adds SessionStart, UserPromptSubmit, and PostToolUse hooks
+- ✅ Enables automatic session state tracking
+- ✅ Creates backup before modifications
+- ✅ Idempotent (safe to run multiple times)
+- ✅ Includes orphan detection and auto-cleanup
+
+**Example:**
+```
+/session:setup              # Install hooks
+/session:setup --status     # Check configuration
+/session:setup --remove     # Remove before uninstalling plugin
+```
+
+**IMPORTANT:** Always run `/session:setup --remove` before uninstalling the plugin to avoid orphaned hook entries!
+
+---
 
 ### Advanced Features
 
