@@ -48,18 +48,18 @@ Or use the interactive menu to browse and install.
 
 ## 📦 Available Plugins
 
-### Session Management (v3.6.3)
+### Session Management (v3.7.1)
 
-**Intelligent session management with hybrid cleanup system, 60-80% token reduction, and smart state tracking**
+**Intelligent session management with parallel subagent architecture (72% token reduction), reliable cleanup system, and smart state tracking**
 
 Never lose context again! Automatic snapshots, smart cleanup on `/clear`, and optimized performance for long-running development sessions.
 
-**Latest Features (v3.6.3):**
+**Latest Features (v3.7.1):**
+- 🔧 **Subagent Reliability** - Fixed critical bugs, 60%→95% success rate
+- ⚡ **72% Token Reduction** - Parallel subagent architecture for session resume
+- 🚀 **Fast Resume** - 2-4 second parallel execution of heavy work
 - 🧹 **Hybrid Cleanup System** - SessionEnd hook + transition handling + orphan detection
 - 🎯 **100% Coverage** - All exit paths handled (exit, logout, crash, transitions)
-- 🔄 **Session Transitions** - Clean handoffs when switching sessions
-- 💡 **User Feedback** - Clear messages on all state changes
-- ⚡ **60-80% token reduction** - Massive performance improvements
 - 🛡️ **Plan mode support** - No data loss when clearing conversations
 - 🗑️ **Delete sessions** - Remove sessions you no longer need with safety confirmations
 - 📝 **Self-contained logs** - Full conversation capture (user + Claude responses)
@@ -84,7 +84,7 @@ Never lose context again! Automatic snapshots, smart cleanup on `/clear`, and op
 
 **Hooks:**
 - `SessionStart` - Auto-cleanup on `/clear` command
-- `SessionEnd` - Auto-cleanup on Claude Code exit/crash (NEW v3.6.3!)
+- `SessionEnd` - Auto-cleanup on Claude Code exit/crash
 - `UserPromptSubmit` - Tracks interactions, queues analysis
 - `PostToolUse` - Monitors file changes (Write/Edit)
 - `Stop` - Captures Claude's full responses
@@ -189,7 +189,7 @@ Stay tuned! ⭐ Star this repo to get notified of new plugins.
 ---
 
 **Marketplace Version:** 1.2.0
-**Latest Plugin:** Session Management v3.6.3
+**Latest Plugin:** Session Management v3.7.1
 **Last Updated:** November 2025
 **Maintainer:** AutomateWith.Us Team
 **Repository:** https://github.com/awudevelop/claude-plugins

@@ -879,4 +879,4 @@ If you find this plugin useful, please star the repository!
 
 **Made with ❤️ by [AutomateWith.Us](https://automatewith.us)**
 
-**Version**: 3.6.3 | **License**: MIT | **Status**: Production Ready 🚀
+**Version**: 3.7.1 | **License**: MIT | **Status**: Production Ready 🚀
