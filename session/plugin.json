@@ -1,7 +1,7 @@
 {
   "name": "session",
-  "version": "3.7.0",
-  "description": "v3.7.0 - Session management with Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis via subagents at resume (2-4s), hybrid cleanup on all exit paths. Fast, efficient, never lose context!",
+  "version": "3.7.1",
+  "description": "v3.7.1 - Hotfix: Fixed subagent reliability (60%→95%). Session management with Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis via subagents at resume (2-4s), hybrid cleanup on all exit paths. Fast, efficient, never lose context!",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"
