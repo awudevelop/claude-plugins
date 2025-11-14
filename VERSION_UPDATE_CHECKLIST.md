@@ -22,8 +22,10 @@
 - **Line**: 3
 - **Field**: `"version"`
 - **Format**: `"X.Y.Z"` (e.g., `"3.7.1"`)
-- **Also Update**: Line 4 - `"description"` field (include version number in description)
-- **Example**: `"v3.7.1 - Brief description of what's new"`
+- **Also Update**: Line 4 - `"description"` field
+- **Format**: `"vX.Y.Z - Version-specific details and recent changes"`
+- **Example**: `"v3.7.1 - Hotfix: Fixed subagent reliability (60%→95%). Session management with..."`
+- **Note**: This description CAN include version-specific highlights, metrics, and recent improvements
 
 ---
 
@@ -35,8 +37,10 @@
 - **Format**: `"X.Y.Z"`
 - **Line**: 18
 - **Field**: `"description"` under `plugins[0]`
-- **Format**: `"vX.Y.Z - Brief description"`
-- **Note**: Keep synchronized with `session/plugin.json`
+- **Format**: `"vX.Y.Z - Stable evergreen description"`
+- **Example**: `"v3.7.1 - Advanced session management for Claude Code with intelligent context tracking, automatic snapshots, and git history capture..."`
+- **Note**: This description should be STABLE and NOT change with each version (only version prefix updates). It describes core capabilities, not recent changes.
+- **Strategy**: Users browsing marketplace see consistent plugin identity; detailed changes go in `plugin.json`
 
 ---
 
@@ -186,9 +190,11 @@ Follow [Semantic Versioning](https://semver.org/):
 
 ### Step 2: Update Core Files First
 
-1. `session/plugin.json` - version and description
-2. `.claude-plugin/marketplace.json` - version and description
+1. `session/plugin.json` - version and description (version-specific details)
+2. `.claude-plugin/marketplace.json` - version prefix ONLY (keep stable description)
 3. `session/cli/package.json` - version (if CLI changed)
+
+**Important**: For marketplace.json, only change the version prefix (e.g., "v3.7.0" → "v3.7.1") in the description. Do NOT change the core description text unless the plugin's fundamental capabilities change.
 
 ### Step 3: Update Documentation
 
@@ -236,15 +242,42 @@ git push origin vX.Y.Z
 
 ---
 
+## 🎯 Description Strategy (IMPORTANT!)
+
+Based on Claude Code official documentation, descriptions serve different purposes:
+
+### marketplace.json - STABLE EVERGREEN DESCRIPTION
+- **Purpose**: Users browsing marketplace see consistent plugin identity
+- **Format**: `"vX.Y.Z - [Core capabilities that don't change]"`
+- **Update Policy**: Only update version prefix (e.g., v3.7.0 → v3.7.1), keep description STABLE
+- **Content**: Core features, key differentiators, what the plugin fundamentally does
+- **Example**: `"v3.7.1 - Advanced session management for Claude Code with intelligent context tracking..."`
+
+### plugin.json - VERSION-SPECIFIC DETAILS
+- **Purpose**: Detailed feature summary with latest improvements
+- **Format**: `"vX.Y.Z - [Version-specific highlights and metrics]"`
+- **Update Policy**: CAN change with each version to highlight recent improvements
+- **Content**: Latest fixes, new features, performance metrics, recent changes
+- **Example**: `"v3.7.1 - Hotfix: Fixed subagent reliability (60%→95%). Session management with Parallel Subagent Architecture..."`
+
+### Why This Matters
+- ✅ Marketplace users see stable, professional plugin description
+- ✅ Plugin.json provides detailed changelog-style information
+- ✅ Avoids confusing users with version-specific jargon in marketplace listings
+- ✅ Follows Claude Code best practices for marketplace distribution
+
+---
+
 ## 🚨 Common Mistakes to Avoid
 
 1. **Forgetting marketplace.json**: This is what users see in the plugin marketplace
-2. **Inconsistent descriptions**: Ensure version descriptions match across all files
-3. **Missing CHANGELOG entry**: Always document what changed
-4. **Old version in footer**: Easy to miss the footer version in READMEs
-5. **Badge not updated**: Version badge in session/README.md needs manual update
-6. **Stale "Latest Features"**: Should reflect the new version, not previous
-7. **Breaking changes not highlighted**: If present, must be clearly documented
+2. **Changing marketplace description with every version**: Keep marketplace description STABLE (only update version prefix)
+3. **Syncing descriptions incorrectly**: marketplace.json = stable evergreen, plugin.json = version-specific
+4. **Missing CHANGELOG entry**: Always document what changed
+5. **Old version in footer**: Easy to miss the footer version in READMEs
+6. **Badge not updated**: Version badge in session/README.md needs manual update
+7. **Stale "Latest Features"**: Should reflect the new version, not previous
+8. **Breaking changes not highlighted**: If present, must be clearly documented
 
 ---
 
@@ -279,11 +312,14 @@ When asked to update versions:
 
 1. **Read this file first** to understand all locations
 2. **Ask for the next version number** if not specified
-3. **Update all files in order** (Step 2 → Step 3)
-4. **Run validation commands** to verify consistency
-5. **Check for old version references** using grep
-6. **Create a summary** of all changes made
-7. **Remind user** about git tagging and pushing
+3. **IMPORTANT - Description Strategy**:
+   - `marketplace.json`: Update version prefix ONLY (e.g., "v3.7.0" → "v3.7.1"), keep description stable
+   - `plugin.json`: Can update entire description with version-specific details
+4. **Update all files in order** (Step 2 → Step 3)
+5. **Run validation commands** to verify consistency
+6. **Check for old version references** using grep
+7. **Create a summary** of all changes made
+8. **Remind user** about git tagging and pushing
 
 **Search Pattern for Old Versions**:
 ```bash
