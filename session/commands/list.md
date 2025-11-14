@@ -66,7 +66,7 @@ Available Sessions ({activeCount} active, {closedCount} closed):
    🎯 {goal}
    {if latestSnapshotSummary exists: show "💬 Last: \"{latestSnapshotSummary}\""}
 
-{blank line between sessions}
+{Add TWO blank lines between sessions for clear visual separation}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 Select a session: /session:list [number]
@@ -100,9 +100,11 @@ Available Sessions (2 active, 1 closed):
    🎯 Implement OAuth2 authentication system
    💬 Last: "Completed login flow, testing redirect logic"
 
+
 2. bugfix-login-issue ✅ CLOSED
    📅 1d ago (started 2d ago)  📸 3 snapshots  📁 4 files
    🎯 Fix session timeout bug in login flow
+
 
 3. refactor-api-layer ⚠️ INACTIVE
    📅 14d ago (started 15d ago)  📸 8 snapshots  📁 23 files
