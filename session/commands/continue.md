@@ -34,218 +34,37 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
 - subagent_type: "general-purpose"
 - description: "Consolidate conversation log"
 - model: "sonnet"
-- prompt:
-  ```
-  Session: {session_name}
+- prompt: |
+  You are working with session: {session_name}
 
-  Goal: Consolidate conversation log into auto-snapshot (if log exists)
-
-  Steps:
-  1. Check if file exists: .claude/sessions/{session_name}/conversation-log.jsonl
-  2. If file does NOT exist:
-     - Return JSON: { "skipped": true, "reason": "No conversation log found" }
-     - STOP (do not proceed)
-
-  3. If file exists:
-     - Read the conversation log file
-     - Parse JSONL format (each line = JSON entry)
-     - Extract:
-       - type: "interaction" entries (user prompts from user_prompt field)
-       - type: "assistant_response" entries (Claude responses from response_text field)
-
-  4. Analyze the conversation:
-     - Write 2-3 paragraph summary of what happened
-     - Identify 2-4 key decisions with rationale
-     - List completed tasks/todos
-     - Document files modified with context (what changed and why)
-     - Assess current state (what's done, what's next, blockers)
-
-  5. Create consolidated snapshot with this exact format (use heredoc):
-
-  cat <<'SNAPSHOT_EOF' | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot "{session_name}" --stdin --type auto
-  # Consolidated Snapshot: {session_name}
-  **Timestamp**: [current ISO timestamp]
-  **Method**: Claude Inline Analysis (Free)
-  **Status**: Consolidated from conversation log
-
-  ## Conversation Summary
-  [2-3 paragraphs]
-
-  ## Key Decisions
-  - [Decision 1 with rationale]
-  - [Decision 2 with rationale]
-
-  ## Completed Tasks
-  - [Task 1]
-  - [Task 2]
-
-  ## Files Modified
-  - [file_path]: [what changed and why]
-
-  ## Current State
-  [Where things stand, what's next, blockers]
-
-  ## Notes
-  Consolidated via Claude inline analysis at session boundary.
-  SNAPSHOT_EOF
-
-  6. Delete conversation log (with error checking):
-     set -e  # Exit on any error
-     rm .claude/sessions/{session_name}/conversation-log.jsonl
-
-     # Verify deletion
-     if [ -f .claude/sessions/{session_name}/conversation-log.jsonl ]; then
-       echo '{"success": false, "error": "Failed to delete conversation log", "step_failed": 6}'
-       exit 1
-     fi
-
-  7. Update state file (with correct JSON syntax):
-     TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-     node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-state "{session_name}" "{\"interactions_since_snapshot\": 0, \"interactions_since_context_update\": 0, \"last_snapshot_timestamp\": \"$TIMESTAMP\"}"
-
-     if [ $? -ne 0 ]; then
-       echo '{"success": false, "error": "Failed to update state file", "step_failed": 7}'
-       exit 1
-     fi
-
-  8. Verify all steps completed successfully:
-     # Check snapshot exists
-     if [ ! -f .claude/sessions/{session_name}/auto_*.md ]; then
-       echo '{"success": false, "error": "Snapshot file not found", "step_failed": 5}'
-       exit 1
-     fi
-
-     # Check log deleted
-     if [ -f .claude/sessions/{session_name}/conversation-log.jsonl ]; then
-       echo '{"success": false, "error": "Log file still exists", "step_failed": 6}'
-       exit 1
-     fi
-
-     # Verify state reset
-     STATE=$(node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-state "{session_name}")
-     if ! echo "$STATE" | grep -q '"interactions_since_snapshot":0'; then
-       echo '{"success": false, "error": "State counters not reset", "step_failed": 7}'
-       exit 1
-     fi
-
-  Return Format:
-  JSON with these exact fields (ONLY after all verifications pass):
-  {
-    "success": true,
-    "snapshot_created": "[filename]",
-    "timestamp": "[ISO timestamp]",
-    "interaction_count": [number],
-    "summary_preview": "[first 100 chars of summary]",
-    "log_deleted": true,
-    "state_reset": true
-  }
-
-  If any error occurs:
-  {
-    "success": false,
-    "error": "[error description]",
-    "step_failed": "[which step number]"
-  }
-
-  IMPORTANT:
-  - Use exact CLI commands shown above
-  - Do NOT read transcript files (log is self-contained)
-  - Use set -e to halt on errors
-  - Verify ALL steps before returning success
-  - Return ONLY JSON, no additional commentary
-  ```
+  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/consolidate-log.md
+  That file contains template placeholders like "{session_name}".
+  Replace all such placeholders with the actual session name: {session_name}
+  Then execute the resulting instructions.
 
 **Subagent 2 - Refresh Git History:**
 - subagent_type: "general-purpose"
 - description: "Refresh git history"
 - model: "haiku"
-- prompt:
-  ```
-  Session: {session_name}
+- prompt: |
+  You are working with session: {session_name}
 
-  Goal: Refresh git history context for session
-
-  Steps:
-  1. Run git history capture CLI:
-     node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{session_name}"
-
-  2. The CLI will:
-     - Get last 50 commits (git log)
-     - Get uncommitted changes (git status, git diff)
-     - Calculate file hotspots (frequently changed files)
-     - Compress to ~2-3KB JSON
-     - Write to: .claude/sessions/{session_name}/git-history.json
-
-  3. If no git repository:
-     - CLI returns: { success: false }
-     - This is OK, just return the result
-
-  Return Format:
-  JSON with these exact fields:
-  {
-    "success": true,
-    "commits_analyzed": [number],
-    "uncommitted_changes": [number],
-    "file_hotspots_count": [number],
-    "latest_commit_hash": "[hash]",
-    "latest_commit_date": "[date]"
-  }
-
-  If no git repo or error:
-  {
-    "success": false,
-    "reason": "[why]"
-  }
-
-  IMPORTANT:
-  - Let CLI handle all git operations
-  - Do NOT run git commands manually
-  - Return ONLY JSON, no additional commentary
-  ```
+  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/refresh-git.md
+  That file contains template placeholders like "{session_name}".
+  Replace all such placeholders with the actual session name: {session_name}
+  Then execute the resulting instructions.
 
 **Subagent 3 - Extract Session Goal:**
 - subagent_type: "general-purpose"
 - description: "Extract session goal"
 - model: "haiku"
-- prompt:
-  ```
-  Session: {session_name}
+- prompt: |
+  You are working with session: {session_name}
 
-  Goal: Extract session goal from session.md
-
-  Steps:
-  1. Read file: .claude/sessions/{session_name}/session.md
-
-  2. Find the "## Goal" section header
-
-  3. Extract all text after "## Goal" until:
-     - Next "##" header, OR
-     - End of file
-
-  4. Clean the extracted text:
-     - Trim whitespace
-     - Remove leading/trailing newlines
-     - Keep formatting (bullets, line breaks within goal)
-
-  Return Format:
-  JSON with these exact fields:
-  {
-    "success": true,
-    "goal": "[extracted goal text]"
-  }
-
-  If file not found or goal section missing:
-  {
-    "success": false,
-    "error": "[description]",
-    "fallback_goal": "Session {session_name}"
-  }
-
-  IMPORTANT:
-  - Return ONLY the goal text, not entire file
-  - Preserve original formatting within goal
-  - Return ONLY JSON, no additional commentary
-  ```
+  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/extract-goal.md
+  That file contains template placeholders like "{session_name}".
+  Replace all such placeholders with the actual session name: {session_name}
+  Then execute the resulting instructions.
 
 **REMINDER**: All 3 Task invocations MUST be in the SAME response to execute in parallel!
 
@@ -306,8 +125,10 @@ What's next?
 **TOKEN OPTIMIZATION BENEFITS:**
 - Before (v3.6.4): 77k tokens in main conversation
 - After (v3.7.0): ~22k tokens in main conversation (72% reduction)
+- After (v3.7.1): ~20k tokens in main conversation (74% reduction)
 - Heavy work (consolidation, git analysis) happens in isolated subagent contexts
 - Parallel execution: 3 subagents run simultaneously (~2-4 seconds total)
+- Lazy-loaded prompts: Subagents read their own prompts (~1.7k token savings)
 - Result: Faster session resume, massive token savings
 
 **ERROR HANDLING:**
