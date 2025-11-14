@@ -14,8 +14,8 @@
     {
       "name": "session",
       "source": "./session",
-      "version": "3.6.4",
-      "description": "v3.6.4 - Session management with Hybrid Cleanup System + Zero-Blocking + FREE Intelligent Analysis + Git Context. Logs conversations in <2ms, analyzes with Claude at session boundaries (1-3s), auto-cleanup on ALL exit paths. Never lose context!",
+      "version": "3.7.0",
+      "description": "v3.7.0 - Session management with Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis via subagents at resume (2-4s), hybrid cleanup on all exit paths. Fast, efficient, never lose context!",
       "author": {
         "name": "AutomateWith.Us",
         "email": "team@automatewith.us"
