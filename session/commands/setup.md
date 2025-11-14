@@ -12,8 +12,9 @@ Extract the operation from the command arguments. Format: `/session:setup [optio
 
 **Supported options:**
 - No arguments: Install/configure hooks (default)
+- `--permissions`: Install hooks + permission bypasses (eliminates ALL prompts)
 - `--remove`: Remove hooks from settings.json
-- `--status`: Show current hook configuration
+- `--status`: Show current hook and permission configuration
 - `--force-cleanup`: Force cleanup of orphaned hooks
 - `--dry-run`: Preview changes without applying them
 
@@ -30,9 +31,14 @@ Extract the operation from the command arguments. Format: `/session:setup [optio
 
 Run the appropriate CLI command based on the operation mode:
 
-**For Install:**
+**For Install (hooks only):**
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js setup-hooks
+```
+
+**For Install (hooks + permissions):**
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js setup-hooks --permissions
 ```
 
 **For Remove:**
@@ -62,11 +68,49 @@ The CLI will return JSON with the operation result.
 Parse the JSON response and display user-friendly output based on the action:
 
 #### Install Success (action: "installed")
+
+**If permissions were added (permissionsRequested: true, permissionsCount > 0):**
+```
+✅ Session plugin configured successfully!
+
+📋 Hooks added to .claude/settings.json:
+  ✓ SessionStart - Auto-clears session on /clear
+  ✓ SessionEnd - Cleanup on Claude Code exit
+  ✓ UserPromptSubmit - Tracks user interactions
+  ✓ PostToolUse (Write, Edit, NotebookEdit) - Tracks file changes
+  ✓ Stop - Captures Claude's responses for self-contained logs
+
+🔓 Permissions added ({permissionsCount} entries):
+  ✓ Read(.claude/sessions/**)
+  ✓ Bash(git log --oneline*)
+  ✓ Bash(git status --porcelain*)
+  ✓ Bash(git diff --stat*)
+  ✓ Bash(git branch -vv*)
+  ✓ Bash(git rev-parse --abbrev-ref*)
+
+⚡ Result: ZERO permission prompts during:
+  • /session:continue (no Read prompts, no git prompts)
+  • /session:save (no Read prompts)
+  • /session:status (no Read prompts)
+  • All session operations run silently
+
+💾 Backup saved: {backupPath}
+📁 Settings: {settingsPath}
+
+⚠️  IMPORTANT: Restart Claude Code for changes to take effect!
+   Hooks and permissions are loaded at startup.
+
+💡 To disable temporarily: Set "disableAllHooks": true in settings.json
+💡 To remove these hooks: /session:setup --remove
+```
+
+**If permissions were NOT added (permissionsRequested: false):**
 ```
 ✅ Session plugin hooks configured successfully!
 
 📋 Hooks added to .claude/settings.json:
   ✓ SessionStart - Auto-clears session on /clear
+  ✓ SessionEnd - Cleanup on Claude Code exit
   ✓ UserPromptSubmit - Tracks user interactions
   ✓ PostToolUse (Write, Edit, NotebookEdit) - Tracks file changes
   ✓ Stop - Captures Claude's responses for self-contained logs
@@ -76,6 +120,15 @@ Parse the JSON response and display user-friendly output based on the action:
   • User prompts and interactions
   • Claude's full responses
   • File modifications
+
+💡 TIP: Eliminate ALL permission prompts during session operations!
+   Run: /session:setup --permissions
+
+   This adds safe read-only permissions for:
+   • .claude/sessions/** files (Read access)
+   • git commands (log, status, diff, branch)
+
+   Result: Zero prompts during /session:continue ⚡
 
 💾 Backup saved: {backupPath}
 📁 Settings: {settingsPath}
@@ -136,12 +189,15 @@ Session plugin hooks are not currently configured in settings.json
 
 **When properly configured:**
 ```
-✅ Session Plugin Hooks Status
+✅ Session Plugin Status
 
-📋 Configured in .claude/settings.json:
+📋 Hooks configured in .claude/settings.json:
 
   ✓ SessionStart
     → node ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.js
+
+  ✓ SessionEnd
+    → node ${CLAUDE_PLUGIN_ROOT}/hooks/session-end.js
 
   ✓ UserPromptSubmit
     → node ${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.js
@@ -154,10 +210,33 @@ Session plugin hooks are not currently configured in settings.json
   ✓ Stop
     → node ${CLAUDE_PLUGIN_ROOT}/hooks/stop.js
 
-🎯 Plugin Status: Installed & Configured
+📊 Hooks: {configuredHookTypes}/{totalHookTypes} hook types configured
 ✅ All hooks pointing to valid scripts
 
-📊 {configuredHookTypes}/{totalHookTypes} hook types configured
+🔓 Permissions configured: {permissionsCount}/{totalPermissions}
+
+{if permissionsConfigured === true}
+  ✅ All session permissions configured
+  • Read(.claude/sessions/**)
+  • Bash(git log --oneline*)
+  • Bash(git status --porcelain*)
+  • Bash(git diff --stat*)
+  • Bash(git branch -vv*)
+  • Bash(git rev-parse --abbrev-ref*)
+
+  ⚡ Result: Zero prompts during session operations
+{else if permissionsCount > 0 && permissionsCount < totalPermissions}
+  ⚠️  Partial permissions configured ({permissionsCount}/{totalPermissions})
+
+  💡 To add missing permissions: /session:setup --permissions
+{else}
+  ⚠️  No session permissions configured
+
+  💡 To eliminate permission prompts: /session:setup --permissions
+     This adds safe read-only permissions for session files and git commands
+{end if}
+
+🎯 Plugin Status: Installed & Configured
 
 💡 To remove: /session:setup --remove
 ```
@@ -250,14 +329,20 @@ Common issues:
 ### Usage Examples
 
 ```bash
-# Install hooks (first time setup)
+# Install hooks only (basic setup)
 /session:setup
 
-# Check current status
+# Install hooks + permissions (RECOMMENDED - eliminates ALL prompts)
+/session:setup --permissions
+
+# Check current status (shows hooks and permissions)
 /session:setup --status
 
 # Preview what would be installed (dry run)
 /session:setup --dry-run
+
+# Preview with permissions
+/session:setup --permissions --dry-run
 
 # Remove hooks before uninstalling plugin
 /session:setup --remove
@@ -265,6 +350,12 @@ Common issues:
 # Clean up orphaned hooks after plugin uninstall
 /session:setup --force-cleanup
 ```
+
+**Recommended:** Always use `--permissions` flag for best experience:
+- Zero permission prompts during `/session:continue`
+- Zero permission prompts during `/session:save`
+- Zero permission prompts during `/session:status`
+- Completely silent session operations
 
 ---
 

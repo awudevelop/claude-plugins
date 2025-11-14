@@ -25,7 +25,8 @@ function parseArgs(args) {
     remove: args.includes('--remove'),
     status: args.includes('--status'),
     forceCleanup: args.includes('--force-cleanup'),
-    dryRun: args.includes('--dry-run')
+    dryRun: args.includes('--dry-run'),
+    permissions: args.includes('--permissions')
   };
 
   // Check for custom project root
@@ -53,7 +54,8 @@ function setupHooks(args) {
     remove,
     status,
     forceCleanup,
-    dryRun
+    dryRun,
+    permissions
   } = parseArgs(args);
 
   const manager = new HooksManager(projectRoot);
@@ -75,7 +77,7 @@ function setupHooks(args) {
     }
 
     // Default: Install operation
-    return installHooks(manager, pluginRoot, dryRun);
+    return installHooks(manager, pluginRoot, dryRun, permissions);
 
   } catch (error) {
     return {
@@ -89,7 +91,7 @@ function setupHooks(args) {
 /**
  * Install hooks to settings.json
  */
-function installHooks(manager, pluginRoot, dryRun) {
+function installHooks(manager, pluginRoot, dryRun, addPermissions) {
   try {
     // Read current settings
     const settings = manager.readSettings();
@@ -97,22 +99,45 @@ function installHooks(manager, pluginRoot, dryRun) {
     // Get plugin hooks
     const pluginHooks = manager.getPluginHooks(pluginRoot);
 
-    // Check if already configured
+    // Check hooks status
     const status = manager.getHookStatus(pluginRoot);
-    if (status.pluginHooksConfigured &&
+    const hooksAlreadyConfigured = status.pluginHooksConfigured &&
         status.configuredHookTypes === status.totalHookTypes &&
-        !status.hasOrphans) {
+        !status.hasOrphans;
+
+    // Check permissions status
+    const permissionsAlreadyConfigured = manager.hasSessionPermissions(settings);
+    const totalPermissions = manager.getSessionPermissions().length;
+    const configuredPermissionsCount = manager.countSessionPermissions(settings);
+
+    // If both hooks and permissions (if requested) are already configured
+    if (hooksAlreadyConfigured && (!addPermissions || permissionsAlreadyConfigured)) {
       return {
         success: true,
         action: 'already_configured',
-        message: 'Session plugin hooks are already configured',
+        message: 'Session plugin is already configured',
         configuredHooks: status.configuredHooks,
-        hookTypes: Object.keys(status.configuredHooks)
+        hookTypes: Object.keys(status.configuredHooks),
+        permissionsConfigured: permissionsAlreadyConfigured,
+        permissionsCount: configuredPermissionsCount,
+        totalPermissions: totalPermissions,
+        permissionsRequested: addPermissions
       };
     }
 
     // Merge hooks
-    const merged = manager.mergeHooks(settings, pluginHooks);
+    let merged = manager.mergeHooks(settings, pluginHooks);
+
+    // Merge permissions if requested
+    let permissionsAdded = [];
+    if (addPermissions) {
+      const sessionPerms = manager.getSessionPermissions();
+      merged = manager.mergePermissions(merged, sessionPerms);
+      // Only report newly added permissions
+      permissionsAdded = sessionPerms.filter(perm =>
+        !settings.permissions || !settings.permissions.allow || !settings.permissions.allow.includes(perm)
+      );
+    }
 
     if (dryRun) {
       return {
@@ -120,8 +145,10 @@ function installHooks(manager, pluginRoot, dryRun) {
         action: 'dry_run',
         message: 'Dry run - no changes made',
         wouldAdd: pluginHooks,
+        wouldAddPermissions: addPermissions ? permissionsAdded : [],
         currentSettings: settings,
-        mergedSettings: merged
+        mergedSettings: merged,
+        permissionsRequested: addPermissions
       };
     }
 
@@ -134,9 +161,13 @@ function installHooks(manager, pluginRoot, dryRun) {
     return {
       success: true,
       action: 'installed',
-      message: 'Session plugin hooks installed successfully',
+      message: 'Session plugin configured successfully',
       hooksAdded: pluginHooks,
       hookTypes: Object.keys(pluginHooks),
+      permissionsAdded: permissionsAdded,
+      permissionsCount: permissionsAdded.length,
+      totalPermissions: totalPermissions,
+      permissionsRequested: addPermissions,
       backupPath: backupPath,
       settingsPath: manager.settingsPath
     };
@@ -223,6 +254,13 @@ function showStatus(manager, pluginRoot) {
       };
     }
 
+    // Get permissions status
+    const settings = manager.readSettings();
+    const permissionsConfigured = manager.hasSessionPermissions(settings);
+    const totalPermissions = manager.getSessionPermissions().length;
+    const configuredPermissionsCount = manager.countSessionPermissions(settings);
+    const sessionPermissions = manager.getSessionPermissions();
+
     return {
       success: true,
       action: 'status',
@@ -233,6 +271,10 @@ function showStatus(manager, pluginRoot) {
       hasOrphans: status.hasOrphans,
       totalHookTypes: status.totalHookTypes,
       configuredHookTypes: status.configuredHookTypes,
+      permissionsConfigured: permissionsConfigured,
+      permissionsCount: configuredPermissionsCount,
+      totalPermissions: totalPermissions,
+      sessionPermissions: sessionPermissions,
       settingsPath: manager.settingsPath
     };
 

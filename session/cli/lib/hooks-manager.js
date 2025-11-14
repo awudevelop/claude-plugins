@@ -393,6 +393,82 @@ class HooksManager {
       };
     }
   }
+
+  /**
+   * Get session plugin permissions (read-only, safe permissions)
+   * These eliminate permission prompts during session operations
+   */
+  getSessionPermissions() {
+    return [
+      // Session file access (read-only for session files)
+      'Read(.claude/sessions/**)',
+
+      // Git read-only commands for history refresh
+      'Bash(git log --oneline*)',
+      'Bash(git status --porcelain*)',
+      'Bash(git diff --stat*)',
+      'Bash(git branch -vv*)',
+      'Bash(git rev-parse --abbrev-ref*)'
+    ];
+  }
+
+  /**
+   * Merge session permissions into existing settings
+   * Preserves all existing permissions, only adds missing ones
+   */
+  mergePermissions(existingSettings, sessionPermissions) {
+    const merged = { ...existingSettings };
+
+    // Initialize permissions structure if doesn't exist
+    if (!merged.permissions) {
+      merged.permissions = {};
+    }
+
+    if (!merged.permissions.allow) {
+      merged.permissions.allow = [];
+    }
+
+    // Merge session permissions, avoiding duplicates
+    for (const perm of sessionPermissions) {
+      if (!merged.permissions.allow.includes(perm)) {
+        merged.permissions.allow.push(perm);
+      }
+    }
+
+    return merged;
+  }
+
+  /**
+   * Check if session permissions are already configured
+   * Returns true only if ALL session permissions are present
+   */
+  hasSessionPermissions(settings) {
+    const sessionPerms = this.getSessionPermissions();
+
+    if (!settings.permissions || !settings.permissions.allow) {
+      return false;
+    }
+
+    // Check if all session permissions are present
+    return sessionPerms.every(perm =>
+      settings.permissions.allow.includes(perm)
+    );
+  }
+
+  /**
+   * Count how many session permissions are configured
+   */
+  countSessionPermissions(settings) {
+    const sessionPerms = this.getSessionPermissions();
+
+    if (!settings.permissions || !settings.permissions.allow) {
+      return 0;
+    }
+
+    return sessionPerms.filter(perm =>
+      settings.permissions.allow.includes(perm)
+    ).length;
+  }
 }
 
 module.exports = HooksManager;
