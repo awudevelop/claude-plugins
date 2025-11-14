@@ -179,7 +179,6 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 ### Previous Updates (v3.3)
 
 #### Living Context System
-- 🧠 **Continuous context tracking** - Updates context.md every 2 interactions automatically
 - 📸 **Automatic snapshots** - Full snapshots every 5 interactions (or 3+ files modified)
 - 🎯 **Smart extraction** - Captures decisions, agreements, requirements, discoveries
 - ⚡ **Ultra-fast updates** - < 1 second overhead, completely silent
@@ -346,8 +345,8 @@ The session plugin uses Claude Code's hook system to automatically track your wo
 
 2. **UserPromptSubmit Hook**: Runs after each user prompt to:
    - Track interaction count
-   - Trigger context updates every 2 interactions
-   - Trigger snapshots every 5 interactions
+   - Log user prompts to conversation-log.jsonl
+   - Trigger snapshots based on interaction thresholds
    - Auto-detect and cleanup orphaned hooks (every 20 prompts)
 
 3. **PostToolUse Hook**: Runs after file modifications to:
@@ -606,12 +605,6 @@ Configure session plugin hooks in `.claude/settings.json` for automatic tracking
 
 ### Advanced Features
 
-#### Auto-Snapshot Analysis
-```
-/session-snapshot-analysis
-```
-Manually trigger snapshot analysis (usually automatic).
-
 #### Git History Decompression
 ```
 /session:git-decompress [session-name]
@@ -706,27 +699,39 @@ session/
 ├── CHANGELOG.md                # Version history
 ├── LICENSE                     # MIT license
 ├── commands/                   # Slash commands
-│   ├── session-list.md         # Optimized
-│   ├── session-status.md       # Optimized
-│   ├── session-continue.md     # Optimized
-│   ├── session-start.md        # Optimized
-│   ├── session-save.md         # Plan mode support
-│   ├── session-close.md
-│   ├── session-auto-snapshot.md # Plan mode support
-│   └── session-snapshot-analysis.md
+│   ├── start.md                # Create new sessions
+│   ├── continue.md             # Resume sessions (v3.7.0 subagent architecture)
+│   ├── list.md                 # List all sessions
+│   ├── status.md               # Session status
+│   ├── save.md                 # Manual snapshots
+│   ├── close.md                # Close sessions
+│   ├── delete.md               # Delete sessions
+│   ├── setup.md                # Hook management
+│   └── git-decompress.md       # Git history debugging
 ├── hooks/                      # Event hooks
-│   ├── session-start.js        # Auto-close on /clear (NEW!)
-│   ├── user-prompt-submit.js   # Auto-capture (optimized threshold)
-│   └── post-tool-use.js        # File tracking
-├── cli/                        # CLI tool (NEW!)
-│   ├── session-cli.js          # Main entry
+│   ├── session-start.js        # Auto-close on /clear
+│   ├── session-end.js          # Cleanup on Claude Code exit
+│   ├── user-prompt-submit.js   # Log interactions, trigger snapshots
+│   ├── post-tool-use.js        # Track file modifications
+│   └── stop.js                 # Capture Claude's responses
+├── cli/                        # CLI tool
+│   ├── session-cli.js          # Main entry point
 │   ├── lib/                    # Core modules
 │   │   ├── index-manager.js    # Metadata index
 │   │   ├── session-reader.js   # Read operations
 │   │   ├── session-writer.js   # Write operations
-│   │   └── commands/           # 10 CLI commands
+│   │   ├── conversation-logger.js # Conversation logging
+│   │   ├── git-historian.js    # Git history capture
+│   │   ├── hooks-manager.js    # Hook management
+│   │   ├── lock-manager.js     # Concurrency control
+│   │   └── commands/           # CLI command implementations
 │   └── README.md               # CLI documentation
+├── prompts/                    # Subagent prompts (v3.7.0)
+│   ├── consolidate-log.md      # Consolidation subagent
+│   ├── refresh-git.md          # Git refresh subagent
+│   └── extract-goal.md         # Goal extraction subagent
 └── docs/                       # Documentation
+    ├── AUTO-SNAPSHOT-REFERENCE.md # Technical reference
     ├── OPTIMIZATION_SUMMARY.md # Implementation details
     ├── TESTING_GUIDE.md        # Comprehensive testing
     └── QUICK_TEST.md           # 5-minute quick test

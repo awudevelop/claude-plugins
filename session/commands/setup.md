@@ -80,6 +80,9 @@ Parse the JSON response and display user-friendly output based on the action:
 💾 Backup saved: {backupPath}
 📁 Settings: {settingsPath}
 
+⚠️  IMPORTANT: Restart Claude Code for hooks to take effect!
+   Hooks are loaded at startup and won't activate until you restart.
+
 💡 To disable temporarily: Set "disableAllHooks": true in settings.json
 💡 To remove these hooks: /session:setup --remove
 ```
@@ -111,6 +114,9 @@ Current hooks:
   ✓ Stop
 
 💾 Backup saved: {backupPath}
+
+⚠️  IMPORTANT: Restart Claude Code to stop hooks!
+   Active hooks will continue running until you restart.
 
 💡 Sessions still work, but automatic tracking is disabled
 💡 To re-enable: /session:setup
@@ -194,6 +200,9 @@ Found {orphanedHooks.length} orphaned hook entries
 {List each orphaned hook that was removed}
 
 💾 Backup saved: {backupPath}
+
+⚠️  IMPORTANT: Restart Claude Code to apply cleanup!
+   Settings changes take effect on next restart.
 
 💡 Settings.json has been cleaned
 💡 To reinstall hooks: /session:setup
