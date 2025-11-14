@@ -1,10 +1,10 @@
-You are managing a session memory system. The user wants to check the current session status and token usage.
+You are managing a session memory system. The user wants to check the current session status.
 
-## Task: Display Session Status and Token Usage
+## Task: Display Session Status (Ultra-Minimal)
 
-Show comprehensive session information including real-time token tracking with warnings.
+Show essential session information quickly and efficiently.
 
-**OPTIMIZATION:** This command now uses the CLI tool for fast metadata retrieval (< 100 tokens, < 50ms).
+**OPTIMIZATION:** Ultra-minimal output. Uses CLI for instant stats (<50ms, <50 tokens).
 
 ### Step 1: Get Active Session from CLI
 
@@ -18,11 +18,10 @@ Parse the JSON response to get `activeSession` field.
 
 If `activeSession` is null, show error:
 ```
-❌ Error: No active session
-Session status requires an active session.
+❌ No active session
 
-💡 Use /session start [name] to create a new session
-💡 Or use /session continue [name] to resume an existing session
+💡 /session:start [name] to create new session
+💡 /session:continue [name] to resume existing session
 ```
 Then STOP.
 
@@ -35,161 +34,120 @@ node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js stats {activeSession}
 ```
 
 This returns JSON with:
-- Session metadata (status, started, goal)
-- Snapshot counts (total, auto, manual)
-- File counts and sizes
-- Timestamps
+- Session metadata (status, started, lastUpdated, goal)
+- Snapshot counts (snapshotCount)
+- File counts (filesInvolvedCount)
 
 ### Step 3: Calculate Session Duration
 
-Parse the `created` timestamp from stats and calculate duration from start to now.
-Format as: `Xh Ym` (e.g., "2h 15m" or "45m" or "3h 0m")
+Parse the `started` timestamp from stats (format: "2025-11-13 14:30").
 
-### Step 4: Get Token Usage Information
+Calculate duration from start time to now:
+1. Parse started date/time
+2. Calculate difference in minutes
+3. Format as:
+   - If < 60 min: "Xm" (e.g., "45m")
+   - If < 24 hours: "Xh Ym" (e.g., "2h 15m" or "5h 0m")
+   - If >= 24 hours: "Xd Yh" (e.g., "2d 3h")
 
-**IMPORTANT**: Extract token usage from the conversation context:
+### Step 4: Calculate Time Since Last Activity
 
-**Method A: Look for System Warnings** (Primary Method)
-- Check if there's a `<system_warning>` or similar tag with token usage
-- Look for patterns like: "Token usage: X/200000" or "X tokens used"
-- Extract the used token count
+Parse `lastUpdated` timestamp (ISO format: "2025-11-14T10:27:04.345Z").
 
-**Method B: Character-Based Estimation** (Fallback)
-If system token info is not available:
-- Estimate based on conversation length
-- Rough formula: tokens ≈ (total_characters / 4)
-- Mark this as "estimated" in display
+Calculate time since last update:
+1. Parse ISO timestamp
+2. Calculate difference from now
+3. Format as relative time:
+   - "just now" (< 1 min)
+   - "Xm ago" (< 60 min)
+   - "Xh ago" (< 24 hours)
+   - "Xd ago" (>= 24 hours)
 
-**Method C: Use Budget Directly** (If Available)
-- Check for `<budget:token_budget>` tags
-- Use provided token usage if available
+### Step 5: Display Ultra-Minimal Status
 
-### Step 5: Calculate Token Metrics
-
-Given the token usage (used tokens):
-1. Budget: 200,000 tokens (fixed)
-2. Remaining: 200,000 - used
-3. Percentage: (used / 200,000) * 100
-4. Round percentage to 1 decimal place
-
-### Step 6: Determine Warning Level
-
-Based on percentage:
-- **< 80%**: Normal (no warning)
-- **80-89.9%**: Warning Level 1 (⚠️  medium)
-- **90-94.9%**: Warning Level 2 (⚠️  high)
-- **≥ 95%**: Critical Level (🚨 critical)
-
-### Step 7: Create Progress Bar
-
-Create a visual progress bar:
-- Total width: 20 characters
-- Filled characters: round(percentage / 5)
-- Use `█` for filled, `░` for empty
-- Example at 82.5%: `████████████████░░░░` (16 filled, 4 empty)
-
-### Step 8: Format Warning Messages
-
-Based on warning level:
-
-**80-89.9%**:
-```
-⚠️  WARNING: 80% token capacity reached
-   Remaining: {remaining_tokens} tokens
-   Consider wrapping up or starting fresh session
-```
-
-**90-94.9%**:
-```
-⚠️  WARNING: 90% token capacity reached
-   Remaining: {remaining_tokens} tokens
-   Recommend closing session soon
-```
-
-**≥95%**:
-```
-🚨 CRITICAL: 95% token capacity reached
-   Remaining: {remaining_tokens} tokens
-   Save work and close session immediately
-```
-
-### Step 9: Display Status
-
-Use the stats JSON to show comprehensive status:
+Show clean, essential information only:
 
 ```
-Session: {sessionName}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 Token Usage (Current Conversation):
-   Used: {used_tokens} tokens {if_estimated:"(estimated)"}
-   Remaining: {remaining_tokens} tokens
-   Budget: 200,000 tokens
-   Usage: {percentage}% {progress_bar}
+✓ Session: {sessionName} ({status})
+  Working for: {duration} (started {started_short})
+  Snapshots: {snapshotCount} total
+  Files: {filesInvolvedCount} tracked
+  Last activity: {time_since_last_update}
 
-{if_warning_level_reached:
-{warning_message}
-}
-
-⏰ Session Duration: {duration}
-📝 Snapshots: {snapshotCount} (auto: {autoSnapshotCount}, manual: {manualSnapshotCount})
-📂 Files tracked: {filesInvolvedCount from index data}
-💾 Total size: {totalSnapshotSizeMB} MB
-
-💡 Use /session save to capture important milestones
-💡 Use /session close when ready to finalize session
+💡 /session:save to capture milestones
+💡 /session:close to finalize
 ```
 
-### Example Output (Normal):
+**Format notes:**
+- {status}: "active" or "closed"
+- {started_short}: "Nov 14, 14:30" format
+- All numbers: plain integers (no formatting)
+- No emojis except status indicator (✓)
+- No Unicode art, no progress bars
+- 5 lines max
 
+### Example Output
+
+**Active session:**
 ```
-Session: feature-auth-system
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 Token Usage (Current Conversation):
-   Used: 45,230 tokens
-   Remaining: 154,770 tokens
-   Budget: 200,000 tokens
-   Usage: 22.6% ████░░░░░░░░░░░░░░░░
+✓ Session: feature-auth (active)
+  Working for: 2h 15m (started Nov 14, 14:30)
+  Snapshots: 12 total
+  Files: 7 tracked
+  Last activity: 30m ago
 
-⏰ Session Duration: 2h 15m
-📝 Snapshots: 3 (auto: 2, manual: 1)
-📂 Files tracked: 7
-💾 Total size: 1.2 MB
-
-💡 Use /session save to capture important milestones
-💡 Use /session close when ready to finalize session
+💡 /session:save to capture milestones
+💡 /session:close to finalize
 ```
 
-### Example Output (Warning):
-
+**Recently started:**
 ```
-Session: feature-auth-system
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 Token Usage (Current Conversation):
-   Used: 165,000 tokens
-   Remaining: 35,000 tokens
-   Budget: 200,000 tokens
-   Usage: 82.5% ████████████████░░░░
+✓ Session: bug-fix-login (active)
+  Working for: 15m (started Nov 14, 18:45)
+  Snapshots: 1 total
+  Files: 2 tracked
+  Last activity: just now
 
-⚠️  WARNING: 80% token capacity reached
-   Remaining: 35,000 tokens
-   Consider wrapping up or starting fresh session
+💡 /session:save to capture milestones
+💡 /session:close to finalize
+```
 
-⏰ Session Duration: 5h 15m
-📝 Snapshots: 12 (auto: 8, manual: 4)
-📂 Files tracked: 15
-💾 Total size: 4.5 MB
+**Closed session:**
+```
+✓ Session: refactor-api (closed)
+  Worked for: 5h 30m (started Nov 13, 09:00)
+  Snapshots: 18 total
+  Files: 12 tracked
+  Last activity: 2d ago
 
-💡 Use /session save to capture important milestones
-💡 Use /session close when ready to finalize session
+💡 /session:continue {sessionName} to resume
 ```
 
 ---
 
-**PERFORMANCE BENEFITS:**
-- **Before:** 2-4K tokens, reads session.md + counts files, 1-2 seconds
-- **After:** < 150 tokens, reads .index.json + stats cache, < 50ms
-- **Improvement:** ~95% token reduction, ~20x faster
+**PERFORMANCE:**
+- **Tokens:** ~50 tokens (vs 150 before) - **66% reduction**
+- **Speed:** <50ms (CLI delegation)
+- **Lines:** 5-7 lines (vs 15-20 before) - **70% reduction**
+
+**WHAT WAS REMOVED:**
+- ❌ Token usage tracking (unreliable, verbose)
+- ❌ Progress bars (unnecessary decoration)
+- ❌ Warning messages (not reliable)
+- ❌ Unicode art (bloat)
+- ❌ Total size display (rarely useful)
+- ❌ Auto vs manual snapshot breakdown (not essential)
+
+**WHAT WAS KEPT:**
+- ✅ Session name and status
+- ✅ Duration (how long working)
+- ✅ Snapshot count (progress indicator)
+- ✅ File count (scope indicator)
+- ✅ Last activity (freshness indicator)
+- ✅ Quick action tips
+
+**FOR TOKEN USAGE:** Users should run `/context` directly for accurate real-time token information.
 
 **ERROR HANDLING:**
 - If CLI command fails, show error and suggest rebuilding index
-- Token usage tracking remains Claude-based (requires conversation context)
+- If timestamps can't be parsed, show raw values
