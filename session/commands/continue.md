@@ -33,7 +33,7 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
 **Subagent 1 - Consolidate Conversation Log:**
 - subagent_type: "general-purpose"
 - description: "Consolidate conversation log"
-- model: "haiku"
+- model: "sonnet"
 - prompt:
   ```
   Session: {session_name}
@@ -89,20 +89,55 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
   Consolidated via Claude inline analysis at session boundary.
   SNAPSHOT_EOF
 
-  6. Delete conversation log:
+  6. Delete conversation log (with error checking):
+     set -e  # Exit on any error
      rm .claude/sessions/{session_name}/conversation-log.jsonl
 
-  7. Update state file:
-     node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-state "{session_name}" --reset-counters --set-last-snapshot "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+     # Verify deletion
+     if [ -f .claude/sessions/{session_name}/conversation-log.jsonl ]; then
+       echo '{"success": false, "error": "Failed to delete conversation log", "step_failed": 6}'
+       exit 1
+     fi
+
+  7. Update state file (with correct JSON syntax):
+     TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+     node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-state "{session_name}" "{\"interactions_since_snapshot\": 0, \"interactions_since_context_update\": 0, \"last_snapshot_timestamp\": \"$TIMESTAMP\"}"
+
+     if [ $? -ne 0 ]; then
+       echo '{"success": false, "error": "Failed to update state file", "step_failed": 7}'
+       exit 1
+     fi
+
+  8. Verify all steps completed successfully:
+     # Check snapshot exists
+     if [ ! -f .claude/sessions/{session_name}/auto_*.md ]; then
+       echo '{"success": false, "error": "Snapshot file not found", "step_failed": 5}'
+       exit 1
+     fi
+
+     # Check log deleted
+     if [ -f .claude/sessions/{session_name}/conversation-log.jsonl ]; then
+       echo '{"success": false, "error": "Log file still exists", "step_failed": 6}'
+       exit 1
+     fi
+
+     # Verify state reset
+     STATE=$(node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-state "{session_name}")
+     if ! echo "$STATE" | grep -q '"interactions_since_snapshot":0'; then
+       echo '{"success": false, "error": "State counters not reset", "step_failed": 7}'
+       exit 1
+     fi
 
   Return Format:
-  JSON with these exact fields:
+  JSON with these exact fields (ONLY after all verifications pass):
   {
     "success": true,
     "snapshot_created": "[filename]",
     "timestamp": "[ISO timestamp]",
     "interaction_count": [number],
-    "summary_preview": "[first 100 chars of summary]"
+    "summary_preview": "[first 100 chars of summary]",
+    "log_deleted": true,
+    "state_reset": true
   }
 
   If any error occurs:
@@ -115,6 +150,8 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
   IMPORTANT:
   - Use exact CLI commands shown above
   - Do NOT read transcript files (log is self-contained)
+  - Use set -e to halt on errors
+  - Verify ALL steps before returning success
   - Return ONLY JSON, no additional commentary
   ```
 
