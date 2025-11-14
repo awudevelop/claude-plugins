@@ -4,7 +4,7 @@ You are managing a session memory system. The user wants to resume an existing s
 
 Parse the session name from the command arguments. The command format is: `/session continue [name]`
 
-**OPTIMIZATION:** This command uses CLI for validation and metadata (60-70% token reduction).
+**OPTIMIZATION**: v3.7.0 uses parallel subagent delegation for 72% token reduction (77k → 22k tokens).
 
 ### Step 1: Validate Session Exists (CLI)
 
@@ -22,30 +22,212 @@ If this returns an error (exit code 2), the session doesn't exist. Show:
 ```
 Then STOP.
 
-The JSON response contains metadata (status, started, goal, snapshotCount, etc.).
+The JSON response contains metadata (status, started, snapshotCount, etc.).
 
-### Step 2: Read Session Files
+### Step 2: Delegate Heavy Work to Subagents (Parallel Execution)
 
-Now read the actual content files (these need full content for context synthesis):
+**CRITICAL**: You MUST invoke ALL 3 Task tools in a SINGLE response message. This runs them in parallel and isolates heavy token usage from the main conversation.
 
-1. Read `.claude/sessions/{name}/session.md`
-2. Read `.claude/sessions/{name}/context.md` (if exists)
-3. Get latest snapshot filename from the CLI JSON response (`latestSnapshot` field)
-4. If `latestSnapshot` exists, read `.claude/sessions/{name}/{latestSnapshot}`
+Use the Task tool to spawn 3 parallel subagents with these exact configurations:
 
-### Step 3: Check for Active Session and Transition (NEW - Session Cleanup)
+**Subagent 1 - Consolidate Conversation Log:**
+- subagent_type: "general-purpose"
+- description: "Consolidate conversation log"
+- model: "haiku"
+- prompt:
+  ```
+  Session: {session_name}
 
-Before activating the new session, check if there's already a different active session:
+  Goal: Consolidate conversation log into auto-snapshot (if log exists)
 
-1. Check if `.claude/sessions/.active-session` exists
-2. If it exists, read the current active session name
-3. If the current active session is **different** from the session being continued:
-   - Show: "📋 Closing previous session '{previous_session_name}'..."
-   - Update the previous session's `session.md` "Last Updated" timestamp to current time
-   - This provides clean transition tracking
-4. If it's the **same** session, skip this step (just updating timestamp)
+  Steps:
+  1. Check if file exists: .claude/sessions/{session_name}/conversation-log.jsonl
+  2. If file does NOT exist:
+     - Return JSON: { "skipped": true, "reason": "No conversation log found" }
+     - STOP (do not proceed)
 
-**Note:** The SessionEnd hook will handle final cleanup on Claude Code termination.
+  3. If file exists:
+     - Read the conversation log file
+     - Parse JSONL format (each line = JSON entry)
+     - Extract:
+       - type: "interaction" entries (user prompts from user_prompt field)
+       - type: "assistant_response" entries (Claude responses from response_text field)
+
+  4. Analyze the conversation:
+     - Write 2-3 paragraph summary of what happened
+     - Identify 2-4 key decisions with rationale
+     - List completed tasks/todos
+     - Document files modified with context (what changed and why)
+     - Assess current state (what's done, what's next, blockers)
+
+  5. Create consolidated snapshot with this exact format (use heredoc):
+
+  cat <<'SNAPSHOT_EOF' | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot "{session_name}" --stdin --type auto
+  # Consolidated Snapshot: {session_name}
+  **Timestamp**: [current ISO timestamp]
+  **Method**: Claude Inline Analysis (Free)
+  **Status**: Consolidated from conversation log
+
+  ## Conversation Summary
+  [2-3 paragraphs]
+
+  ## Key Decisions
+  - [Decision 1 with rationale]
+  - [Decision 2 with rationale]
+
+  ## Completed Tasks
+  - [Task 1]
+  - [Task 2]
+
+  ## Files Modified
+  - [file_path]: [what changed and why]
+
+  ## Current State
+  [Where things stand, what's next, blockers]
+
+  ## Notes
+  Consolidated via Claude inline analysis at session boundary.
+  SNAPSHOT_EOF
+
+  6. Delete conversation log:
+     rm .claude/sessions/{session_name}/conversation-log.jsonl
+
+  7. Update state file:
+     node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-state "{session_name}" --reset-counters --set-last-snapshot "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  Return Format:
+  JSON with these exact fields:
+  {
+    "success": true,
+    "snapshot_created": "[filename]",
+    "timestamp": "[ISO timestamp]",
+    "interaction_count": [number],
+    "summary_preview": "[first 100 chars of summary]"
+  }
+
+  If any error occurs:
+  {
+    "success": false,
+    "error": "[error description]",
+    "step_failed": "[which step number]"
+  }
+
+  IMPORTANT:
+  - Use exact CLI commands shown above
+  - Do NOT read transcript files (log is self-contained)
+  - Return ONLY JSON, no additional commentary
+  ```
+
+**Subagent 2 - Refresh Git History:**
+- subagent_type: "general-purpose"
+- description: "Refresh git history"
+- model: "haiku"
+- prompt:
+  ```
+  Session: {session_name}
+
+  Goal: Refresh git history context for session
+
+  Steps:
+  1. Run git history capture CLI:
+     node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{session_name}"
+
+  2. The CLI will:
+     - Get last 50 commits (git log)
+     - Get uncommitted changes (git status, git diff)
+     - Calculate file hotspots (frequently changed files)
+     - Compress to ~2-3KB JSON
+     - Write to: .claude/sessions/{session_name}/git-history.json
+
+  3. If no git repository:
+     - CLI returns: { success: false }
+     - This is OK, just return the result
+
+  Return Format:
+  JSON with these exact fields:
+  {
+    "success": true,
+    "commits_analyzed": [number],
+    "uncommitted_changes": [number],
+    "file_hotspots_count": [number],
+    "latest_commit_hash": "[hash]",
+    "latest_commit_date": "[date]"
+  }
+
+  If no git repo or error:
+  {
+    "success": false,
+    "reason": "[why]"
+  }
+
+  IMPORTANT:
+  - Let CLI handle all git operations
+  - Do NOT run git commands manually
+  - Return ONLY JSON, no additional commentary
+  ```
+
+**Subagent 3 - Extract Session Goal:**
+- subagent_type: "general-purpose"
+- description: "Extract session goal"
+- model: "haiku"
+- prompt:
+  ```
+  Session: {session_name}
+
+  Goal: Extract session goal from session.md
+
+  Steps:
+  1. Read file: .claude/sessions/{session_name}/session.md
+
+  2. Find the "## Goal" section header
+
+  3. Extract all text after "## Goal" until:
+     - Next "##" header, OR
+     - End of file
+
+  4. Clean the extracted text:
+     - Trim whitespace
+     - Remove leading/trailing newlines
+     - Keep formatting (bullets, line breaks within goal)
+
+  Return Format:
+  JSON with these exact fields:
+  {
+    "success": true,
+    "goal": "[extracted goal text]"
+  }
+
+  If file not found or goal section missing:
+  {
+    "success": false,
+    "error": "[description]",
+    "fallback_goal": "Session {session_name}"
+  }
+
+  IMPORTANT:
+  - Return ONLY the goal text, not entire file
+  - Preserve original formatting within goal
+  - Return ONLY JSON, no additional commentary
+  ```
+
+**REMINDER**: All 3 Task invocations MUST be in the SAME response to execute in parallel!
+
+### Step 3: Process Subagent Results
+
+After all 3 subagents complete, you'll receive their results. Handle errors gracefully:
+
+**Consolidation Result**:
+- If `success: true` → Snapshot created successfully
+- If `skipped: true` → No conversation log found (OK, continue)
+- If `success: false` → Log error but continue
+
+**Git Refresh Result**:
+- If `success: true` → Git history updated
+- If `success: false` → No git repo or error (OK, continue)
+
+**Goal Extraction Result**:
+- If `success: true` → Use the extracted goal
+- If `success: false` → Use fallback goal from result
 
 ### Step 4: Activate Session (CLI)
 
@@ -59,141 +241,43 @@ This updates both the .active-session file and the index.
 
 ### Step 5: Update Last Updated Timestamp
 
-Update the "Last Updated" line in session.md to current time using the Edit tool.
-
-### Step 6: Synthesize and Display Context Summary
-
-Using the data from CLI JSON + file contents, show a comprehensive summary:
+Update the "Last Updated" line in session.md to current time using the Edit tool:
 
 ```
-✓ Loaded session: '{name}'
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📅 Started: {started from CLI JSON}
-🎯 Goal: {goal from CLI JSON or session.md}
-📝 Last update: {lastUpdated from CLI JSON}
-⏰ Status: {status from CLI JSON}
-📸 Snapshots: {snapshotCount from CLI JSON}
-
-## Recent Context
-
-{latest_snapshot_conversation_summary if available}
-
-## Key Files
-{list of files from filesInvolved array in CLI JSON}
-
-## Milestones
-{key milestones from session.md with checkboxes}
-
-## Recent Decisions
-{recent decisions from context.md, max 3}
-
-## Current State
-{current state from latest snapshot if available}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Ready to continue! How would you like to proceed?
+**Last Updated**: {current ISO timestamp}
 ```
 
-### Step 7: Prepare for Work
+### Step 6: Display Minimal Summary
 
-Tell the user:
-"I've loaded the full context for session '{name}'. All previous work, decisions, and progress have been restored. What would you like to work on next?"
+Show a clean, minimal summary using the goal extracted by Subagent 3:
+
+```
+✓ Session ready: {goal}
+
+What's next?
+```
+
+**IMPORTANT**:
+- Do NOT show comprehensive summaries
+- Do NOT list files, milestones, decisions, snapshots
+- Keep it minimal for token efficiency
+- The heavy analysis already happened in the subagents
+- User can run `/session status` for detailed view
 
 ---
 
-**PERFORMANCE BENEFITS:**
-- **Before:** 10-20K tokens, reads session.md + context.md + snapshot + metadata parsing, 3-5s
-- **After:** 3-8K tokens, CLI provides metadata instantly, only reads content files, 1-2s
-- **Improvement:** ~60-70% token reduction, ~2x faster
-
-**WHY STILL READ CONTENT FILES:**
-- context.md and snapshots contain narrative context needed for synthesis
-- Claude needs full context to provide meaningful summary
-- CLI provides structure/metadata, Claude provides intelligence/understanding
+**TOKEN OPTIMIZATION BENEFITS:**
+- Before (v3.6.4): 77k tokens in main conversation
+- After (v3.7.0): ~22k tokens in main conversation (72% reduction)
+- Heavy work (consolidation, git analysis) happens in isolated subagent contexts
+- Parallel execution: 3 subagents run simultaneously (~2-4 seconds total)
+- Result: Faster session resume, massive token savings
 
 **ERROR HANDLING:**
-- If session.md missing, show corrupted session warning
-- If CLI fails, suggest rebuilding index
-- Handle missing context.md or snapshots gracefully (show what's available)
+- If all subagents fail: Still activate session, show generic message "✓ Session ready. What's next?"
+- If session.md missing: Show corrupted session warning
+- If CLI fails: Suggest rebuilding index with `/session rebuild-index`
 
 ---
 
-## CRITICAL: Check for Unconsolidated Logs (Inline Analysis)
-
-**YOU MUST CHECK THIS BEFORE DISPLAYING THE SESSION SUMMARY:**
-
-When resuming a session, check if the previous session left unconsolidated logs:
-
-1. Check if `.claude/sessions/{name}/conversation-log.jsonl` exists
-2. If the file exists:
-   - Show brief message: "📊 Analyzing previous session... (this may take 1-3 seconds)"
-   - Read the conversation log file
-   - Parse interactions from JSONL format
-   - **Parse self-contained conversation log (v3.6.2+):**
-     - Each entry has type: 'interaction' (user prompt) or 'assistant_response' (Claude's response)
-     - Extract full conversation from log entries:
-       - User prompts: `user_prompt` field in 'interaction' entries
-       - Claude responses: `response_text` field in 'assistant_response' entries
-       - Tools used: `tools_used` field in 'assistant_response' entries
-       - File modifications: `modified_files` field in 'interaction' entries
-     - Log is self-contained - NO need to read transcript file!
-     - **Backward compatibility**: If `transcript_path` exists but no `response_text`, fall back to reading transcript file (for v3.6.1 logs)
-   - **Capture git history (if available):**
-     - Run: `node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{name}"`
-     - This creates `.claude/sessions/{name}/git-history.json` (~2-3KB compressed)
-     - Contains: last 50 commits, uncommitted changes, branch status, hotspots
-     - Performance: ~60-90ms (acceptable at session boundary)
-     - If no git repo, command returns success: false (silent skip, no error)
-   - **Analyze the conversation with Claude inline:**
-     - Use the full conversation from log entries (user prompts + Claude responses)
-     - Extract conversation summary (2-3 paragraphs covering what happened)
-     - Identify key decisions made with rationale
-     - List completed todos/tasks
-     - Document files modified with context about what changed and why (from conversation, not just file paths)
-     - Assess current state, what's next, and any blockers
-   - Create consolidated snapshot via CLI:
-     ```bash
-     echo "# Consolidated Snapshot: {session_name}
-**Timestamp**: {ISO timestamp}
-**Method**: Claude Inline Analysis (Free)
-**Status**: Consolidated from conversation log
-
-## Conversation Summary
-{2-3 paragraph summary of what happened in session}
-
-## Key Decisions
-- {Decision 1 with rationale}
-- {Decision 2 with rationale}
-
-## Completed Tasks
-- {Task 1}
-- {Task 2}
-
-## Files Modified
-- {file_path}: {what changed and why}
-
-## Current State
-{Where things stand, what's next, blockers}
-
-## Notes
-Consolidated via Claude inline analysis at session boundary. Zero cost, highest quality." | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot "{name}" --stdin --type auto
-     ```
-   - Delete conversation-log.jsonl after successful snapshot creation
-   - Update `.auto-capture-state` to reset counters and set last_snapshot_timestamp
-3. If no log exists:
-   - **Still capture git history** for updated repository context:
-     - Run: `node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{name}"`
-     - This refreshes git context since last session
-     - Silent skip if no git repo (no error)
-
-**PERFORMANCE:**
-- Log check: <5ms
-- Claude analysis: 1-3s (acceptable at session boundaries - users expect loading)
-- Snapshot write: <50ms
-- Log deletion: <5ms
-- **Total: ~1-3 seconds** (users expect loading at session resume)
-
-**NOTE:** This is the v3.5.1 architecture where:
-- During session: Conversation logged incrementally (<2ms per interaction, zero blocking)
-- At session boundaries: Claude inline analysis creates intelligent snapshots (FREE, highest quality)
-- Result: User NEVER experiences blocking during work, only brief wait at session resume where loading is expected
+ARGUMENTS: {name}
