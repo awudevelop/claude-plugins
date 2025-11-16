@@ -25,14 +25,33 @@ Parse the session name from the command arguments. The command format is: `/sess
 
 ### Step 2: Check for Duplicate Sessions
 
-1. Check if `.claude/sessions/{name}/` directory already exists
-2. If exists, show error:
-   ```
-   ❌ Error: Session '{name}' already exists
-   💡 Use /session continue {name} to resume
-   💡 Or use /session list to see all sessions
-   ```
-   Then STOP.
+**CRITICAL:** Check both directory names AND session.md file contents to prevent duplicates.
+
+1. **Check directory collision:**
+   - Check if `.claude/sessions/{name}/` directory already exists
+   - If exists, show error:
+     ```
+     ❌ Error: Session directory '{name}' already exists
+     💡 Use /session continue {name} to resume
+     💡 Or use /session list to see all sessions
+     ```
+     Then STOP.
+
+2. **Check session name collision (NEW - prevents duplicate names):**
+   - Use the CLI to get all existing sessions:
+     ```bash
+     node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js list
+     ```
+   - Parse the JSON response and check if any existing session has `name: "{name}"`
+   - If a session with this name exists (even if directory name is different), show error:
+     ```
+     ❌ Error: A session named '{name}' already exists
+     💡 Use /session list to see all sessions
+     💡 Choose a different name for this session
+     ```
+     Then STOP.
+
+This dual-check prevents both directory collisions and duplicate session names.
 
 ### Step 3: Check for Active Session and Transition (NEW - Session Cleanup)
 
@@ -54,6 +73,8 @@ Before creating the new session, check if there's already an active session:
 2. Verify creation was successful
 
 ### Step 5: Initialize session.md
+
+**CRITICAL:** The session name in session.md MUST match the directory name to prevent duplicates.
 
 Create `.claude/sessions/{name}/session.md` with this content:
 

@@ -8,8 +8,8 @@
 
 ## 🎯 Current Version Tracking
 
-**Latest Release**: `v3.7.1`
-**Last Updated**: 2025-11-14
+**Latest Release**: `v3.7.2`
+**Last Updated**: 2025-11-16
 **Next Version**: `[TO BE DETERMINED]`
 
 ---
@@ -285,6 +285,7 @@ Based on Claude Code official documentation, descriptions serve different purpos
 
 | Version | Release Date | Type | Key Changes |
 |---------|--------------|------|-------------|
+| v3.7.2 | 2025-11-16 | PATCH | Permission wildcard syntax fix + duplicate session prevention |
 | v3.7.1 | 2025-11-14 | PATCH | Subagent reliability hotfix (60%→95%) |
 | v3.7.0 | 2025-11-14 | MINOR | Parallel subagent architecture (72% token reduction) |
 | v3.6.4 | 2025-11-13 | PATCH | Stop hook reliability improvements |

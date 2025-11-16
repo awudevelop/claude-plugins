@@ -404,11 +404,11 @@ class HooksManager {
       'Read(.claude/sessions/**)',
 
       // Git read-only commands for history refresh
-      'Bash(git log --oneline*)',
-      'Bash(git status --porcelain*)',
-      'Bash(git diff --stat*)',
-      'Bash(git branch -vv*)',
-      'Bash(git rev-parse --abbrev-ref*)'
+      'Bash(git log --oneline:*)',
+      'Bash(git status --porcelain:*)',
+      'Bash(git diff --stat:*)',
+      'Bash(git branch -vv:*)',
+      'Bash(git rev-parse --abbrev-ref:*)'
     ];
   }
 

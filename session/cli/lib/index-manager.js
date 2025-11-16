@@ -211,6 +211,15 @@ class IndexManager {
     const content = fs.readFileSync(sessionFile, 'utf8');
     const metadata = this.parseSessionMarkdown(content);
 
+    // VALIDATION: Warn if directory name doesn't match session name in file
+    if (metadata.name && metadata.name !== sessionName) {
+      console.warn(`⚠️  Warning: Session name mismatch detected!`);
+      console.warn(`   Directory name: "${sessionName}"`);
+      console.warn(`   Session.md name: "${metadata.name}"`);
+      console.warn(`   This can cause duplicate entries in session listings.`);
+      console.warn(`   Consider renaming the directory to match: "${metadata.name}"`);
+    }
+
     // Get file stats
     const stats = fs.statSync(sessionFile);
     metadata.lastUpdated = stats.mtime.toISOString();

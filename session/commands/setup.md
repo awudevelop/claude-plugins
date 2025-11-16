@@ -82,11 +82,11 @@ Parse the JSON response and display user-friendly output based on the action:
 
 🔓 Permissions added ({permissionsCount} entries):
   ✓ Read(.claude/sessions/**)
-  ✓ Bash(git log --oneline*)
-  ✓ Bash(git status --porcelain*)
-  ✓ Bash(git diff --stat*)
-  ✓ Bash(git branch -vv*)
-  ✓ Bash(git rev-parse --abbrev-ref*)
+  ✓ Bash(git log --oneline:*)
+  ✓ Bash(git status --porcelain:*)
+  ✓ Bash(git diff --stat:*)
+  ✓ Bash(git branch -vv:*)
+  ✓ Bash(git rev-parse --abbrev-ref:*)
 
 ⚡ Result: ZERO permission prompts during:
   • /session:continue (no Read prompts, no git prompts)
@@ -218,11 +218,11 @@ Session plugin hooks are not currently configured in settings.json
 {if permissionsConfigured === true}
   ✅ All session permissions configured
   • Read(.claude/sessions/**)
-  • Bash(git log --oneline*)
-  • Bash(git status --porcelain*)
-  • Bash(git diff --stat*)
-  • Bash(git branch -vv*)
-  • Bash(git rev-parse --abbrev-ref*)
+  • Bash(git log --oneline:*)
+  • Bash(git status --porcelain:*)
+  • Bash(git diff --stat:*)
+  • Bash(git branch -vv:*)
+  • Bash(git rev-parse --abbrev-ref:*)
 
   ⚡ Result: Zero prompts during session operations
 {else if permissionsCount > 0 && permissionsCount < totalPermissions}
