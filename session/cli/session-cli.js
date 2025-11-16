@@ -139,8 +139,8 @@ Examples:
  * Show version information
  */
 function showVersion() {
-  const pkg = require('./package.json');
-  console.log(`Session CLI v${pkg.version}`);
+  const plugin = require('../plugin.json');
+  console.log(`Session CLI v${plugin.version}`);
 }
 
 /**

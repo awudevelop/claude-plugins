@@ -279,7 +279,6 @@ Warning: Index corrupted, rebuilding...
 ```
 cli/
 ├── session-cli.js              # Main entry point
-├── package.json                # Package metadata
 ├── lib/
 │   ├── index-manager.js        # Index operations
 │   ├── session-reader.js       # Read operations
