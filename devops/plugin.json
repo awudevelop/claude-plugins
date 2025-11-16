@@ -1,0 +1,79 @@
+{
+  "name": "devops",
+  "version": "1.0.0",
+  "description": "DevOps automation for Netlify deployments with encrypted secrets management (AES-256), automatic token validation, instant rollback, and zero-token CLI operations. Multi-cloud support (AWS, GCP, Azure, Vercel) coming soon.",
+  "author": {
+    "name": "AutomateWith.Us",
+    "email": "team@automatewith.us"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/automatewithus/claude-plugins.git"
+  },
+  "keywords": [
+    "devops",
+    "netlify",
+    "deployment",
+    "automation",
+    "secrets-management",
+    "rollback",
+    "aes-256",
+    "token-validation",
+    "zero-token",
+    "cli",
+    "ci-cd",
+    "jamstack",
+    "static-sites",
+    "serverless"
+  ],
+  "category": "devops",
+  "license": "MIT",
+  "changelog": {
+    "1.0.0": {
+      "date": "2025-11-16",
+      "description": "Initial release with Netlify-only support",
+      "changes": [
+        "Netlify deployment automation via official CLI wrapper",
+        "AES-256 encrypted secrets management with local storage",
+        "Hybrid token authentication (env vars + encrypted storage)",
+        "Automatic Netlify token validation",
+        "Platform validation blocking unsupported platforms",
+        "Project type auto-detection (Next.js, React, Vue, etc.)",
+        "Instant rollback capability",
+        "Deployment tracking and history",
+        "Zero-token CLI operations for efficiency",
+        "Comprehensive error handling with actionable fixes"
+      ],
+      "breaking": [],
+      "notes": [
+        "AWS, GCP, Azure, and Vercel support planned for future releases",
+        "Netlify CLI required (installed via npx automatically)",
+        "Supports static sites, SPAs, SSGs, and Netlify Functions"
+      ]
+    }
+  },
+  "commands": {
+    "/devops:init": "commands/init.md",
+    "/devops:deploy": "commands/deploy.md",
+    "/devops:build": "commands/build.md",
+    "/devops:infra": "commands/infra.md",
+    "/devops:status": "commands/status.md",
+    "/devops:logs": "commands/logs.md",
+    "/devops:rollback": "commands/rollback.md",
+    "/devops:config": "commands/config.md",
+    "/devops:secrets": "commands/secrets.md"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/pre-deployment-check.js"
+          }
+        ]
+      }
+    ]
+  }
+}

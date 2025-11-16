@@ -1,0 +1,94 @@
+{
+  "_comment": "GCP DevOps Configuration Template",
+  "platform": "gcp",
+  "region": "us-central1",
+  "projectId": "YOUR_GCP_PROJECT_ID",
+
+  "deployment": {
+    "service": "cloud-run",
+    "serviceName": "app-service",
+    "minInstances": 1,
+    "maxInstances": 10,
+    "strategy": "rolling",
+    "healthCheck": {
+      "enabled": true,
+      "path": "/health",
+      "initialDelay": 10,
+      "timeout": 5,
+      "checkInterval": 30
+    }
+  },
+
+  "infrastructure": {
+    "network": {
+      "vpcName": "default",
+      "subnetName": "default",
+      "ipRange": "10.128.0.0/20"
+    },
+    "compute": {
+      "type": "cloud-run",
+      "cpu": "1",
+      "memory": "512Mi",
+      "concurrency": 80,
+      "autoScaling": {
+        "enabled": true,
+        "minInstances": 1,
+        "maxInstances": 10,
+        "targetConcurrency": 60
+      }
+    },
+    "loadBalancer": {
+      "type": "cloud-load-balancing",
+      "sslCertificate": "projects/PROJECT/global/sslCertificates/CERT_NAME"
+    }
+  },
+
+  "storage": {
+    "cloudStorage": {
+      "bucketName": "YOUR_APP_BUCKET",
+      "location": "US",
+      "storageClass": "STANDARD",
+      "versioning": true
+    },
+    "cloudSQL": {
+      "databaseVersion": "POSTGRES_14",
+      "tier": "db-f1-micro",
+      "diskSize": 10,
+      "backupEnabled": true
+    }
+  },
+
+  "monitoring": {
+    "cloudMonitoring": {
+      "enabled": true,
+      "logRetention": 30,
+      "metrics": ["request_count", "request_latencies", "container/cpu/utilization"]
+    },
+    "alerts": {
+      "highCPU": {
+        "threshold": 80,
+        "duration": "300s",
+        "alignmentPeriod": "60s"
+      },
+      "highMemory": {
+        "threshold": 85,
+        "duration": "300s",
+        "alignmentPeriod": "60s"
+      },
+      "errorRate": {
+        "threshold": 5,
+        "duration": "300s",
+        "alignmentPeriod": "60s"
+      }
+    }
+  },
+
+  "cicd": {
+    "cloudBuild": {
+      "enabled": false,
+      "triggerName": "app-build-trigger",
+      "sourceRepo": "github_YOUR_ORG_YOUR_REPO",
+      "branch": "main"
+    }
+  }
+}

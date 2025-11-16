@@ -1,0 +1,65 @@
+# DevOps Plugin - Git Ignore
+
+# Secrets and credentials
+.devops/
+*.enc
+credentials.enc
+secrets-backup/
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.*.local
+
+# API tokens and keys
+*_token
+*_key
+*_secret
+
+# Node modules
+node_modules/
+cli/node_modules/
+
+# Test artifacts
+.devops-test/
+test-deployments/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+
+# Build artifacts (if testing locally)
+dist/
+build/
+out/
+.next/
+
+# Platform-specific configs (may contain sensitive data)
+aws-config.json
+gcp-config.json
+azure-config.json
+netlify-config.json
+vercel-config.json
+
+# Backup files
+*.bak
+*.backup

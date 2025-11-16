@@ -1,0 +1,110 @@
+{
+  "_comment": "Azure DevOps Configuration Template",
+  "platform": "azure",
+  "region": "eastus",
+  "subscriptionId": "YOUR_AZURE_SUBSCRIPTION_ID",
+  "resourceGroup": "YOUR_RESOURCE_GROUP",
+
+  "deployment": {
+    "service": "app-service",
+    "appName": "your-app-name",
+    "sku": "B1",
+    "strategy": "rolling",
+    "healthCheck": {
+      "enabled": true,
+      "path": "/health",
+      "interval": 30,
+      "timeout": 5
+    }
+  },
+
+  "infrastructure": {
+    "network": {
+      "vnetName": "app-vnet",
+      "addressPrefix": "10.0.0.0/16",
+      "subnets": {
+        "app": "10.0.1.0/24",
+        "data": "10.0.2.0/24"
+      }
+    },
+    "compute": {
+      "type": "app-service",
+      "tier": "Basic",
+      "size": "B1",
+      "instances": 1,
+      "autoScaling": {
+        "enabled": true,
+        "minInstances": 1,
+        "maxInstances": 5,
+        "rules": [
+          {
+            "metricName": "CpuPercentage",
+            "operator": "GreaterThan",
+            "threshold": 70,
+            "scaleAction": "Increase",
+            "cooldown": "PT5M"
+          }
+        ]
+      }
+    },
+    "loadBalancer": {
+      "type": "application-gateway",
+      "tier": "Standard_v2",
+      "sslCertificate": "/subscriptions/SUB_ID/resourceGroups/RG/providers/Microsoft.Network/applicationGateways/AG/sslCertificates/CERT"
+    }
+  },
+
+  "storage": {
+    "blobStorage": {
+      "accountName": "yourappstorageaccount",
+      "tier": "Standard",
+      "replication": "LRS",
+      "containerName": "app-container"
+    },
+    "sqlDatabase": {
+      "serverName": "your-sql-server",
+      "databaseName": "your-database",
+      "edition": "Basic",
+      "serviceObjective": "Basic",
+      "maxSizeGB": 2
+    }
+  },
+
+  "monitoring": {
+    "applicationInsights": {
+      "enabled": true,
+      "retentionDays": 90,
+      "samplingPercentage": 100
+    },
+    "alerts": {
+      "highCPU": {
+        "threshold": 80,
+        "windowSize": "PT5M",
+        "frequency": "PT1M",
+        "severity": 2
+      },
+      "highMemory": {
+        "threshold": 85,
+        "windowSize": "PT5M",
+        "frequency": "PT1M",
+        "severity": 2
+      },
+      "responseTime": {
+        "threshold": 1000,
+        "windowSize": "PT5M",
+        "frequency": "PT1M",
+        "severity": 3
+      }
+    }
+  },
+
+  "cicd": {
+    "azureDevOps": {
+      "enabled": false,
+      "organization": "YOUR_ORG",
+      "project": "YOUR_PROJECT",
+      "repository": "YOUR_REPO",
+      "branch": "main"
+    }
+  }
+}

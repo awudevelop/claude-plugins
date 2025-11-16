@@ -1,0 +1,24 @@
+{
+  "name": "devops-cli",
+  "version": "1.0.0",
+  "description": "Zero-dependency CLI tool for DevOps plugin - uses Netlify CLI via npx for all operations",
+  "main": "devops-cli.js",
+  "bin": {
+    "devops-cli": "./devops-cli.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["devops", "cli", "netlify", "deployment", "automation"],
+  "author": "AutomateWith.Us",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {},
+  "notes": [
+    "This CLI uses npx netlify-cli for all Netlify operations",
+    "No dependencies needed - Netlify CLI is downloaded via npx on first use",
+    "Relies only on Node.js built-in modules (child_process, fs, path)"
+  ]
+}

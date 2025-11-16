@@ -1,0 +1,92 @@
+{
+  "_comment": "Netlify DevOps Configuration Template",
+  "platform": "netlify",
+  "siteId": "YOUR_NETLIFY_SITE_ID",
+  "siteName": "your-app-name",
+
+  "deployment": {
+    "buildCommand": "npm run build",
+    "publishDirectory": "dist",
+    "functionsDirectory": "netlify/functions",
+    "productionBranch": "main",
+    "strategy": "instant",
+    "autoPublish": true
+  },
+
+  "build": {
+    "environment": {
+      "NODE_VERSION": "18",
+      "NPM_VERSION": "9"
+    },
+    "processing": {
+      "css": {
+        "bundle": true,
+        "minify": true
+      },
+      "js": {
+        "bundle": true,
+        "minify": true
+      },
+      "images": {
+        "compress": true
+      }
+    }
+  },
+
+  "functions": {
+    "directory": "netlify/functions",
+    "nodeVersion": 18,
+    "externalNodeModules": [],
+    "includedFiles": []
+  },
+
+  "redirects": [
+    {
+      "from": "/api/*",
+      "to": "/.netlify/functions/:splat",
+      "status": 200
+    },
+    {
+      "from": "/*",
+      "to": "/index.html",
+      "status": 200
+    }
+  ],
+
+  "headers": [
+    {
+      "for": "/*",
+      "values": {
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin"
+      }
+    }
+  ],
+
+  "plugins": [],
+
+  "monitoring": {
+    "analytics": {
+      "enabled": true
+    },
+    "logDrain": {
+      "enabled": false,
+      "url": ""
+    }
+  },
+
+  "cicd": {
+    "buildHooks": {
+      "enabled": true,
+      "triggerOnPush": true,
+      "triggerOnPR": false
+    },
+    "notifications": {
+      "onSuccess": false,
+      "onFailure": true,
+      "email": "YOUR_EMAIL"
+    }
+  }
+}

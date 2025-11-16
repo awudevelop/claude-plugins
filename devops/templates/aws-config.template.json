@@ -1,0 +1,92 @@
+{
+  "_comment": "AWS DevOps Configuration Template",
+  "platform": "aws",
+  "region": "us-east-1",
+  "accountId": "YOUR_AWS_ACCOUNT_ID",
+
+  "deployment": {
+    "service": "ecs",
+    "cluster": "default",
+    "taskDefinition": "app-task",
+    "desiredCount": 2,
+    "strategy": "rolling",
+    "healthCheck": {
+      "enabled": true,
+      "path": "/health",
+      "interval": 30,
+      "timeout": 5,
+      "healthyThreshold": 2,
+      "unhealthyThreshold": 3
+    }
+  },
+
+  "infrastructure": {
+    "vpc": {
+      "cidr": "10.0.0.0/16",
+      "subnets": {
+        "public": ["10.0.1.0/24", "10.0.2.0/24"],
+        "private": ["10.0.10.0/24", "10.0.11.0/24"]
+      }
+    },
+    "compute": {
+      "type": "ecs-fargate",
+      "cpu": "256",
+      "memory": "512",
+      "autoScaling": {
+        "enabled": true,
+        "minCapacity": 2,
+        "maxCapacity": 10,
+        "targetCPU": 70,
+        "targetMemory": 80
+      }
+    },
+    "loadBalancer": {
+      "type": "application",
+      "scheme": "internet-facing",
+      "sslCertificate": "arn:aws:acm:REGION:ACCOUNT:certificate/CERT_ID"
+    }
+  },
+
+  "storage": {
+    "s3": {
+      "bucketName": "YOUR_APP_BUCKET",
+      "versioning": true,
+      "encryption": "AES256"
+    },
+    "rds": {
+      "engine": "postgres",
+      "version": "14.7",
+      "instanceClass": "db.t3.micro",
+      "allocatedStorage": 20,
+      "multiAZ": false
+    }
+  },
+
+  "monitoring": {
+    "cloudWatch": {
+      "enabled": true,
+      "logRetention": 30,
+      "metrics": ["CPUUtilization", "MemoryUtilization", "RequestCount"]
+    },
+    "alarms": {
+      "highCPU": {
+        "threshold": 80,
+        "period": 300,
+        "evaluationPeriods": 2
+      },
+      "highMemory": {
+        "threshold": 85,
+        "period": 300,
+        "evaluationPeriods": 2
+      }
+    }
+  },
+
+  "cicd": {
+    "codePipeline": {
+      "enabled": false,
+      "sourceProvider": "GitHub",
+      "branch": "main"
+    }
+  }
+}

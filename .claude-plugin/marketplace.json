@@ -74,6 +74,43 @@
         "cicd",
         "workflow"
       ]
+    },
+    {
+      "name": "devops",
+      "source": "./devops",
+      "version": "1.0.0",
+      "description": "v1.0.0 - DevOps automation for Netlify deployments with encrypted secrets management, automatic validation, and instant rollback. Zero-token CLI operations with hybrid token authentication. AWS, GCP, Azure, and Vercel support coming soon.",
+      "author": {
+        "name": "AutomateWith.Us",
+        "email": "team@automatewith.us"
+      },
+      "homepage": "https://github.com/automatewithus/claude-plugins",
+      "repository": "https://github.com/automatewithus/claude-plugins",
+      "license": "MIT",
+      "keywords": [
+        "devops",
+        "netlify",
+        "deployment",
+        "automation",
+        "secrets-management",
+        "rollback",
+        "aes-256",
+        "token-validation",
+        "zero-token",
+        "cli",
+        "ci-cd",
+        "jamstack",
+        "static-sites",
+        "serverless"
+      ],
+      "category": "devops",
+      "tags": [
+        "devops",
+        "netlify",
+        "deployment",
+        "automation",
+        "secrets"
+      ]
     }
   ]
 }
