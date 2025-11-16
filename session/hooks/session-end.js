@@ -68,6 +68,24 @@ try {
       }
     }
 
+    // Mark session as closed in .auto-capture-state (fast, atomic)
+    if (sessionName) {
+      const sessionDir = path.join(SESSIONS_DIR, sessionName);
+      const statePath = path.join(sessionDir, '.auto-capture-state');
+
+      if (fs.existsSync(statePath)) {
+        try {
+          let state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+          state.session_status = 'closed';
+          state.session_closed = new Date().toISOString();
+          fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+        } catch (stateError) {
+          // Silent fail - hook must be safe
+          // Session status update failed but continue with other cleanup
+        }
+      }
+    }
+
     // Update the index.json to clear activeSession using IndexManager
     // This uses proper locking and atomic writes to prevent corruption
     try {

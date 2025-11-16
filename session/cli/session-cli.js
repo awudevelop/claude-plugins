@@ -15,6 +15,7 @@
  *   activate <name>         Activate a session
  *   delete <name>           Delete a session permanently
  *   update-index            Update metadata index
+ *   update-status <name> <status>  Update session status (active/closed)
  *   validate                Validate index integrity
  *   stats <name>            Get session statistics
  *   stats-all               Get statistics for all sessions
@@ -44,6 +45,7 @@ const commands = {
   activate: require('./lib/commands/activate'),
   delete: require('./lib/commands/delete'),
   'update-index': require('./lib/commands/update-index'),
+  'update-status': require('./lib/commands/update-status'),
   validate: require('./lib/commands/validate'),
   stats: require('./lib/commands/stats'),
   'stats-all': require('./lib/commands/stats-all'),
@@ -79,6 +81,9 @@ Commands:
 
   update-index [--session <name>] [--full-rebuild]
       Update the metadata index
+
+  update-status <session-name> <status>
+      Update session status (active or closed) in .auto-capture-state
 
   validate [--fix]
       Validate index integrity and optionally fix issues

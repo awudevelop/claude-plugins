@@ -61,8 +61,11 @@ Before creating the new session, check if there's already an active session:
 2. If it exists:
    - Read the current active session name
    - Show: "📋 Closing previous session '{previous_session_name}'..."
-   - Update the previous session's `session.md` "Last Updated" timestamp to current time
-   - This provides clean transition tracking
+   - Close the previous session status:
+     ```bash
+     node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-status "{previous_session_name}" "closed"
+     ```
+   - This marks the previous session as closed in `.auto-capture-state`
 3. Continue to next step (the new session activation will overwrite `.active-session`)
 
 **Note:** The SessionEnd hook will handle final cleanup on Claude Code termination.
@@ -81,7 +84,6 @@ Create `.claude/sessions/{name}/session.md` with this content:
 ```markdown
 # Session: {name}
 
-**Status**: Active
 **Started**: {current_timestamp_YYYY-MM-DD_HH:MM}
 **Last Updated**: {current_timestamp_YYYY-MM-DD_HH:MM}
 
@@ -131,6 +133,23 @@ Session started on {current_timestamp}. Ready to capture context.
 
 1. Write the session name to `.claude/sessions/.active-session` (single line, just the name)
 2. This marks it as the currently active session
+
+### Step 7.5: Initialize .auto-capture-state with Session Status
+
+Create `.claude/sessions/{name}/.auto-capture-state` with initial session status:
+
+```bash
+echo '{
+  "interaction_count": 0,
+  "modified_files": [],
+  "last_snapshot_timestamp": null,
+  "session_status": "active",
+  "session_started": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+  "session_closed": null
+}' > .claude/sessions/{name}/.auto-capture-state
+```
+
+This initializes the operational state tracking for the session, including the session status which is now tracked in JSON for fast, atomic updates.
 
 ### Step 8: Update Index (NEW - CRITICAL)
 

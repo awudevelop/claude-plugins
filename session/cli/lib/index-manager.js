@@ -211,6 +211,35 @@ class IndexManager {
     const content = fs.readFileSync(sessionFile, 'utf8');
     const metadata = this.parseSessionMarkdown(content);
 
+    // Read status from .auto-capture-state (preferred) with backward compatibility
+    const statePath = path.join(sessionDir, '.auto-capture-state');
+    if (fs.existsSync(statePath)) {
+      try {
+        const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+        if (state.session_status) {
+          // Use status from .auto-capture-state (authoritative)
+          metadata.status = state.session_status;
+          if (state.session_closed) {
+            metadata.closed = state.session_closed;
+          }
+        } else {
+          // Migrate status from session.md to .auto-capture-state (backward compatibility)
+          state.session_status = metadata.status || 'active';
+          if (metadata.closed) {
+            state.session_closed = metadata.closed;
+          }
+          if (metadata.started) {
+            state.session_started = metadata.started;
+          }
+          fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+        }
+      } catch (err) {
+        // If .auto-capture-state is corrupted, fall back to session.md
+        // Status already extracted from session.md, continue
+      }
+    }
+    // If .auto-capture-state doesn't exist, use status from session.md (backward compatibility)
+
     // VALIDATION: Warn if directory name doesn't match session name in file
     if (metadata.name && metadata.name !== sessionName) {
       console.warn(`⚠️  Warning: Session name mismatch detected!`);
