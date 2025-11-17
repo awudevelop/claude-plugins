@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.8.5] - 2025-11-17
+
+### Fixed
+
+- **Bash Tool Parse Error** (`session/commands/continue.md:112`)
+  - Fixed "parse error near `(`" when resuming sessions
+  - Root cause: Bash tool limitation with `$(command | pipe)` syntax inside command substitution
+  - Changed from: `LATEST_SNAPSHOT=$(find ... | xargs ls -t | head -1)`
+  - Changed to: `LATEST_SNAPSHOT=\`find ... | sort -r | head -1\``
+  - Used backticks (deprecated but works with Bash tool) instead of `$()`
+  - Simplified to alphabetic reverse sort (works perfectly for ISO date format)
+  - Impact: Session continue command now works without parse errors
+
+---
+
 ## [3.8.3] - 2025-11-17
 
 ### Fixed
