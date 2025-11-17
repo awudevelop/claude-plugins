@@ -276,13 +276,12 @@ function handleDeploy(options) {
       timestamp: new Date().toISOString()
     };
 
-    if (options.track) {
-      tracker.recordDeployment(deployment);
-    }
+    // Always track deployments
+    const trackedDeployment = tracker.recordDeployment(deployment);
 
     outputJson({
       success: true,
-      deployment,
+      deployment: trackedDeployment,
       message: 'Deployment started (simulated)'
     });
   } catch (error) {
