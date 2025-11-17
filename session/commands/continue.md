@@ -105,58 +105,43 @@ After all 3 subagents complete, you'll receive their results. Handle errors grac
 
 ### Step 3.5: Extract Snapshot Pointer with Teaser (Hybrid Approach)
 
-Provide Claude with pointer to full context + 2-3 line teaser for immediate orientation:
+Provide Claude with pointer to full context + 2-3 line teaser for immediate orientation using Claude Code tools.
 
-1. Find the latest snapshot file:
-   ```bash
-   LATEST_SNAPSHOT=`find .claude/sessions/{session_name} -name "auto_*.md" -type f 2>/dev/null | sort -r | head -1`
+**IMPORTANT**: This step uses Claude Code's Read and Glob tools instead of bash pipelines to avoid parse errors with command substitution.
+
+**Implementation Steps:**
+
+1. **Find the latest snapshot file using Glob tool:**
+   - Pattern: `.claude/sessions/{session_name}/auto_*.md`
+   - Glob returns files sorted by modification time (newest first)
+   - Take the first result as the latest snapshot
+
+2. **If snapshot exists, use Read tool to extract teaser:**
+   - Read the snapshot file (first 50 lines should contain all needed sections)
+   - Extract three teaser lines:
+     - **Line 1 (Done)**: First sentence from "## Conversation Summary" section (after heading, skip blank line, take line 1, truncate at first period, limit 100 chars)
+     - **Line 2 (Status)**: First 1-2 sentences from "## Current State" section (after heading, skip blank line, take lines 1-2, join with space, limit 120 chars)
+     - **Line 3 (Next)**: Look for "what's next" or similar forward-looking text in "## Current State" section (limit 80 chars)
+   - Use fallback text if any extraction fails:
+     - Done: "Session work consolidated"
+     - Status: "See snapshot for current status"
+     - Next: "See snapshot for next steps"
+
+3. **Build teaser output:**
+   ```
+   📋 Latest: {snapshot_filename} (recently)
+      • Done: {LINE_DONE}
+      • Status: {LINE_STATUS}
+      • Next: {LINE_NEXT}
+   💡 Read {snapshot_path} for full context
    ```
 
-2. If snapshot exists, extract 3-line teaser:
-   ```bash
-   if [ -n "$LATEST_SNAPSHOT" ] && [ -f "$LATEST_SNAPSHOT" ]; then
-     # Calculate time ago (simplified - could use more sophisticated logic)
-     SNAPSHOT_TIME=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M" "$LATEST_SNAPSHOT" 2>/dev/null || date -r "$LATEST_SNAPSHOT" "+%Y-%m-%d %H:%M" 2>/dev/null || echo "recently")
-     TIME_AGO="recently"
-
-     # Line 1: Main accomplishment (from Conversation Summary, first sentence)
-     LINE_DONE=$(grep -A 5 "## Conversation Summary" "$LATEST_SNAPSHOT" 2>/dev/null | sed -n '3p' | sed 's/\. .*/\./' | cut -c1-100)
-
-     # Line 2: Current state (from Current State section, first 2 sentences)
-     LINE_STATUS=$(grep -A 10 "## Current State" "$LATEST_SNAPSHOT" 2>/dev/null | sed -n '3,4p' | tr '\n' ' ' | cut -c1-120)
-
-     # Line 3: Next steps (from Current State, look for "next" after heading)
-     LINE_NEXT=$(grep -A 15 "## Current State" "$LATEST_SNAPSHOT" 2>/dev/null | grep -A 2 -i "what's next" | tail -2 | head -1 | cut -c1-80)
-
-     # Fallback if extractions fail
-     if [ -z "$LINE_DONE" ]; then
-       LINE_DONE="Session work consolidated"
-     fi
-     if [ -z "$LINE_STATUS" ]; then
-       LINE_STATUS="See snapshot for current status"
-     fi
-     if [ -z "$LINE_NEXT" ]; then
-       LINE_NEXT="See snapshot for next steps"
-     fi
-
-     # Build teaser
-     SNAPSHOT_NAME=$(basename "$LATEST_SNAPSHOT")
-     TEASER="📋 Latest: $SNAPSHOT_NAME ($TIME_AGO)
-   • Done: $LINE_DONE
-   • Status: $LINE_STATUS
-   • Next: $LINE_NEXT
-💡 Read $LATEST_SNAPSHOT for full context"
-   else
-     TEASER=""
-   fi
-   ```
-
-3. Store TEASER variable for use in Step 6 display
+4. **Display the teaser in Step 6** (after showing the session goal)
 
 **Graceful Handling**:
-- If no snapshot exists → TEASER is empty (OK, fresh session)
-- If extraction fails → Falls back to generic text (still shows pointer)
-- If file read fails → Silent failure, continue (don't break resume)
+- If no snapshot exists → Skip teaser display (OK, fresh session)
+- If extraction fails → Use fallback text (still shows pointer)
+- If Read fails → Silent failure, continue (don't break resume)
 
 **Why Hybrid Pointer Works Better**:
 - Teaser gives immediate context (what/status/next) in ~80 tokens
@@ -164,6 +149,7 @@ Provide Claude with pointer to full context + 2-3 line teaser for immediate orie
 - Lazy loading: Only loads full context when relevant (zero waste)
 - Solves: "Wave never started" - teaser shows execution completed
 - Better than auto-inject: Complete sentences, not truncated mid-word
+- **No bash parse errors** - uses Claude Code tools (Glob, Read) natively
 
 ### Step 4: Activate Session (CLI)
 
@@ -185,31 +171,21 @@ Update the "Last Updated" line in session.md to current time using the Edit tool
 
 ### Step 6: Display Summary with Hybrid Pointer
 
-Show session goal plus snapshot pointer with 2-3 line teaser for context continuity:
+Show session goal plus snapshot pointer with 2-3 line teaser for context continuity.
 
+**Implementation**: Use Glob and Read tools (from Step 3.5) to extract and display the teaser.
+
+**Display Format**:
 ```
 ✓ Session ready: {goal}
 
-{if TEASER is not empty:}
-
-{TEASER}
+📋 Latest: {snapshot_filename} (recently)
+   • Done: {LINE_DONE}
+   • Status: {LINE_STATUS}
+   • Next: {LINE_NEXT}
+💡 Read {snapshot_path} for full context
 
 What's next?
-```
-
-**Implementation**:
-```bash
-# Display session ready with goal
-echo "✓ Session ready: $GOAL"
-echo ""
-
-# Show hybrid pointer + teaser if available (from Step 3.5)
-if [ -n "$TEASER" ]; then
-  echo "$TEASER"
-  echo ""
-fi
-
-echo "What's next?"
 ```
 
 **Example Output**:
@@ -224,6 +200,11 @@ echo "What's next?"
 
 What's next?
 ```
+
+**Notes**:
+- If no snapshot exists, skip the teaser and only show "✓ Session ready: {goal}" and "What's next?"
+- Use Read tool to extract teaser lines (avoids bash parse errors)
+- Fallback gracefully if extraction fails (show generic pointer text)
 
 **IMPORTANT**:
 - Do show hybrid pointer + teaser (Step 3.5) if available ← HYBRID APPROACH

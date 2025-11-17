@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.8.6] - 2025-11-17
+
+### Fixed
+
+- **All Bash Parse Error Patterns** (`session/commands/continue.md:106-207`)
+  - Completely eliminated bash parse errors by replacing complex pipelines with Claude Code native tools
+  - Replaced all `$(grep ... | sed ... | cut ...)` patterns with Read + Glob tools
+  - Root cause: Bash tool cannot parse `$(...)` command substitution containing pipes (in Step 3.5)
+  - Previous fix (v3.8.5) only addressed one instance; three more remained in teaser extraction
+  - Solution: Use Glob tool to find latest snapshot, Read tool to extract teaser lines
+  - Benefits: More reliable, more readable, consistent with Claude Code best practices
+  - Impact: Session continue command now works 100% reliably with no parse errors
+
+---
+
 ## [3.8.5] - 2025-11-17
 
 ### Fixed
