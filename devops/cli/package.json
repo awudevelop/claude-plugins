@@ -1,6 +1,6 @@
 {
   "name": "devops-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero-dependency CLI tool for DevOps plugin - uses Netlify CLI via npx for all operations",
   "main": "devops-cli.js",
   "bin": {
@@ -9,7 +9,13 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["devops", "cli", "netlify", "deployment", "automation"],
+  "keywords": [
+    "devops",
+    "cli",
+    "netlify",
+    "deployment",
+    "automation"
+  ],
   "author": "AutomateWith.Us",
   "license": "MIT",
   "engines": {

@@ -1,7 +1,7 @@
 {
   "name": "devops",
-  "version": "1.0.0",
-  "description": "v1.0.0 - DevOps automation for Netlify deployments with encrypted secrets management (AES-256), automatic token validation, instant rollback, and zero-token CLI operations. Multi-cloud support (AWS, GCP, Azure, Vercel) coming soon.",
+  "version": "1.0.1",
+  "description": "v1.0.1 - DevOps automation for Netlify deployments with encrypted secrets management (AES-256), automatic token validation, instant rollback, and zero-token CLI operations. Multi-cloud support (AWS, GCP, Azure, Vercel) coming soon.",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"
@@ -75,5 +75,10 @@
         ]
       }
     ]
+  },
+  "versionMetadata": {
+    "lastUpdateCommit": "5193dfa0b5e6883e8bd937dd905e339aa5290d5d",
+    "lastUpdateDate": "2025-11-17T11:16:10.337Z",
+    "lastBumpType": "patch"
   }
 }
