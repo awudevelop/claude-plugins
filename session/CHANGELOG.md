@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.8.1] - 2025-11-17
+
+### Fixed
+
+- **Version Consistency**
+  - Synced all version references across plugin.json, marketplace.json, and README files
+  - Added versionMetadata with baseline commit tracking for intelligent version management
+  - Impact: Consistent version reporting and improved version bump automation
+
+### Changed
+
+- **Version Management**
+  - Integrated intelligent version manager with baseline commit tracking
+  - Baseline commit (e8df972) saved for tracking changes in next version bump
+  - Automated version updates across all project files
+
+---
+
 ## [3.7.1] - 2025-11-14
 
 ### 🔧 Hotfix: Subagent Reliability
