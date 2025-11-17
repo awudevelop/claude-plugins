@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.8.2] - 2025-11-17
+
+### Fixed
+
+- **Zsh Compatibility** (`session/commands/continue.md:112`)
+  - Replaced `ls -t .claude/sessions/{name}/auto_*.md` with `find` command
+  - Fixed "parse error near '('" error in zsh when no snapshot files exist
+  - Before: `ls -t .claude/sessions/{name}/auto_*.md 2>/dev/null | head -1`
+  - After: `find .claude/sessions/{name} -name "auto_*.md" -type f 2>/dev/null | xargs ls -t 2>/dev/null | head -1`
+  - Impact: Session continue command now works reliably in zsh environments (macOS default shell)
+
+---
+
 ## [3.8.1] - 2025-11-17
 
 ### Fixed
