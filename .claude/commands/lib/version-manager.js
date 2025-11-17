@@ -8,6 +8,11 @@ const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 const PLUGINS = ['session', 'deployment', 'devops'];
 const MARKER_FILE = path.join(PROJECT_ROOT, '.version-update-in-progress');
 
+// Load config for static descriptions
+const CONFIG_PATH = path.join(__dirname, 'version-update-config.json');
+const CONFIG = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+const STATIC_DESCRIPTIONS = CONFIG.f.find(f => f.n === '.claude-plugin/marketplace.json')?.sd || {};
+
 class VersionManager {
   constructor() {
     this.errors = [];
@@ -485,8 +490,25 @@ class VersionManager {
       const oldVersion = pluginEntry.version;
       pluginEntry.version = newVersion;
 
-      // Update description version prefix (keeping the rest stable/evergreen)
-      pluginEntry.description = pluginEntry.description.replace(/^v\d+\.\d+\.\d+/, `v${newVersion}`);
+      // Use static description from config (enforces evergreen description)
+      const staticDesc = STATIC_DESCRIPTIONS[plugin];
+      if (staticDesc) {
+        const oldDesc = pluginEntry.description;
+        pluginEntry.description = `v${newVersion} - ${staticDesc}`;
+
+        // Check if description had deviated from static baseline
+        const oldDescBody = oldDesc.replace(/^v\d+\.\d+\.\d+\s*-\s*/, '');
+        if (oldDescBody !== staticDesc) {
+          this.warnings.push(
+            `${plugin}: marketplace.json description was reset to static baseline ` +
+            `(had deviated from canonical description)`
+          );
+        }
+      } else {
+        // Fallback: just update version prefix (shouldn't happen with config)
+        pluginEntry.description = pluginEntry.description.replace(/^v\d+\.\d+\.\d+/, `v${newVersion}`);
+        this.warnings.push(`${plugin}: No static description in config, only updating version prefix`);
+      }
 
       fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
       this.changes.push(`.claude-plugin/marketplace.json: ${plugin} ${oldVersion} → ${newVersion}`);

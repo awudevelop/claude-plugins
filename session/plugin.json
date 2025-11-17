@@ -1,7 +1,7 @@
 {
   "name": "session",
-  "version": "3.8.2",
-  "description": "v3.8.2 - Status Persistence: Session status now tracked in .auto-capture-state with backward compatibility. Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis at resume (2-4s). Fast, efficient, never lose context!",
+  "version": "3.8.3",
+  "description": "v3.8.3 - Status Persistence: Session status now tracked in .auto-capture-state with backward compatibility. Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis at resume (2-4s). Fast, efficient, never lose context!",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"
@@ -101,8 +101,8 @@
     ]
   },
   "versionMetadata": {
-    "lastUpdateCommit": "acfeaeef8f80477fe83188ddae274904419239e0",
-    "lastUpdateDate": "2025-11-17T05:55:31.393Z",
+    "lastUpdateCommit": "d8cf6d16fbc90f1e0ec372d232055f16314178eb",
+    "lastUpdateDate": "2025-11-17T06:47:55.109Z",
     "lastBumpType": "patch"
   }
 }

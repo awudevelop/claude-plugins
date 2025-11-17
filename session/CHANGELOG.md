@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.8.3] - 2025-11-17
+
+### Fixed
+
+- **Marketplace Description** (`.claude-plugin/marketplace.json`)
+  - Restored static/evergreen description for marketplace listing
+  - Was incorrectly showing version-specific details from v3.8.0-3.8.2
+  - Now shows: "Advanced session management for Claude Code with intelligent context tracking..."
+  - Impact: Consistent plugin identity in marketplace, no version-specific clutter
+
+### Changed
+
+- **Version Management Architecture** (`.claude/commands/lib/version-update-config.json`)
+  - Introduced ultra-compressed JSON config approach (81% token reduction)
+  - Config contains: static descriptions, update rules, workflow, negative prompts
+  - Version manager now enforces static marketplace descriptions from config
+  - Command file simplified from 1,723 tokens to 330 tokens (command + config)
+  - Impact: Deterministic updates, impossible to accidentally copy version-specific descriptions
+
+- **Version Manager Enhancement** (`.claude/commands/lib/version-manager.js`)
+  - Now reads static descriptions from `version-update-config.json`
+  - Automatically detects and corrects marketplace description deviations
+  - Warns when description has deviated from canonical static baseline
+  - Impact: Self-healing version management, prevents future description corruption
+
+---
+
 ## [3.8.2] - 2025-11-17
 
 ### Fixed

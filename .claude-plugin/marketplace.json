@@ -14,8 +14,8 @@
     {
       "name": "session",
       "source": "./session",
-      "version": "3.8.2",
-      "description": "v3.8.2 - Status Persistence: Session status now tracked in .auto-capture-state with backward compatibility. Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis at resume (2-4s). Fast, efficient, never lose context!",
+      "version": "3.8.3",
+      "description": "v3.8.3 - Advanced session management for Claude Code with intelligent context tracking, automatic snapshots, and git history capture. Features zero-blocking conversation logging, AI-powered analysis, and optimized parallel subagent architecture. Never lose context!",
       "author": {
         "name": "AutomateWith.Us",
         "email": "team@automatewith.us"
