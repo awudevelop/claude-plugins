@@ -109,7 +109,7 @@ Provide Claude with pointer to full context + 2-3 line teaser for immediate orie
 
 1. Find the latest snapshot file:
    ```bash
-   LATEST_SNAPSHOT=$(find .claude/sessions/{session_name} -name "auto_*.md" -type f 2>/dev/null | xargs ls -t 2>/dev/null | head -1)
+   LATEST_SNAPSHOT=`find .claude/sessions/{session_name} -name "auto_*.md" -type f 2>/dev/null | sort -r | head -1`
    ```
 
 2. If snapshot exists, extract 3-line teaser:

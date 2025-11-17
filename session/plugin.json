@@ -1,7 +1,7 @@
 {
   "name": "session",
-  "version": "3.8.3",
-  "description": "v3.8.3 - Status Persistence: Session status now tracked in .auto-capture-state with backward compatibility. Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis at resume (2-4s). Fast, efficient, never lose context!",
+  "version": "3.8.4",
+  "description": "v3.8.4 - Fixed Bash tool parse error in session continue (replaced $() with backticks for pipe compatibility). Status Persistence: Session status now tracked in .auto-capture-state with backward compatibility. Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis at resume (2-4s). Fast, efficient, never lose context!",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"
