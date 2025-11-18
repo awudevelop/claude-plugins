@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.8.7] - 2025-11-18
+
+### Fixed
+
+- **Status Sync Bug** (`session/cli/lib/commands/update-status.js:77`)
+  - Fixed critical bug where status updates failed due to treating `index.sessions` as array instead of object
+  - Changed `index.sessions.find(s => s.name === sessionName)` to `index.sessions[sessionName]`
+  - Root cause: Incorrect assumption about index data structure
+  - Impact: Status updates between `.auto-capture-state` and `.index.json` now work reliably
+
+- **Session Continue Missing Status Update** (`session/commands/continue.md`)
+  - Added Step 4.5: Update session status to "active" after activation
+  - Previously `/session:continue` would activate session but not update status field
+  - Result: Sessions showed as "closed" even when active (sync bug)
+  - Solution: Added `update-status "{session_name}" "active"` call after activation
+  - Impact: Continuing closed sessions now properly marks them as active
+
+### Documentation
+
+- Updated `PLANNING_FEATURE_APPROACH.md` with conversation-driven planning architecture
+  - Changed from template-driven to conversation-driven approach
+  - Updated file naming convention: `plan_{name}.json` and `conversation_{name}.md`
+  - Simplified implementation from 4 phases (26-34h) to 3 phases (7-11h)
+  - Added new sections: Conversation Analysis, File Naming Convention, Execution in New Session
+
+---
+
 ## [3.8.6] - 2025-11-17
 
 ### Fixed

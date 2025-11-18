@@ -74,7 +74,7 @@ async function updateStatusCommand(args) {
   const indexManager = new IndexManager(sessionsDir);
   try {
     const index = indexManager.read({ skipValidation: true });
-    const sessionMeta = index.sessions.find(s => s.name === sessionName);
+    const sessionMeta = index.sessions[sessionName];  // Fixed: sessions is object, not array
     if (sessionMeta) {
       sessionMeta.status = status;
       if (status === 'closed') {

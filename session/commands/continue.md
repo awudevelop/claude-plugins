@@ -161,6 +161,16 @@ node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js activate {session_name}
 
 This updates both the .active-session file and the index.
 
+### Step 4.5: Update Session Status to Active
+
+Update the session status in `.auto-capture-state` and index:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-status "{session_name}" "active"
+```
+
+This ensures the session status matches its active state and prevents sync bugs.
+
 ### Step 5: Update Last Updated Timestamp
 
 Update the "Last Updated" line in session.md to current time using the Edit tool:
