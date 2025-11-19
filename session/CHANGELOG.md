@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.8.8] - 2025-11-19
+
+### Performance
+
+- **Consolidation Speed Improvement** (`session/commands/continue.md:54`)
+  - Switched consolidation subagent from Sonnet to Haiku for 2.4x faster processing
+  - Root cause: Consolidation processes 173KB JSONL (43,000 tokens) with model speed being the bottleneck
+  - Sonnet: 63 tokens/sec vs Haiku: 150 tokens/sec (2.4x difference)
+  - Expected result: 120s → ~50s (60% reduction in consolidation time)
+  - Quality: Haiku is sufficient for structured summarization (proven by git refresh task)
+  - Impact: Faster session resume during `/session:continue` operations
+
+---
+
 ## [3.8.7] - 2025-11-18
 
 ### Fixed

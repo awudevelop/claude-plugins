@@ -51,7 +51,7 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
 **Subagent 1 - Consolidate Conversation Log:**
 - subagent_type: "general-purpose"
 - description: "Consolidate conversation log"
-- model: "sonnet"
+- model: "haiku"
 - prompt: |
   You are working with session: {session_name}
 
