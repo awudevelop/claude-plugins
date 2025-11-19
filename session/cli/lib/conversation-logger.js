@@ -25,26 +25,35 @@ class ConversationLogger {
    * Log a single interaction
    * Performance target: <2ms
    *
+   * COMPACT FORMAT (v3.8.9+):
+   * - ts: Unix timestamp (seconds)
+   * - p: User prompt
+   * - f: Modified files as [[path, status_code], ...]
+   *
    * @param {object} interaction - Interaction data
-   * @param {number} interaction.num - Interaction number
    * @param {string} interaction.timestamp - ISO timestamp
-   * @param {string} interaction.transcript_path - Path to Claude Code transcript file (v3.6.1+)
-   * @param {string} interaction.user_prompt - User's message text (v3.6.1+)
-   * @param {object} interaction.state - Session state (interaction_count, file_count, etc.)
+   * @param {string} interaction.user_prompt - User's message text
    * @param {Array} interaction.modified_files - Files modified since last snapshot
    */
   logInteraction(interaction) {
     try {
+      // COMPACT FORMAT - 61% size reduction
       const entry = {
-        type: 'interaction',
-        num: interaction.num,
-        timestamp: interaction.timestamp || new Date().toISOString(),
-        transcript_path: interaction.transcript_path || null,
-        user_prompt: interaction.user_prompt || null,
-        interaction_count: interaction.state?.interaction_count || interaction.num,
-        file_count: interaction.state?.file_count || 0,
-        modified_files: interaction.modified_files || interaction.state?.modified_files || []
+        ts: Math.floor(Date.now() / 1000),  // Unix seconds
+        p: interaction.user_prompt || null
       };
+
+      // Add files if present (array format for compactness)
+      const files = interaction.modified_files || interaction.state?.modified_files || [];
+      if (files.length > 0) {
+        entry.f = files.map(file => [
+          file.path,
+          this._statusToCode(file.status)
+        ]);
+      }
+
+      // Remove null values to save space
+      if (!entry.p) delete entry.p;
 
       // Append to log file (JSONL format - one JSON object per line)
       const line = JSON.stringify(entry) + '\n';
@@ -61,21 +70,27 @@ class ConversationLogger {
    * Log Claude's assistant response (called from Stop hook)
    * Performance target: <5ms
    *
+   * COMPACT FORMAT (v3.8.9+):
+   * - ts: Unix timestamp (seconds)
+   * - r: Response text
+   * - tl: Tool names only (no input details)
+   *
    * @param {object} response - Response data
-   * @param {string} response.timestamp - ISO timestamp
    * @param {string} response.response_text - Claude's response text
    * @param {Array} response.tools_used - Tools used in response [{tool, input, id}]
-   * @param {string} response.message_id - Message ID from transcript
    */
   logAssistantResponse(response) {
     try {
+      // COMPACT FORMAT - 53% size reduction
       const entry = {
-        type: 'assistant_response',
-        timestamp: response.timestamp || new Date().toISOString(),
-        response_text: response.response_text || '',
-        tools_used: response.tools_used || [],
-        message_id: response.message_id || null
+        ts: Math.floor(Date.now() / 1000),  // Unix seconds
+        r: response.response_text || ''
       };
+
+      // Only include tool names (not input details) to save tokens
+      if (response.tools_used && response.tools_used.length > 0) {
+        entry.tl = response.tools_used.map(t => t.tool);
+      }
 
       // Append to log file (JSONL format - one JSON object per line)
       const line = JSON.stringify(entry) + '\n';
@@ -86,6 +101,28 @@ class ConversationLogger {
       // Silent failure - don't block hook execution
       return false;
     }
+  }
+
+  /**
+   * Convert file status string to numeric code (for compact format)
+   * @param {string} status - Status code (M, A, D, R)
+   * @returns {number} Numeric status code
+   * @private
+   */
+  _statusToCode(status) {
+    const codes = { 'M': 1, 'A': 2, 'D': 3, 'R': 4 };
+    return codes[status] || 1;  // Default to Modified
+  }
+
+  /**
+   * Convert numeric status code to string (for backward compatibility)
+   * @param {number} code - Numeric status code
+   * @returns {string} Status string
+   * @private
+   */
+  _codeToStatus(code) {
+    const statuses = { 1: 'M', 2: 'A', 3: 'D', 4: 'R' };
+    return statuses[code] || 'M';
   }
 
   /**
@@ -154,6 +191,7 @@ class ConversationLogger {
 
   /**
    * Read all interactions from log
+   * Supports both old and compact formats for backward compatibility
    * @returns {Array} Array of interaction objects
    */
   readLog() {
@@ -169,7 +207,16 @@ class ConversationLogger {
         .filter(Boolean)
         .map(line => {
           try {
-            return JSON.parse(line);
+            const entry = JSON.parse(line);
+
+            // Auto-detect format and normalize
+            if (entry.type) {
+              // Old format - convert to compact for consistency
+              return this._normalizeOldFormat(entry);
+            } else {
+              // New compact format - return as-is
+              return entry;
+            }
           } catch (e) {
             return null;
           }
@@ -181,7 +228,45 @@ class ConversationLogger {
   }
 
   /**
+   * Convert old format entries to compact format (for backward compatibility)
+   * @param {object} entry - Old format entry
+   * @returns {object} Compact format entry
+   * @private
+   */
+  _normalizeOldFormat(entry) {
+    if (entry.type === 'interaction') {
+      const result = {
+        ts: Math.floor(new Date(entry.timestamp).getTime() / 1000),
+        p: entry.user_prompt
+      };
+
+      if (entry.modified_files && entry.modified_files.length > 0) {
+        result.f = entry.modified_files.map(f => [
+          f.path,
+          this._statusToCode(f.status)
+        ]);
+      }
+
+      return result;
+    } else if (entry.type === 'assistant_response') {
+      const result = {
+        ts: Math.floor(new Date(entry.timestamp).getTime() / 1000),
+        r: entry.response_text
+      };
+
+      if (entry.tools_used && entry.tools_used.length > 0) {
+        result.tl = entry.tools_used.map(t => t.tool);
+      }
+
+      return result;
+    }
+
+    return entry;
+  }
+
+  /**
    * Get summary stats about the log
+   * Handles both old and compact formats
    * @returns {object} Stats object
    */
   getLogStats() {
@@ -198,13 +283,20 @@ class ConversationLogger {
 
     const first = interactions[0];
     const last = interactions[interactions.length - 1];
-    const startTime = new Date(first.timestamp);
-    const endTime = new Date(last.timestamp);
+
+    // Handle both compact (ts) and old (timestamp) formats
+    const startTime = first.ts ? new Date(first.ts * 1000) : new Date(first.timestamp);
+    const endTime = last.ts ? new Date(last.ts * 1000) : new Date(last.timestamp);
     const timespan = endTime - startTime;
 
-    // Calculate total files modified
+    // Calculate total files modified (handle both compact and old formats)
     const allFiles = new Set();
     interactions.forEach(i => {
+      // Compact format: f = [[path, code], ...]
+      if (i.f) {
+        i.f.forEach(file => allFiles.add(file[0]));
+      }
+      // Old format: modified_files = [{path, status}, ...]
       if (i.modified_files) {
         i.modified_files.forEach(f => allFiles.add(f.path));
       }
