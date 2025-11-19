@@ -1,15 +1,15 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.8.8** - Status Persistence: Session status now tracked in .auto-capture-state with backward compatibility
+**Version 3.9.0** - Status Persistence: Session status now tracked in .auto-capture-state with backward compatibility
 
 Intelligent session management with **72% token reduction** through parallel subagent delegation. Zero-blocking conversation logging (<2ms), intelligent analysis via isolated subagents (2-4s), hybrid cleanup on all exit paths. Fast, efficient session resume with minimal main context usage.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-v3.8.8-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-v3.9.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.8.8 (Latest Update)
+## 🚀 What's New in v3.9.0 (Latest Update)
 
 ### 🔧 Hotfix: Subagent Reliability Fixes
 - **CLI Syntax Bug Fixed** - `update-state` command now uses correct JSON format (was causing 100% failure)
@@ -111,7 +111,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 
 ### Previous Update: v3.6.2
 
-## 🚀 What's New in v3.8.8
+## 🚀 What's New in v3.9.0
 
 ### 📝 Self-Contained Conversation Logs
 - 🎯 **Complete Capture** - Both user prompts AND Claude's full responses
@@ -131,7 +131,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 
 ### Previous Update: v3.6.0
 
-## 🚀 What's New in v3.8.8
+## 🚀 What's New in v3.9.0
 
 ### 🔍 Automatic Git History Capture
 - 📊 **Repository Context** - Last 50 commits captured automatically at session boundaries

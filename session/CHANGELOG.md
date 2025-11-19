@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.9.0] - 2025-11-19
+
+### Added
+
+- **Ultra-Compact Conversation Log Format** (`session/cli/lib/conversation-logger.js`)
+  - Implemented new compact JSONL schema with 61% size reduction (2,340 tokens saved per 20-interaction session)
+  - Removed unnecessary fields: `num`, `transcript_path`, `interaction_count`, `file_count`, `message_id`
+  - Replaced verbose keys with compact versions: `ts` (timestamp), `p` (prompt), `r` (response), `f` (files), `tl` (tools)
+  - Converted ISO 8601 timestamps to Unix seconds (24 chars → 10 digits)
+  - Changed file format from objects to arrays: `[["path", status_code], ...]`
+  - Store only tool names without input details for token efficiency
+  - Numeric status codes: 1=Modified, 2=Added, 3=Deleted, 4=Renamed
+  - Before: 15,380 chars (~3,845 tokens) | After: 6,020 chars (~1,505 tokens)
+  - Full backward compatibility with auto-detection and format normalization
+
+### Fixed
+
+- **Subagent Path Resolution** (`session/commands/continue.md`, `session/prompts/*.md`)
+  - Fixed "File does not exist" and "MODULE_NOT_FOUND" errors in parallel subagents
+  - Root cause: Subagents don't inherit parent working directory or environment variables
+  - Added Step 1.8 to calculate absolute paths before spawning subagents
+  - Now passes `working_directory`, `plugin_root`, and `session_path` explicitly to all subagents
+  - Updated all 3 prompt templates to accept and use absolute path parameters
+  - Replaced `${CLAUDE_PLUGIN_ROOT}` with `{plugin_root}` variable substitution
+  - Replaced relative paths (`.claude/sessions/...`) with `{session_path}` variable
+  - Impact: Consolidation, git refresh, and goal extraction subagents now execute reliably
+
+---
+
 ## [3.8.8] - 2025-11-19
 
 ### Performance
