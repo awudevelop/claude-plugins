@@ -1,17 +1,22 @@
 Session: {session_name}
 
+**Absolute Paths** (use these exact paths):
+- Session path: {session_path}
+- Plugin root: {plugin_root}
+- Working directory: {working_directory}
+
 Goal: Refresh git history context for session
 
 Steps:
 1. Run git history capture CLI:
-   node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{session_name}"
+   node {plugin_root}/cli/session-cli.js capture-git "{session_name}"
 
 2. The CLI will:
    - Get last 50 commits (git log)
    - Get uncommitted changes (git status, git diff)
    - Calculate file hotspots (frequently changed files)
    - Compress to ~2-3KB JSON
-   - Write to: .claude/sessions/{session_name}/git-history.json
+   - Write to: {session_path}/git-history.json
 
 3. If no git repository:
    - CLI returns: { success: false }

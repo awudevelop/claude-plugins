@@ -42,6 +42,19 @@ Before continuing the target session, close any currently active session if it's
 
 **Note**: This ensures clean session transitions with no abandoned active sessions.
 
+### Step 1.8: Calculate Absolute Paths for Subagents
+
+Before delegating to subagents, you need to determine absolute paths that subagents will use.
+
+**IMPORTANT**: Subagents don't inherit the working directory or environment variables from the main conversation. You MUST provide absolute paths explicitly.
+
+Calculate these values (conceptually - don't run bash commands, just determine the values):
+- **Working directory**: Current working directory (you already know this from your environment)
+- **Plugin root**: `/Users/prajyot/.claude/plugins/marketplaces/automatewithus-plugins/session`
+- **Session path**: `{working_directory}/.claude/sessions/{session_name}`
+
+You will substitute these absolute paths into the subagent prompts in the next step.
+
 ### Step 2: Delegate Heavy Work to Subagents (Parallel Execution)
 
 **CRITICAL**: You MUST invoke ALL 3 Task tools in a SINGLE response message. This runs them in parallel and isolates heavy token usage from the main conversation.
@@ -55,9 +68,14 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
 - prompt: |
   You are working with session: {session_name}
 
-  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/consolidate-log.md
-  That file contains template placeholders like "{session_name}".
-  Replace all such placeholders with the actual session name: {session_name}
+  **Absolute paths for this task:**
+  - Working directory: {working_directory}
+  - Plugin root: {plugin_root}
+  - Session path: {session_path}
+
+  Read the prompt file: {plugin_root}/prompts/consolidate-log.md
+  That file contains template placeholders like "{session_name}", "{session_path}", "{plugin_root}".
+  Replace all such placeholders with the actual values provided above.
   Then execute the resulting instructions.
 
 **Subagent 2 - Refresh Git History:**
@@ -67,9 +85,14 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
 - prompt: |
   You are working with session: {session_name}
 
-  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/refresh-git.md
-  That file contains template placeholders like "{session_name}".
-  Replace all such placeholders with the actual session name: {session_name}
+  **Absolute paths for this task:**
+  - Working directory: {working_directory}
+  - Plugin root: {plugin_root}
+  - Session path: {session_path}
+
+  Read the prompt file: {plugin_root}/prompts/refresh-git.md
+  That file contains template placeholders like "{session_name}", "{session_path}", "{plugin_root}".
+  Replace all such placeholders with the actual values provided above.
   Then execute the resulting instructions.
 
 **Subagent 3 - Extract Session Goal:**
@@ -79,9 +102,14 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
 - prompt: |
   You are working with session: {session_name}
 
-  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/extract-goal.md
-  That file contains template placeholders like "{session_name}".
-  Replace all such placeholders with the actual session name: {session_name}
+  **Absolute paths for this task:**
+  - Working directory: {working_directory}
+  - Plugin root: {plugin_root}
+  - Session path: {session_path}
+
+  Read the prompt file: {plugin_root}/prompts/extract-goal.md
+  That file contains template placeholders like "{session_name}", "{session_path}", "{plugin_root}".
+  Replace all such placeholders with the actual values provided above.
   Then execute the resulting instructions.
 
 **REMINDER**: All 3 Task invocations MUST be in the SAME response to execute in parallel!

@@ -1,9 +1,15 @@
 Session: {session_name}
 
+**Absolute Paths** (use these exact paths):
+- Session path: {session_path}
+- Plugin root: {plugin_root}
+- Working directory: {working_directory}
+
 Goal: Consolidate conversation log into auto-snapshot (if log exists)
 
 Steps:
-1. Check if file exists: .claude/sessions/{session_name}/conversation-log.jsonl
+1. Check if file exists: {session_path}/conversation-log.jsonl
+   (Use the Read tool to attempt reading this absolute path)
 2. If file does NOT exist:
    - Return JSON: { "skipped": true, "reason": "No conversation log found" }
    - STOP (do not proceed)
@@ -11,9 +17,12 @@ Steps:
 3. If file exists:
    - Read the conversation log file
    - Parse JSONL format (each line = JSON entry)
-   - Extract:
-     - type: "interaction" entries (user prompts from user_prompt field)
-     - type: "assistant_response" entries (Claude responses from response_text field)
+   - Extract entries (COMPACT FORMAT v3.8.9+):
+     - Interaction entries (have "p" key = user prompt text)
+     - Response entries (have "r" key = Claude's response text)
+     - Timestamps: "ts" field = Unix timestamp in seconds (convert to date if needed)
+     - File status codes: 1=Modified, 2=Added, 3=Deleted, 4=Renamed
+     - Modified files: "f" = [[path, status_code], ...] array format
 
 4. Analyze the conversation:
    - Write 2-3 paragraph summary of what happened
@@ -24,7 +33,7 @@ Steps:
 
 5. Create consolidated snapshot with this exact format (use heredoc):
 
-cat <<'SNAPSHOT_EOF' | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot "{session_name}" --stdin --type auto
+cat <<'SNAPSHOT_EOF' | node {plugin_root}/cli/session-cli.js write-snapshot "{session_name}" --stdin --type auto
 # Consolidated Snapshot: {session_name}
 **Timestamp**: [current ISO timestamp]
 **Method**: Claude Inline Analysis (Free)
@@ -53,17 +62,17 @@ SNAPSHOT_EOF
 
 6. Delete conversation log (with error checking):
    set -e  # Exit on any error
-   rm .claude/sessions/{session_name}/conversation-log.jsonl
+   rm {session_path}/conversation-log.jsonl
 
    # Verify deletion
-   if [ -f .claude/sessions/{session_name}/conversation-log.jsonl ]; then
+   if [ -f {session_path}/conversation-log.jsonl ]; then
      echo '{"success": false, "error": "Failed to delete conversation log", "step_failed": 6}'
      exit 1
    fi
 
 7. Update state file (with correct JSON syntax):
    TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-   node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-state "{session_name}" "{\"interactions_since_snapshot\": 0, \"interactions_since_context_update\": 0, \"last_snapshot_timestamp\": \"$TIMESTAMP\"}"
+   node {plugin_root}/cli/session-cli.js update-state "{session_name}" "{\"interactions_since_snapshot\": 0, \"interactions_since_context_update\": 0, \"last_snapshot_timestamp\": \"$TIMESTAMP\"}"
 
    if [ $? -ne 0 ]; then
      echo '{"success": false, "error": "Failed to update state file", "step_failed": 7}'
@@ -71,20 +80,17 @@ SNAPSHOT_EOF
    fi
 
 8. Verify all steps completed successfully:
-   # Check snapshot exists
-   if [ ! -f .claude/sessions/{session_name}/auto_*.md ]; then
-     echo '{"success": false, "error": "Snapshot file not found", "step_failed": 5}'
-     exit 1
-   fi
+   # Check snapshot exists (use Glob tool to find auto_*.md files in session path)
+   # If using bash: if [ ! -f {session_path}/auto_*.md ]; then
 
    # Check log deleted
-   if [ -f .claude/sessions/{session_name}/conversation-log.jsonl ]; then
+   if [ -f {session_path}/conversation-log.jsonl ]; then
      echo '{"success": false, "error": "Log file still exists", "step_failed": 6}'
      exit 1
    fi
 
    # Verify state reset
-   STATE=$(node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-state "{session_name}")
+   STATE=$(node {plugin_root}/cli/session-cli.js get-state "{session_name}")
    if ! echo "$STATE" | grep -q '"interactions_since_snapshot":0'; then
      echo '{"success": false, "error": "State counters not reset", "step_failed": 7}'
      exit 1

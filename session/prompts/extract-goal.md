@@ -1,9 +1,15 @@
 Session: {session_name}
 
+**Absolute Paths** (use these exact paths):
+- Session path: {session_path}
+- Plugin root: {plugin_root}
+- Working directory: {working_directory}
+
 Goal: Extract session goal from session.md
 
 Steps:
-1. Read file: .claude/sessions/{session_name}/session.md
+1. Read file: {session_path}/session.md
+   (Use the Read tool with this absolute path)
 
 2. Find the "## Goal" section header
 
