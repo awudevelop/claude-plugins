@@ -227,23 +227,43 @@ After starting the session, check if previous session left unconsolidated logs:
 **Timestamp**: {ISO timestamp}
 **Method**: Claude Inline Analysis (Free)
 **Status**: Consolidated from conversation log
+**Format Version**: 2.0
 
-## Conversation Summary
-{2-3 paragraph summary of what happened in session}
+## Topics Discussed
 
-## Key Decisions
-- {Decision 1 with rationale}
-- {Decision 2 with rationale}
+1. **[Category]**: [Brief description of what was discussed]
+2. **[Category]**: [Brief description of what was discussed]
+[Continue for ALL topics in chronological order]
 
-## Completed Tasks
-- {Task 1}
-- {Task 2}
+## Suggestions & Recommendations
+
+1. **[Category]**: [Specific suggestion] - [Rationale]
+2. **[Category]**: [Specific suggestion] - [Rationale]
+[Continue for ALL suggestions]
+
+## Decisions Made
+
+1. **[Decision]**: [Rationale and context]
+2. **[Decision]**: [Rationale and context]
+[Continue for ALL decisions]
+
+## Tasks Completed
+
+1. [Action completed in past tense]
+2. [Action completed in past tense]
+[Continue for ALL tasks]
 
 ## Files Modified
-- {file_path}: {what changed and why}
 
-## Current State
-{Where things stand, what's next, blockers}
+1. `[file_path]`: [What changed and why]
+2. `[file_path]`: [What changed and why]
+[Continue for ALL files]
+
+## Current Status
+
+- **Progress**: [Where things stand - what's been accomplished]
+- **Next Steps**: [What should be done next]
+- **Blockers**: [Issues or write \"None\"]
 
 ## Notes
 Consolidated via Claude inline analysis at session boundary. Zero cost, highest quality." | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot "{name}" --stdin --type auto

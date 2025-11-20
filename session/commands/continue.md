@@ -145,11 +145,31 @@ Provide Claude with pointer to full context + 2-3 line teaser for immediate orie
    - Take the first result as the latest snapshot
 
 2. **If snapshot exists, use Read tool to extract teaser:**
-   - Read the snapshot file (first 50 lines should contain all needed sections)
+   - Read the snapshot file (first 80 lines should contain all needed sections)
+   - **Format Detection**: Check if snapshot contains "**Format Version**: 2.0"
+
+   **For v2.0 Format (numbered lists)**:
    - Extract three teaser lines:
+     - **Line 1 (Done)**: First 3 topics from "## Topics Discussed" section
+       - Format: "1. **Category**: Description"
+       - Extract category + brief description for first 3 topics
+       - Join with semicolons: "Topic1; Topic2; Topic3"
+       - Limit 120 chars total
+     - **Line 2 (Status)**: Progress line from "## Current Status" section
+       - Look for "- **Progress**:" line
+       - Extract the text after "**Progress**:"
+       - Limit 120 chars
+     - **Line 3 (Next)**: Next Steps line from "## Current Status" section
+       - Look for "- **Next Steps**:" line
+       - Extract the text after "**Next Steps**:"
+       - Limit 80 chars
+
+   **For v1.0 Format (paragraphs) - Backward Compatibility**:
+   - Extract three teaser lines (legacy behavior):
      - **Line 1 (Done)**: First sentence from "## Conversation Summary" section (after heading, skip blank line, take line 1, truncate at first period, limit 100 chars)
      - **Line 2 (Status)**: First 1-2 sentences from "## Current State" section (after heading, skip blank line, take lines 1-2, join with space, limit 120 chars)
      - **Line 3 (Next)**: Look for "what's next" or similar forward-looking text in "## Current State" section (limit 80 chars)
+
    - Use fallback text if any extraction fails:
      - Done: "Session work consolidated"
      - Status: "See snapshot for current status"

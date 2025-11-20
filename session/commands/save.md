@@ -90,21 +90,34 @@ Create the snapshot content in this structure (but DON'T write it yet):
 ```markdown
 # Snapshot: {session_name}
 **Timestamp**: {full_timestamp_YYYY-MM-DD_HH:MM:SS}
+**Format Version**: 2.0
 
-## Conversation Summary
-{summary_from_step_2}
+## Topics Discussed
+1. **[Category]**: {topic_1_brief_description}
+2. **[Category]**: {topic_2_brief_description}
+{continue_for_all_topics}
 
-## Completed Todos
-{todos_from_step_3}
+## Suggestions & Recommendations
+1. **[Category]**: {suggestion} - {rationale}
+{if_any_suggestions_given}
+
+## Decisions Made
+1. **[Decision]**: {rationale}
+{if_any_decisions_made}
+
+## Tasks Completed
+1. {completed_task_1}
+2. {completed_task_2}
+{or_write_"No_tasks_completed"}
 
 ## Files Modified
-{files_from_step_4}
+1. `{file_path}`: {what_changed_and_why}
+{or_write_"No_files_modified"}
 
-## Current State
-{state_from_step_5}
-
-## Key Code Snippets
-{snippets_from_step_6_if_any}
+## Current Status
+- **Progress**: {where_things_stand}
+- **Next Steps**: {what_should_be_done_next}
+- **Blockers**: {issues_or_"None"}
 
 ## Notes
 {any_additional_important_observations}
