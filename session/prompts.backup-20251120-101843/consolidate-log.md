@@ -24,24 +24,12 @@ Steps:
      - File status codes: 1=Modified, 2=Added, 3=Deleted, 4=Renamed
      - Modified files: "f" = [[path, status_code], ...] array format
 
-4. ⚠️ CRITICAL INSTRUCTION - Analyze the ENTIRE conversation from beginning to end:
-
-   **Anti-Recency Bias**: Do NOT focus only on recent messages. Topics from the start
-   of the conversation are EQUALLY important as topics from the end. You MUST ensure
-   comprehensive coverage of the complete timeline.
-
-   - Extract ALL distinct topics discussed (enumerate each one, not just recent)
-   - Extract ALL suggestions and recommendations given with rationale
-   - Identify ALL key decisions made with rationale (no limit on count)
-   - List ALL completed tasks/todos
-   - Document ALL files modified with context (what changed and why)
-   - Assess current state (progress, next steps, blockers)
-
-   **Coverage Requirements**:
-   - List topics in CHRONOLOGICAL order as they appeared
-   - Do NOT skip topics that were discussed briefly
-   - Do NOT merge related topics - list separately
-   - Do NOT summarize - enumerate explicitly
+4. Analyze the conversation:
+   - Write 2-3 paragraph summary of what happened
+   - Identify 2-4 key decisions with rationale
+   - List completed tasks/todos
+   - Document files modified with context (what changed and why)
+   - Assess current state (what's done, what's next, blockers)
 
 5. Create consolidated snapshot with this exact format (use heredoc):
 
@@ -50,55 +38,23 @@ cat <<'SNAPSHOT_EOF' | node {plugin_root}/cli/session-cli.js write-snapshot "{se
 **Timestamp**: [current ISO timestamp]
 **Method**: Claude Inline Analysis (Free)
 **Status**: Consolidated from conversation log
-**Format Version**: 2.0
 
-## Topics Discussed
+## Conversation Summary
+[2-3 paragraphs]
 
-1. **[Category]**: [Brief description of what was discussed]
-2. **[Category]**: [Brief description of what was discussed]
-3. **[Category]**: [Brief description of what was discussed]
-[Continue for ALL topics in chronological order]
+## Key Decisions
+- [Decision 1 with rationale]
+- [Decision 2 with rationale]
 
-Examples of categories: Bug Fix, Feature, Architecture, Performance, Security,
-Testing, Documentation, Configuration, Deployment, Question, Investigation
-
-## Suggestions & Recommendations
-
-1. **[Category]**: [Specific suggestion] - [Rationale for the suggestion]
-2. **[Category]**: [Specific suggestion] - [Rationale for the suggestion]
-3. **[Category]**: [Specific suggestion] - [Rationale for the suggestion]
-[Continue for ALL suggestions given during conversation]
-
-Format: Category (Architecture/Security/Performance/etc.) + Suggestion + Why
-
-## Decisions Made
-
-1. **[Decision]**: [Rationale and context for why this was decided]
-2. **[Decision]**: [Rationale and context for why this was decided]
-3. **[Decision]**: [Rationale and context for why this was decided]
-[Continue for ALL decisions - no limit on count]
-
-## Tasks Completed
-
-1. [Action completed in past tense]
-2. [Action completed in past tense]
-3. [Action completed in past tense]
-[Continue for ALL tasks completed during conversation]
+## Completed Tasks
+- [Task 1]
+- [Task 2]
 
 ## Files Modified
+- [file_path]: [what changed and why]
 
-1. `[file_path]`: [What changed and why - be specific]
-2. `[file_path]`: [What changed and why - be specific]
-3. `[file_path]`: [What changed and why - be specific]
-[Continue for ALL files modified]
-
-## Current Status
-
-- **Progress**: [1-2 sentences describing where things stand - what's been accomplished]
-- **Next Steps**: [What should be done next - be specific]
-- **Blockers**: [Any blocking issues preventing progress, or write "None"]
-
-Do NOT use paragraphs. Use this exact 3-bullet structure.
+## Current State
+[Where things stand, what's next, blockers]
 
 ## Notes
 Consolidated via Claude inline analysis at session boundary.
