@@ -1,15 +1,15 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.10.0** - Status Persistence: Session status now tracked in .auto-capture-state with backward compatibility
+**Version 3.11.0** - Consolidation Format v2.0: Numbered lists for comprehensive topic capture with anti-recency bias improvements
 
 Intelligent session management with **72% token reduction** through parallel subagent delegation. Zero-blocking conversation logging (<2ms), intelligent analysis via isolated subagents (2-4s), hybrid cleanup on all exit paths. Fast, efficient session resume with minimal main context usage.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-v3.10.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-v3.11.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.10.0 (Latest Update)
+## 🚀 What's New in v3.11.0 (Latest Update)
 
 ### 🔧 Hotfix: Subagent Reliability Fixes
 - **CLI Syntax Bug Fixed** - `update-state` command now uses correct JSON format (was causing 100% failure)
