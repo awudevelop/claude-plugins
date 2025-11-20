@@ -23,6 +23,15 @@
  *   get-state <name>        Get session state
  *   update-state <name>     Update session state
  *   capture-git <name>      Capture git history in compressed format
+ *
+ *   Plan Commands:
+ *   create-plan <session> <name> <json>  Create a new plan
+ *   get-plan <session> <name>            Get plan details
+ *   list-plans <session>                 List all plans for a session
+ *   update-task-status <session> <plan> <taskId> <status>  Update task status
+ *   plan-status <session> <plan>         Get plan execution status
+ *   detect-work-type <session>           Detect work type from conversation
+ *   select-template <type>               Load template by work type
  */
 
 const fs = require('fs');
@@ -53,7 +62,36 @@ const commands = {
   'get-state': require('./lib/commands/get-state'),
   'update-state': require('./lib/commands/update-state'),
   'setup-hooks': require('./lib/commands/setup-hooks'),
-  'capture-git': require('./lib/commands/capture-git')
+  'capture-git': require('./lib/commands/capture-git'),
+  // Plan operations
+  'create-plan': require('./lib/commands/plan-ops').createPlan,
+  'get-plan': require('./lib/commands/plan-ops').getPlan,
+  'update-plan': require('./lib/commands/plan-ops').updatePlan,
+  'delete-plan': require('./lib/commands/plan-ops').deletePlan,
+  'list-plans': require('./lib/commands/plan-ops').listPlans,
+  'validate-plan': require('./lib/commands/plan-ops').validatePlan,
+  'update-task-status': require('./lib/commands/plan-ops').updateTaskStatus,
+  'plan-status': require('./lib/commands/plan-ops').getPlanStatus,
+  'export-plan': require('./lib/commands/plan-ops').exportPlan,
+  'plan-exists': require('./lib/commands/plan-ops').planExists,
+  // Work type and template operations
+  'detect-work-type': async (sessionName) => {
+    const workTypeDetector = require('./lib/work-type-detector');
+    const conversationPath = path.join(process.cwd(), '.claude/sessions', sessionName, 'conversation-log.jsonl');
+    try {
+      const content = fs.readFileSync(conversationPath, 'utf-8');
+      const conversationLog = content.trim().split('\n')
+        .filter(line => line.trim())
+        .map(line => JSON.parse(line));
+      return await workTypeDetector.detectWorkType(conversationLog);
+    } catch (error) {
+      return { type: 'unknown', confidence: 0, reason: error.message };
+    }
+  },
+  'select-template': async (workType) => {
+    const templateSelector = require('./lib/template-selector');
+    return await templateSelector.selectTemplate(workType);
+  }
 };
 
 /**

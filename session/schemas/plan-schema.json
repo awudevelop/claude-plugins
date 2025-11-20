@@ -1,0 +1,218 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/plan.json",
+  "title": "Session Plan",
+  "description": "Schema for session planning files",
+  "type": "object",
+  "required": [
+    "plan_name",
+    "work_type",
+    "goal",
+    "phases",
+    "created_at",
+    "version"
+  ],
+  "properties": {
+    "plan_name": {
+      "type": "string",
+      "description": "Unique identifier for the plan",
+      "pattern": "^[a-z0-9-]+$",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "work_type": {
+      "type": "string",
+      "description": "Type of work being planned",
+      "enum": ["feature", "bug", "spike", "refactor", "other"]
+    },
+    "auto_detected": {
+      "type": "boolean",
+      "description": "Whether work type was auto-detected",
+      "default": false
+    },
+    "detection_confidence": {
+      "type": "number",
+      "description": "Confidence score for auto-detection (0-100)",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "goal": {
+      "type": "string",
+      "description": "Primary goal of this plan",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "success_criteria": {
+      "type": "array",
+      "description": "Criteria for success",
+      "items": {
+        "type": "string",
+        "minLength": 5,
+        "maxLength": 200
+      },
+      "minItems": 0,
+      "maxItems": 10
+    },
+    "phases": {
+      "type": "array",
+      "description": "Work phases",
+      "items": {
+        "$ref": "#/definitions/phase"
+      },
+      "minItems": 1,
+      "maxItems": 10
+    },
+    "requirements": {
+      "type": "object",
+      "description": "Project requirements",
+      "properties": {
+        "functional": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "non_functional": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "description": "Project constraints",
+      "items": { "type": "string" }
+    },
+    "technical_decisions": {
+      "type": "array",
+      "description": "Technical decisions made",
+      "items": {
+        "$ref": "#/definitions/technical_decision"
+      }
+    },
+    "conversation_summary": {
+      "type": "string",
+      "description": "Summary of planning conversation",
+      "maxLength": 2000
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp",
+      "format": "date-time"
+    },
+    "version": {
+      "type": "string",
+      "description": "Plan version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "progress": {
+      "type": "object",
+      "description": "Execution progress tracking",
+      "properties": {
+        "total_tasks": { "type": "integer", "minimum": 0 },
+        "completed": { "type": "integer", "minimum": 0 },
+        "in_progress": { "type": "integer", "minimum": 0 },
+        "pending": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["total_tasks", "completed", "in_progress", "pending"]
+    }
+  },
+  "definitions": {
+    "phase": {
+      "type": "object",
+      "required": ["phase_name", "tasks"],
+      "properties": {
+        "phase_name": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/task"
+          },
+          "minItems": 1,
+          "maxItems": 50
+        },
+        "context": {
+          "type": "array",
+          "description": "Phase-specific context from conversation",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["task_id", "description", "status"],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "pattern": "^task-[a-z0-9-]+$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 300
+        },
+        "details": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_progress", "completed", "blocked"],
+          "default": "pending"
+        },
+        "technical_notes": {
+          "type": "array",
+          "description": "Conversation-specific technical details",
+          "items": { "type": "string" }
+        },
+        "dependencies": {
+          "type": "array",
+          "description": "Task IDs this task depends on",
+          "items": {
+            "type": "string",
+            "pattern": "^task-[a-z0-9-]+$"
+          }
+        },
+        "estimated_effort": {
+          "type": "string",
+          "description": "Time estimate (e.g., '2h', '1d')",
+          "pattern": "^\\d+[hdw]$"
+        }
+      }
+    },
+    "technical_decision": {
+      "type": "object",
+      "required": ["category", "decision"],
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": ["technology", "architecture", "approach", "other"]
+        },
+        "decision": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 200
+        },
+        "rationale": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "alternatives": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

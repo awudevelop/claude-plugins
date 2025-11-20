@@ -1,0 +1,27 @@
+{
+  "work_type": "spike",
+  "version": "1.0.0",
+  "phases": [
+    {
+      "phase_name": "Phase 1: Research and Exploration",
+      "tasks": [
+        {"task_id": "task-1-1", "description": "Research available options and approaches", "status": "pending"},
+        {"task_id": "task-1-2", "description": "Document findings and comparisons", "status": "pending"}
+      ]
+    },
+    {
+      "phase_name": "Phase 2: Prototyping",
+      "tasks": [
+        {"task_id": "task-2-1", "description": "Build proof of concept", "status": "pending", "dependencies": ["task-1-1"]},
+        {"task_id": "task-2-2", "description": "Test and validate approach", "status": "pending", "dependencies": ["task-2-1"]}
+      ]
+    },
+    {
+      "phase_name": "Phase 3: Recommendation",
+      "tasks": [
+        {"task_id": "task-3-1", "description": "Create recommendation document", "status": "pending", "dependencies": ["task-2-2"]},
+        {"task_id": "task-3-2", "description": "Present findings and next steps", "status": "pending", "dependencies": ["task-3-1"]}
+      ]
+    }
+  ]
+}

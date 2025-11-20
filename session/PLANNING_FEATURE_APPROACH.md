@@ -1,9 +1,55 @@
 # Session Plugin: Planning Feature Implementation Approach
 
-**Document Version:** 1.1.0 (Updated: File naming convention)
-**Date:** 2025-11-17
-**Status:** Brainstorming / Design Phase
-**Feasibility:** 88% (Highly Feasible)
+**Document Version:** 2.0.0 (Updated: Hybrid Approach with Intelligent Work Type Detection)
+**Date:** 2025-11-19
+**Status:** Design Phase
+**Feasibility:** 90% (Highly Feasible)
+
+---
+
+## Changelog
+
+### Version 2.0.0 - Hybrid Approach Design (2025-11-19)
+
+**Major Changes:**
+- **Hybrid Architecture:** Introduced hybrid approach combining template structure with conversation content
+- **Work Type Detection:** Added intelligent detection algorithm for feature/bug/spike/refactor work types
+- **Smart Auto-Selection:** System analyzes conversation and auto-selects appropriate template
+- **Token Optimization:** 40% reduction in subagent token usage through template scaffolding
+- **Enhanced UX:** Three-path flow (auto-accept, customize, or start fresh)
+
+**Sections Updated:**
+- Executive Summary: Added hybrid approach vision and work type detection feasibility
+- Core Concept: Updated workflow for hybrid approach
+- Standard JSON Schema: Added work_type, auto_detected, detection_confidence fields
+- Architecture Design: Added work type detection layer
+- Command Structure: Rewrote /save-plan for hybrid flow
+- Template System: Changed from "future enhancement" to core feature
+- Implementation Phases: Added detection features and updated time estimates
+- Files to Create/Modify: Added work-type-detector.js, template-selector.js
+- Risk Mitigation: Added detection accuracy and template mismatch risks
+- Technical Challenges: Added detection and merge challenges
+- Design Decisions: Added hybrid approach rationale
+- Success Metrics: Added detection accuracy metrics
+
+**New Sections:**
+- Hybrid Approach Architecture: Comprehensive three-layer system design
+- Work Type Detection Algorithm: Detailed detection logic and scoring
+
+**Implementation Impact:**
+- Time estimate: 9-14 hours (was 7-11 hours, +2-3h for detection)
+- New files: 2 (work-type-detector.js, detect-work-type.md)
+- Detection accuracy target: >80%
+- User override rate target: <20%
+
+### Version 1.1.0 - File Naming Convention Update (2025-11-17)
+- Switched from `plan-{name}.json` to `plan_{name}.json` for consistency
+- Updated all examples and documentation
+
+### Version 1.0.0 - Initial Design (2025-11-17)
+- Initial conversation-driven planning system design
+- Simplified from template-driven approach (26-34h → 7-11h)
+- Single command `/save-plan {name}` workflow
 
 ---
 
@@ -11,27 +57,32 @@
 
 1. [Executive Summary](#executive-summary)
 2. [Core Concept](#core-concept)
-3. [Standard JSON Schema](#standard-json-schema)
-4. [Architecture Design](#architecture-design)
-5. [Command Structure](#command-structure)
-6. [Implementation Phases](#implementation-phases)
-7. [Template System](#template-system)
-8. [Internal Tracking Mechanism](#internal-tracking-mechanism)
-9. [Risk Mitigation](#risk-mitigation)
-10. [Past Bug Lessons](#past-bug-lessons)
-11. [Technical Challenges](#technical-challenges)
-12. [Design Decisions](#design-decisions)
-13. [Files to Create/Modify](#files-to-createmodify)
-14. [Success Metrics](#success-metrics)
-15. [Open Questions](#open-questions)
+3. [Hybrid Approach Architecture](#hybrid-approach-architecture) **[NEW]**
+4. [Standard JSON Schema](#standard-json-schema)
+5. [Architecture Design](#architecture-design)
+6. [Command Structure](#command-structure)
+7. [Implementation Phases](#implementation-phases)
+8. [Template System](#template-system)
+9. [Work Type Detection Algorithm](#work-type-detection-algorithm) **[NEW]**
+10. [Internal Tracking Mechanism](#internal-tracking-mechanism)
+11. [Risk Mitigation](#risk-mitigation)
+12. [Past Bug Lessons](#past-bug-lessons)
+13. [Technical Challenges](#technical-challenges)
+14. [Design Decisions](#design-decisions)
+15. [Files to Create/Modify](#files-to-createmodify)
+16. [Success Metrics](#success-metrics)
+17. [Open Questions](#open-questions)
 
 ---
 
 ## Executive Summary
 
 ### Vision
-Create a conversation-driven planning system within the session plugin that:
-- Analyzes natural conversations to extract structured plans
+Create a **hybrid planning system** within the session plugin that:
+- Intelligently detects work type (feature/bug/spike/refactor) from natural conversation
+- Auto-selects appropriate template structure for consistency and best practices
+- Combines template scaffolding with conversation-specific content
+- Analyzes natural conversations to extract goals, decisions, and requirements
 - Uses a standard JSON format for robust planning structure (`plan_{name}.json`)
 - Saves conversation context alongside plans (`conversation_{name}.md`)
 - Works with or without active sessions (flexible storage)
@@ -39,12 +90,15 @@ Create a conversation-driven planning system within the session plugin that:
 - Zero user commands during work (Claude auto-updates task status)
 
 ### Feasibility Assessment
-**Overall: 92% - Highly Feasible** (Increased from 88% - simpler architecture)
+**Overall: 90% - Highly Feasible** (Hybrid approach with intelligent detection)
 
 | Component | Feasibility | Confidence |
 |-----------|-------------|------------|
 | Standard JSON format | 100% | Very High |
 | Conversation analysis | 90% | High |
+| **Work type detection** | **85%** | **High** |
+| **Template auto-selection** | **90%** | **High** |
+| **Hybrid merge (template + conversation)** | **92%** | **Very High** |
 | CLI implementation | 100% | Very High |
 | Single command integration | 100% | Very High |
 | Token-efficient tools | 100% | Very High |
@@ -52,16 +106,20 @@ Create a conversation-driven planning system within the session plugin that:
 | Pattern recognition (file naming) | 100% | Very High |
 
 ### Key Recommendations
-✅ **PROCEED** with implementation
-🎯 **START** with Phase 1 (4-6 hours) - Core infrastructure
-⚠️ **WATCH** for bash parsing, subagent reliability (conversation analysis)
-🎯 **TOTAL EFFORT:** 7-11 hours (vs 26-34 in previous design)
+✅ **PROCEED** with hybrid approach implementation
+🎯 **START** with Phase 1 (4-6 hours) - Core infrastructure + work type detection
+🎯 **HYBRID:** Smart /save-plan auto-detects work type and selects template
+⚠️ **WATCH** for detection accuracy (target >80%), subagent reliability
+🎯 **TOTAL EFFORT:** 9-14 hours (hybrid approach, +2-3h for detection logic)
 
 ### Value Proposition
+- **Intelligent:** Auto-detects work type (feature/bug/spike/refactor) from conversation
+- **Structured:** Templates provide proven phase/task patterns for consistency
+- **Contextual:** Fills templates with conversation-specific goals and decisions
 - **Natural workflow:** Users just talk, Claude extracts plan on demand
-- **Zero friction:** Single command `/save-plan {name}` - no complex interaction
-- **Flexible:** Works in sessions or standalone conversations
-- **Token-efficient:** 97% token savings via Node CLI tools
+- **Zero friction:** Single command `/save-plan {name}` with smart defaults
+- **Flexible:** Auto-select template, choose different, or start from scratch
+- **Token-efficient:** 40% token savings via template scaffolding + 97% via CLI tools
 - **Reusable:** Plans generate execution prompts for new sessions
 - **Traceable:** Conversation context saved with every plan
 
@@ -69,7 +127,7 @@ Create a conversation-driven planning system within the session plugin that:
 
 ## Core Concept
 
-### User Workflow (Conversation-Driven)
+### User Workflow (Hybrid Approach)
 ```
 1. User and Claude have natural conversation about what to build
    → "I think we should use passport.js for OAuth"
@@ -78,9 +136,30 @@ Create a conversation-driven planning system within the session plugin that:
    → [Discussion continues naturally...]
 
 2. User calls: /save-plan oauth-implementation
-   → Claude analyzes entire conversation
-   → Extracts: goals, decisions, requirements, constraints, technical approach
-   → Structures into phases and tasks
+   → Claude detects work type from conversation
+      ✓ Analyzing conversation signals...
+      ✓ Detected: FEATURE (confidence: 85%)
+      ✓ Selected template: feature-development
+
+   → Claude extracts conversation details
+      • Goal: "Implement OAuth2 with Google provider"
+      • Tech decisions: passport.js, Redis
+      • Requirements: 3 found
+      • Constraints: 2 found
+
+   → Claude shows preview with template structure + conversation content
+      "Using feature-development template (4 phases)
+       Filled with your conversation specifics:
+       - Phase 1: OAuth setup and configuration
+       - Phase 2: passport.js integration
+       - Phase 3: Testing OAuth flow
+       - Phase 4: Deployment"
+
+   → User chooses:
+      1. ✓ Use this template (recommended)
+      2. Choose different template
+      3. Start from scratch (no template)
+
    → Saves plan_oauth-implementation.json
    → Saves conversation_oauth-implementation.md (conversation summary)
 
@@ -185,6 +264,227 @@ Next Task: task-2 "Install and configure passport.js"
 
 ---
 
+## Hybrid Approach Architecture
+
+### Overview
+
+The hybrid planning system combines the **structure of templates** with the **specificity of conversation analysis** to create high-quality plans efficiently.
+
+**Core Principle:** Templates provide the scaffolding (phases, task patterns, best practices), while conversation analysis provides the content (specific goals, technical decisions, project constraints).
+
+### The Three-Layer System
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│             LAYER 1: CONVERSATION ANALYSIS                   │
+│  Extract structured content from natural discussion          │
+│                                                              │
+│  Outputs:                                                    │
+│  • Goals: "Implement OAuth2 with Google provider"           │
+│  • Tech Decisions: "Use passport.js (battle-tested)"        │
+│  • Requirements: ["Support Google OAuth", "Redis tokens"]   │
+│  • Constraints: ["No DB schema changes"]                    │
+│  • Timeline: "9-13 hours total"                             │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│            LAYER 2: WORK TYPE DETECTION                      │
+│  Analyze conversation signals to determine work type         │
+│                                                              │
+│  Process:                                                    │
+│  1. Score indicators: Keywords, Context, Structure          │
+│  2. Rank by confidence: feature(85%), bug(15%), spike(10%)  │
+│  3. Select template: Auto if >70%, Ask if 50-70%, Custom<50%│
+│                                                              │
+│  Output: Template selection (feature-development, bug-fix,   │
+│          spike, refactoring, or custom)                      │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│                LAYER 3: HYBRID MERGE                         │
+│  Combine template structure with conversation content        │
+│                                                              │
+│  Template Provides:                Conversation Provides:    │
+│  • Phase structure                 • Specific goals          │
+│  • Task categories                 • Technical decisions     │
+│  • Completion criteria             • Project constraints     │
+│  • Standard checks                 • Timeline estimates      │
+│  • Best practice patterns          • Risk identification     │
+│                                                              │
+│  Result: Structured plan with project-specific content       │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│              LAYER 4: USER CONFIRMATION                      │
+│  Preview and customize before saving                         │
+│                                                              │
+│  User Options:                                               │
+│  1. ✓ Accept (use detected template)                        │
+│  2. ⚡ Customize (modify template or switch)                 │
+│  3. ✏️  Start Fresh (ignore template, freeform)              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Template Selection Flow
+
+**Step 1: Signal Analysis**
+```
+Conversation analyzed for indicators:
+- Feature: "implement", "build", requirements discussion
+- Bug: "fix", "broken", root cause analysis
+- Spike: "research", "evaluate", trade-off discussion
+- Refactor: "improve", "cleanup", code quality focus
+```
+
+**Step 2: Confidence Scoring**
+```
+Each work type scored 0-100:
+- Keywords: Up to 40 points
+- Context patterns: Up to 30 points
+- Structure signals: Up to 30 points
+
+Total confidence determines action:
+- ≥70%: Auto-select template
+- 50-69%: Show suggestion, ask confirmation
+- <50%: Offer choices or custom
+```
+
+**Step 3: Template Loading**
+```
+Selected template provides:
+- Phase structure (e.g., Requirements → Implementation → Testing)
+- Task categories (e.g., "analyze_requirements", "implement_core")
+- Completion criteria templates
+- Standard quality checks
+```
+
+### Hybrid Merge Algorithm
+
+**How conversation content fills template structure:**
+
+1. **Goal Mapping**
+   - Template: Generic "Implement feature"
+   - Conversation: "Implement OAuth2 authentication with Google provider"
+   - Result: Specific, actionable goal
+
+2. **Task Generation**
+   - Template category: "analyze_requirements"
+   - Conversation mentions: Google OAuth, passport.js, Redis
+   - Result: Tasks like "Configure OAuth app in Google Console", "Install passport.js"
+
+3. **Decision Preservation**
+   - Conversation: "Use passport.js because it's well-documented"
+   - Result: Task note captures rationale, not just action
+
+4. **Constraint Integration**
+   - Conversation: "Can't change database schema"
+   - Result: Added to plan constraints, informs task descriptions
+
+5. **Timeline Extraction**
+   - Conversation: "Setup 2-3h, implementation 4-6h"
+   - Template: Phase duration templates
+   - Result: Realistic estimates per phase
+
+### Token Optimization
+
+**Why Hybrid Saves Tokens:**
+
+**Pure Conversation Analysis:**
+- Subagent analyzes full conversation (20k tokens in subagent)
+- Infers structure from scratch
+- Generates all phases/tasks from conversation
+
+**Hybrid Approach:**
+- Template provides structure (1k tokens, loaded from file)
+- Subagent extracts content only (10k tokens in subagent)
+- Fills template slots with conversation details
+
+**Savings: 40% reduction in subagent token usage**
+
+### Benefits Summary
+
+**For Users:**
+- ✅ **Faster:** Templates reduce planning time by 50%
+- ✅ **Consistent:** Standard phase structures across similar projects
+- ✅ **Specific:** Conversation details preserved exactly
+- ✅ **Flexible:** Can override or ignore templates anytime
+
+**For System:**
+- ✅ **Efficient:** 40% token reduction via template scaffolding
+- ✅ **Quality:** Templates encode best practices
+- ✅ **Scalable:** Templates improve over time
+- ✅ **Measurable:** Detection accuracy trackable
+
+**For Teams:**
+- ✅ **Alignment:** Common vocabulary and structure
+- ✅ **Onboarding:** New members see proven patterns
+- ✅ **Standards:** Consistent approach across projects
+
+### Example: OAuth Implementation
+
+**Input: Natural Conversation**
+```
+User: "Need to add OAuth authentication. Google first, Azure AD later."
+Claude: "Recommend passport.js for OAuth handling."
+User: "What about token storage? We have Redis."
+Claude: "Perfect, Redis handles expiration automatically."
+[... conversation continues ...]
+```
+
+**Layer 1: Extracted Content**
+```json
+{
+  "goal": "Implement OAuth2 with Google provider",
+  "tech_decisions": [
+    {"choice": "passport.js", "reason": "Battle-tested, good docs"},
+    {"choice": "Redis", "reason": "Fast, has expiration, in stack"}
+  ],
+  "requirements": ["Google OAuth", "Token storage", "Refresh handling"],
+  "constraints": ["No DB changes", "Existing Express app"],
+  "timeline": "9-13 hours"
+}
+```
+
+**Layer 2: Work Type Detection**
+```
+Signals detected:
+- Keywords: "implement", "add" → Feature (30 points)
+- Context: Architecture discussion → Feature (20 points)
+- Structure: Multiple phases mentioned → Feature (25 points)
+
+Score: Feature (75%), Bug (10%), Spike (5%)
+Decision: Auto-select feature-development template
+```
+
+**Layer 3: Hybrid Merge**
+```
+Template: feature-development (4 phases, 20 default tasks)
+Content: OAuth conversation specifics
+
+Merged Result:
+- Phase 1: "Requirements & Design" →
+  Tasks: "Configure Google OAuth app", "Set up env variables"
+  (from conversation, not generic template tasks)
+
+- Phase 2: "Core Implementation" →
+  Tasks: "Create passport strategy", "Build auth middleware", "Set up Redis token storage"
+  (specific to conversation decisions)
+
+- Tech Decisions preserved in task notes
+- Timeline estimates from conversation applied to phases
+```
+
+**Output: Production-Ready Plan**
+- Structured (template phases)
+- Specific (conversation tasks)
+- Complete (best practices from template)
+- Contextual (decisions and rationale preserved)
+
+---
+
 ## Standard JSON Schema
 
 ### Schema Version 1.0.0
@@ -209,9 +509,27 @@ Next Task: task-2 "Install and configure passport.js"
         "goal": {"type": "string"},
         "created_at": {"type": "string", "format": "date-time"},
         "last_updated": {"type": "string", "format": "date-time"},
-        "planning_method": {"enum": ["interactive", "automatic", "template"]},
+        "planning_method": {"enum": ["interactive", "automatic", "template", "hybrid"]},
         "status": {"enum": ["draft", "in_progress", "completed", "abandoned"]},
-        "conversation_snapshot": {"type": "string"}
+        "conversation_snapshot": {"type": "string"},
+        "work_type": {
+          "enum": ["feature", "bug", "spike", "refactor", "unknown"],
+          "description": "Detected work type from conversation analysis"
+        },
+        "auto_detected": {
+          "type": "boolean",
+          "description": "Whether work type was auto-detected (true) or manually selected (false)"
+        },
+        "detection_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence score for work type detection (0.0-1.0)"
+        },
+        "template_used": {
+          "type": "string",
+          "description": "Template name if planning_method is 'hybrid' or 'template'"
+        }
       }
     },
     "phases": {
@@ -351,12 +669,16 @@ Next Task: task-2 "Install and configure passport.js"
   "schema_version": "1.0.0",
   "plan_metadata": {
     "session_name": "feature-auth",
-    "goal": "Implement OAuth2 authentication system",
+    "goal": "Implement OAuth2 authentication with Google provider",
     "created_at": "2025-11-17T10:00:00Z",
     "last_updated": "2025-11-17T15:30:00Z",
-    "planning_method": "interactive",
+    "planning_method": "hybrid",
     "status": "in_progress",
-    "conversation_snapshot": "auto_2025-11-17_10-00.md"
+    "conversation_snapshot": "conversation_oauth-implementation.md",
+    "work_type": "feature",
+    "auto_detected": true,
+    "detection_confidence": 0.85,
+    "template_used": "feature-development"
   },
 
   "phases": [
@@ -718,40 +1040,73 @@ If exists, ask user:
 - Create new version (oauth-implementation-v2)
 - Cancel
 
-**Step 3: Analyze Conversation**
-Spawn subagent (Sonnet) to analyze entire conversation:
+**Step 3: Detect Work Type**
+Quick analysis in main conversation (~500 tokens):
+```javascript
+const detection = detectWorkType(conversationLog);
+// Returns: {type: 'feature', confidence: 0.85, reason: '...'}
+```
+
+**Step 3.5: Select Template**
+Based on detection confidence:
+- ≥70%: Auto-select template, show to user
+- 50-69%: Show top 2 suggestions, ask user
+- <50%: Offer manual selection or custom
+
+**Step 4: User Confirmation**
+Show preview:
+```
+✓ Detected: FEATURE (85% confidence)
+✓ Template: feature-development
+
+Preview:
+- 4 phases (Requirements, Implementation, Testing, Deployment)
+- Filled with conversation specifics
+
+Options:
+1. Use this template
+2. Choose different template
+3. Start from scratch
+```
+
+**Step 5: Hybrid Extraction via Subagent**
+Spawn subagent (Sonnet) with template context:
 - Read conversation history
-- Extract: goals, decisions, requirements, constraints, technical approach
-- Structure into phases and tasks
+- Load selected template structure
+- Extract: goals, decisions, requirements, constraints
+- Fill template with conversation details
 - Create conversation summary
 
-**Step 4: Save Plan via CLI**
+**Step 6: Save Plan via CLI**
 ```bash
 cat <<'EOF' | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js save-plan "${plan_name}" "${session_name}" --stdin
 {
-  "plan": { ... plan JSON ... },
+  "plan": { ... plan JSON with hybrid metadata ... },
   "conversation_summary": "... markdown content ..."
 }
 EOF
 ```
 
-**Step 5: Generate Execution Prompt**
+**Step 7: Generate Execution Prompt**
 CLI returns execution prompt for use in new session.
 
-**Step 6: Display Confirmation**
-Show files created, plan summary, and execution prompt.
+**Step 8: Display Confirmation**
+Show files created, plan summary (with template info), and execution prompt.
 
 ---
 
 ## Implementation Phases
 
-### Phase 1: Core Planning Infrastructure (4-6 hours)
-**Goal:** Build foundation for conversation-driven planning
+### Phase 1: Core Planning Infrastructure + Hybrid Approach (6-8 hours)
+**Goal:** Build foundation for hybrid planning (template + conversation)
 
 #### Features
-- ✅ `/save-plan {name}` command
-- ✅ Conversation analysis via subagent
-- ✅ `plan_{name}.json` and `conversation_{name}.md` storage
+- ✅ `/save-plan {name}` command with hybrid approach
+- ✅ **Work type detection** (feature/bug/spike/refactor)
+- ✅ **Template auto-selection** based on detection confidence
+- ✅ **User confirmation** flow (accept/customize/custom)
+- ✅ **Hybrid extraction** via subagent (template + conversation)
+- ✅ `plan_{name}.json` and `conversation_{name}.md` storage with hybrid metadata
 - ✅ Execution prompt generation
 - ✅ Duplicate handling (overwrite/version/cancel)
 
@@ -759,13 +1114,17 @@ Show files created, plan summary, and execution prompt.
 ```
 session/
 ├── commands/
-│   └── save-plan.md                 # /save-plan command
+│   └── save-plan.md                 # /save-plan with hybrid approach
+├── cli/lib/
+│   ├── work-type-detector.js        # Detection algorithm (~200 lines)
+│   └── template-selector.js         # Template selection logic (~150 lines)
 ├── cli/lib/commands/
-│   └── plan-ops.js                  # All plan operations (~300 lines)
+│   └── plan-ops.js                  # All plan operations (~400 lines)
 ├── prompts/
-│   └── analyze-conversation.md      # Conversation analysis prompt
+│   ├── analyze-conversation.md      # Hybrid extraction prompt
+│   └── detect-work-type.md          # Work type detection prompt
 └── schemas/
-    └── plan-schema.json             # Simplified JSON schema
+    └── plan-schema.json             # JSON schema with hybrid fields
 ```
 
 #### Files to Modify
@@ -773,12 +1132,17 @@ session/
 session/
 ├── plugin.json                      # Register /save-plan
 ├── cli/lib/session-cli.js           # Register plan-ops commands
-└── cli/lib/index-manager.js         # Add plan metadata
+├── cli/lib/index-manager.js         # Add hybrid metadata (work_type, etc.)
+└── cli/lib/template-manager.js      # Integration with detection
 ```
 
 #### Success Criteria
 - ✅ Can save plan from conversation with `/save-plan {name}`
-- ✅ Creates both files with correct naming
+- ✅ **Work type detection accuracy >80%**
+- ✅ **Template auto-selection works for high confidence (≥70%)**
+- ✅ **User can override detected template**
+- ✅ **Hybrid merge produces structured plans with conversation details**
+- ✅ Creates both files with correct naming and hybrid metadata
 - ✅ Works in session and non-session contexts
 - ✅ Duplicate handling works correctly
 - ✅ Generates valid execution prompt
@@ -826,7 +1190,7 @@ session/
 - ✅ Zero npm dependencies
 - ✅ Pattern recognition works (`plan_*.json`)
 
-**Total Effort: 7-11 hours** (down from 26-34 hours in original design)
+**Total Effort: 9-14 hours** (hybrid approach with detection, down from 26-34 hours in original template-only design)
 
 ---
 
@@ -1478,6 +1842,374 @@ function applyTemplate(template, sessionGoal, customizations = {}) {
 
 ---
 
+## Work Type Detection Algorithm
+
+### Overview
+
+The work type detection algorithm analyzes conversation content to automatically determine whether the user is planning a **feature**, **bug fix**, **spike/research**, or **refactoring** task. This enables intelligent template selection without requiring manual classification.
+
+### Detection Signals
+
+Each work type has characteristic signals that appear in conversation. The algorithm scores each type based on multiple signal categories.
+
+#### Feature Development Indicators
+
+| Signal Type | Indicators | Points |
+|-------------|------------|--------|
+| **Keywords** | "implement", "add", "create", "build", "develop", "new feature" | Up to 40 |
+| **Context Patterns** | Requirements discussion, design decisions, architecture planning | Up to 30 |
+| **Structure Signals** | Multiple phases mentioned, timeline estimates, milestone planning | Up to 30 |
+
+**Example Conversation:**
+```
+"We need to implement OAuth authentication"
+"Let's add support for Google and Azure AD"
+"First we'll design the auth flow, then implement..."
+```
+**Score:** Feature (85%) - Strong keywords + architecture discussion + phased approach
+
+#### Bug Fix Indicators
+
+| Signal Type | Indicators | Points |
+|-------------|------------|--------|
+| **Keywords** | "fix", "bug", "broken", "error", "issue", "not working", "crash" | Up to 50 |
+| **Context Patterns** | Root cause discussion, reproduction steps, debugging strategies | Up to 30 |
+| **Structure Signals** | Investigation phase, fix implementation, verification steps | Up to 20 |
+
+**Example Conversation:**
+```
+"The login is broken - users getting 500 errors"
+"Need to reproduce the issue first"
+"Looks like a null pointer in auth middleware"
+```
+**Score:** Bug (90%) - Clear error description + investigation approach
+
+#### Spike/Research Indicators
+
+| Signal Type | Indicators | Points |
+|-------------|------------|--------|
+| **Keywords** | "research", "investigate", "explore", "evaluate", "compare", "spike", "POC" | Up to 40 |
+| **Context Patterns** | Options comparison, trade-off analysis, uncertainty expressions | Up to 40 |
+| **Structure Signals** | Open questions listed, decision criteria, recommendation needed | Up to 20 |
+
+**Example Conversation:**
+```
+"Not sure which state management library to use"
+"Need to evaluate Redux vs MobX vs Zustand"
+"What are the trade-offs?"
+```
+**Score:** Spike (85%) - Evaluation language + options + trade-offs
+
+#### Refactoring Indicators
+
+| Signal Type | Indicators | Points |
+|-------------|------------|--------|
+| **Keywords** | "refactor", "cleanup", "improve", "restructure", "optimize", "technical debt" | Up to 40 |
+| **Context Patterns** | Code quality discussion, performance concerns, maintainability focus | Up to 40 |
+| **Structure Signals** | Incremental approach, testing emphasis, "no behavior change" | Up to 20 |
+
+**Example Conversation:**
+```
+"This module has grown too complex"
+"Need to refactor without changing behavior"
+"Let's improve test coverage first"
+```
+**Score:** Refactor (80%) - Quality focus + incremental + testing
+
+### Scoring Algorithm
+
+**Pseudocode:**
+```javascript
+function detectWorkType(conversation) {
+  // Extract conversation text
+  const text = conversation.map(entry => entry.text).join(' ').toLowerCase();
+
+  // Score each work type
+  const scores = {
+    feature: scoreFeature(text, conversation),
+    bug: scoreBug(text, conversation),
+    spike: scoreSpike(text, conversation),
+    refactor: scoreRefactor(text, conversation)
+  };
+
+  // Find highest score
+  const ranked = Object.entries(scores)
+    .sort((a, b) => b[1] - a[1]);
+
+  const [topType, topScore] = ranked[0];
+  const [secondType, secondScore] = ranked[1];
+
+  // Determine confidence level
+  if (topScore < 30) {
+    return {
+      type: 'unknown',
+      confidence: 0,
+      reason: 'Insufficient signals detected',
+      allScores: scores
+    };
+  }
+
+  // Check for clear winner
+  if (topScore - secondScore < 15) {
+    return {
+      type: 'ambiguous',
+      confidence: topScore / 100,
+      reason: `Close scores: ${topType}(${topScore}) vs ${secondType}(${secondScore})`,
+      suggestions: ranked.slice(0, 2),
+      allScores: scores
+    };
+  }
+
+  return {
+    type: topType,
+    confidence: topScore / 100,
+    reason: `Strong ${topType} indicators detected`,
+    allScores: scores
+  };
+}
+
+function scoreFeature(text, conversation) {
+  let score = 0;
+
+  // Keywords (up to 40 points)
+  const keywords = ['implement', 'add', 'create', 'build', 'develop', 'new'];
+  const keywordMatches = keywords.filter(kw => text.includes(kw)).length;
+  score += Math.min(keywordMatches * 10, 40);
+
+  // Context patterns (up to 30 points)
+  if (hasRequirementsDiscussion(conversation)) score += 15;
+  if (hasArchitectureDiscussion(conversation)) score += 15;
+
+  // Structure signals (up to 30 points)
+  if (hasMultiplePhases(conversation)) score += 10;
+  if (hasTimelineEstimates(conversation)) score += 10;
+  if (hasMilestones(conversation)) score += 10;
+
+  return score;
+}
+
+// Similar functions for scoreBug, scoreSpike, scoreRefactor
+```
+
+### Template Selection Logic
+
+**Decision Tree:**
+
+```
+┌─────────────────────────────────────────┐
+│  Run Work Type Detection                │
+│  Get: type, confidence, allScores       │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+        ┌────────────────────┐
+        │ Confidence ≥ 70%?  │
+        └────────┬───────────┘
+                 │
+        ┌────────┴────────┐
+        │                 │
+       YES               NO
+        │                 │
+        ▼                 ▼
+┌───────────────┐  ┌─────────────────────┐
+│ AUTO-SELECT   │  │ Confidence 50-69%?  │
+│ Load template │  └──────┬──────────────┘
+│ Show preview  │         │
+└───────────────┘  ┌──────┴──────┐
+                   │             │
+                  YES           NO
+                   │             │
+                   ▼             ▼
+          ┌────────────────┐  ┌────────────┐
+          │ ASK USER       │  │ OFFER      │
+          │ Show top 2     │  │ CHOICES    │
+          │ suggestions    │  │ or Custom  │
+          └────────────────┘  └────────────┘
+```
+
+**User Experience Flow:**
+
+**Scenario 1: High Confidence (≥70%)**
+```
+✓ Detected work type: FEATURE (confidence: 85%)
+✓ Selected template: feature-development
+
+Extracting conversation details...
+[Shows preview with template structure + conversation content]
+
+Options:
+1. ✓ Use this template (recommended)
+2. Choose different template
+3. Start from scratch (no template)
+```
+
+**Scenario 2: Medium Confidence (50-69%)**
+```
+💡 Detected work type (moderate confidence):
+   1. Bug fix (55%) - Root cause discussion detected
+   2. Refactoring (50%) - Code quality mentions found
+
+Which template best fits your work?
+[User selects]
+```
+
+**Scenario 3: Low Confidence (<50%)**
+```
+⚠️  No clear work type detected
+   Feature: 25%, Bug: 30%, Spike: 20%, Refactor: 15%
+
+Options:
+1. Choose template manually (feature/bug/spike/refactor)
+2. Start with custom structure (no template)
+3. Continue discussion to clarify
+```
+
+### Edge Cases and Handling
+
+#### Edge Case 1: Multiple Work Types in Conversation
+
+**Scenario:**
+```
+"First we need to fix the login bug (Bug)
+ Then refactor the auth module (Refactor)
+ Finally add OAuth support (Feature)"
+```
+
+**Detection Result:**
+```
+Bug: 40%, Refactor: 35%, Feature: 45%
+```
+
+**Handling:**
+```
+⚠️  Multiple work types detected:
+   - Feature (45%): OAuth implementation
+   - Bug (40%): Login fix
+   - Refactor (35%): Auth cleanup
+
+Options:
+1. Focus on primary work (Feature - OAuth)
+2. Create separate plans for each work type
+3. Use custom structure for mixed work
+```
+
+#### Edge Case 2: Ambiguous Signals
+
+**Scenario:**
+```
+"The authentication module needs work"
+(Could be bug fix, refactor, or feature)
+```
+
+**Detection Result:**
+```
+All scores < 30% (insufficient information)
+```
+
+**Handling:**
+```
+⚠️  Insufficient information to detect work type
+
+Suggestions:
+1. Continue discussion with more details
+2. Choose template manually
+3. Start with custom structure
+
+Helpful questions:
+- Is something broken? (→ Bug fix)
+- Are you adding new functionality? (→ Feature)
+- Improving existing working code? (→ Refactor)
+- Evaluating options? (→ Spike)
+```
+
+#### Edge Case 3: User Override
+
+**Scenario:**
+User manually specifies template despite auto-detection
+
+```
+/save-plan oauth-impl --template spike
+```
+
+**Detection:**
+```
+Auto-detected: Feature (85%)
+User selected: Spike
+```
+
+**Handling:**
+```
+⚠️  Template override detected
+
+Auto-detected: Feature Development (85% confidence)
+You selected: Spike/Research
+
+This will structure your plan for research/evaluation rather than implementation.
+
+Proceed with Spike template? (y/n)
+[If n: Show detected template option]
+```
+
+#### Edge Case 4: Confidence Tie
+
+**Scenario:**
+```
+Feature: 55%, Bug: 54%
+```
+
+**Handling:**
+```
+Unable to determine work type (scores within 1%):
+- Feature: 55%
+- Bug: 54%
+
+Both seem equally likely. Which fits better?
+1. Feature (new functionality)
+2. Bug (fix broken functionality)
+3. Review conversation together
+```
+
+### Testing Strategy
+
+**Accuracy Metrics:**
+- Track: Detected type vs User final choice
+- Target: >80% match rate (user accepts suggestion)
+- Measure: User override rate (<20% target)
+
+**Test Conversations:**
+Create 20 test conversations (5 per type):
+1. 5 clear feature conversations (expect >90% accuracy)
+2. 5 clear bug conversations (expect >90% accuracy)
+3. 5 clear spike conversations (expect >85% accuracy)
+4. 5 clear refactor conversations (expect >85% accuracy)
+
+**Validation:**
+- If accuracy < 80%: Adjust scoring weights
+- If false positives high: Increase confidence thresholds
+- If ambiguous cases common: Improve context pattern detection
+
+### Implementation Notes
+
+**File:** `cli/lib/work-type-detector.js`
+
+**Key Functions:**
+- `detectWorkType(conversation)` - Main detection function
+- `scoreFeature(text, conversation)` - Score feature indicators
+- `scoreBug(text, conversation)` - Score bug indicators
+- `scoreSpike(text, conversation)` - Score spike indicators
+- `scoreRefactor(text, conversation)` - Score refactor indicators
+- `selectTemplate(detection)` - Map detection to template
+
+**Integration Point:**
+Called from `/save-plan` command before conversation analysis subagent spawning.
+
+**Performance:**
+- Target: <500ms for detection
+- Runs in main conversation (small token cost ~500 tokens)
+- Does NOT spawn subagent (quick analysis only)
+
+---
+
 ## Internal Tracking Mechanism
 
 ### Multi-Layer Tracking Architecture
@@ -1931,6 +2663,88 @@ function suggestTaskCompletion(task, recentActivity) {
 
 ---
 
+#### Risk 8: Work Type Detection Accuracy
+**Severity:** Medium
+**Probability:** Medium
+**Impact:** Wrong template selected, user frustrated
+
+**Mitigation:**
+- Conservative scoring (require clear signals)
+- Show confidence score to user
+- Always allow manual override
+- Show preview before committing
+- Track accuracy metrics (target >80%)
+- Improve algorithm based on user feedback
+
+**Implementation:**
+```javascript
+// Detection confidence thresholds
+const THRESHOLDS = {
+  AUTO_SELECT: 70,  // High confidence → auto-select
+  ASK_USER: 50,     // Medium → ask confirmation
+  CUSTOM: 0         // Low → offer choices or custom
+};
+
+// Always show reasoning
+return {
+  type: 'feature',
+  confidence: 85,
+  reason: 'Strong feature indicators: "implement", "add", architecture discussion',
+  allScores: {feature: 85, bug: 15, spike: 10, refactor: 5}
+};
+```
+
+**Testing:**
+- Test with 20 diverse conversations (5 per type)
+- Measure: User accepts suggestion vs overrides
+- Target: >80% accuracy (user accepts auto-suggestion)
+- Adjust weights if false positives >20%
+
+---
+
+#### Risk 9: Template Rigidity
+**Severity:** Low
+**Probability:** Low
+**Impact:** User feels constrained by template
+
+**Mitigation:**
+- Emphasize templates are starting points, not constraints
+- Make customization easy (always show "Start from scratch" option)
+- Allow switching templates mid-creation
+- Don't enforce template structure
+- Support partial template use (some phases only)
+- Flexible merge logic (adapt template to content)
+
+**User Experience:**
+```
+Detected: Feature Development (85%)
+
+Options:
+1. ✓ Use this template (recommended)
+2. Choose different template
+3. ⚡ Start from scratch (no template)  ← Always available!
+```
+
+**Implementation:**
+```javascript
+function mergeTemplateWithConversation(template, conversation) {
+  // If conversation has specific phases, use those
+  if (conversation.phases && conversation.phases.length > 0) {
+    return conversation.phases; // Conversation wins
+  }
+
+  // Otherwise, use template phases filled with conversation content
+  return template.phases.map(phase => ({
+    ...phase,
+    tasks: generateTasksFromConversation(phase, conversation)
+  }));
+}
+```
+
+**Testing:** Usability testing with real users
+
+---
+
 ## Past Bug Lessons
 
 ### Lesson 1: Bash Parse Errors (v3.8.5-3.8.6)
@@ -2154,6 +2968,96 @@ function detectUnplannedWork(sessionName) {
 
 ---
 
+### Challenge 7: Work Type Detection from Conversation
+**Issue:** Conversation signals may be ambiguous or mixed
+
+**Solution:**
+- Multi-signal scoring (not just keywords)
+- Context patterns recognition (architecture discussion → feature)
+- Structure signals (investigation steps → bug fix)
+- Confidence thresholds (don't guess if unclear)
+- Show user reasoning ("Detected feature because...")
+- Allow override before commitment
+- Learn from user corrections over time
+
+**Example Ambiguity:**
+```
+"We need to investigate the OAuth bug and then implement a fix"
+```
+Contains both spike AND bug signals.
+
+**Handling:**
+```
+⚠️  Multiple work types detected:
+   - Bug (45%): Error investigation mentioned
+   - Spike (40%): "investigate" keyword found
+
+Which best describes your current work?
+1. Bug fix (fixing broken functionality)
+2. Spike (researching the issue first)
+```
+
+**Performance Target:**
+- >80% detection accuracy (user accepts suggestion)
+- <500ms detection time
+- <500 tokens for quick analysis
+
+---
+
+### Challenge 8: Template-Conversation Content Merging
+**Issue:** Template structure might not fit conversation content
+
+**Solution:**
+- Flexible merge logic (adapt template to content)
+- Conversation always wins for content
+- Template provides structure suggestions only
+- Allow partial template use (some phases only)
+- Support template customization during preview
+- Freeform fallback always available
+
+**Merge Strategy:**
+```javascript
+function mergeTemplateWithConversation(template, conversation) {
+  const plan = {};
+
+  // 1. Phase selection
+  if (conversation.explicitPhases) {
+    // User discussed specific phases → use those
+    plan.phases = conversation.explicitPhases;
+  } else {
+    // Use template phases as scaffolding
+    plan.phases = template.phases;
+  }
+
+  // 2. Task generation
+  plan.phases.forEach(phase => {
+    // Fill template categories with conversation tasks
+    phase.tasks = conversation.tasks
+      .filter(t => matchesPhaseCategory(t, phase))
+      .map(t => ({
+        ...template.defaultTaskStructure,
+        ...t  // Conversation details override template
+      }));
+  });
+
+  // 3. Content enrichment
+  plan.tech_decisions = conversation.tech_decisions;
+  plan.constraints = conversation.constraints;
+  plan.timeline = conversation.timeline || template.estimatedTimeline;
+
+  return plan;
+}
+```
+
+**Edge Case Handling:**
+- If template has 4 phases but conversation only 2 → Use 2 phases
+- If conversation mentions 5 phases but template has 4 → Use 5 phases
+- If no clear phase structure → Freeform with conversation grouping
+
+**Testing:** Test with mismatched conversations and templates
+
+---
+
 ## Design Decisions
 
 ### Decision 1: JSON vs Markdown
@@ -2324,7 +3228,9 @@ session/
 
 ## Success Metrics
 
-### Phase 1 (Core Infrastructure) Success Criteria
+### Phase 1 (Core Infrastructure + Hybrid Approach) Success Criteria
+
+**Core Functionality:**
 - ✅ Can save plan from conversation with `/save-plan {name}`
 - ✅ Creates `plan_{name}.json` and `conversation_{name}.md`
 - ✅ Works in session and non-session contexts
@@ -2333,6 +3239,18 @@ session/
 - ✅ JSON schema validates on write
 - ✅ Zero crashes or data loss
 - ✅ Files stored in correct location with correct naming
+
+**Hybrid Approach Metrics:**
+- ✅ **Work type detection accuracy >80%** (user accepts auto-suggestion)
+- ✅ **User override rate <20%** (system picks correctly most times)
+- ✅ **Template auto-selection works for high confidence (≥70%)**
+- ✅ **User confirmation flow works for medium confidence (50-69%)**
+- ✅ **Custom fallback available for low confidence (<50%)**
+- ✅ **Hybrid merge produces valid structured plans**
+- ✅ **Conversation details preserved in plan tasks and notes**
+- ✅ **Detection completes in <500ms**
+- ✅ **Plan metadata includes: work_type, auto_detected, detection_confidence, template_used**
+- ✅ **All 4 work types detectable (feature/bug/spike/refactor)**
 
 ### Phase 2 (Execution Support) Success Criteria
 - ✅ Can load and execute plan in new session

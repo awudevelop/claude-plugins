@@ -1,0 +1,123 @@
+{
+  "work_type": "feature",
+  "version": "1.0.0",
+  "template_version": "1.0.0",
+  "phases": [
+    {
+      "phase_name": "Phase 1: Setup and Configuration",
+      "description": "Initial setup, dependencies, and configuration",
+      "tasks": [
+        {
+          "task_id": "task-1-1",
+          "description": "Install required dependencies and libraries",
+          "details": "Set up project dependencies, install npm packages, configure build tools",
+          "status": "pending",
+          "estimated_effort": "1h"
+        },
+        {
+          "task_id": "task-1-2",
+          "description": "Configure environment and settings",
+          "details": "Set up environment variables, configuration files, and secrets management",
+          "status": "pending",
+          "estimated_effort": "1h"
+        },
+        {
+          "task_id": "task-1-3",
+          "description": "Set up database schema or data structures",
+          "details": "Create database migrations, schemas, or initialize data structures",
+          "status": "pending",
+          "estimated_effort": "2h"
+        }
+      ]
+    },
+    {
+      "phase_name": "Phase 2: Core Implementation",
+      "description": "Implement main feature functionality",
+      "tasks": [
+        {
+          "task_id": "task-2-1",
+          "description": "Implement core feature logic",
+          "details": "Build main functionality, business logic, and algorithms",
+          "status": "pending",
+          "estimated_effort": "4h",
+          "dependencies": ["task-1-1", "task-1-2"]
+        },
+        {
+          "task_id": "task-2-2",
+          "description": "Create API endpoints or interfaces",
+          "details": "Build REST/GraphQL endpoints, CLI commands, or UI components",
+          "status": "pending",
+          "estimated_effort": "3h",
+          "dependencies": ["task-2-1"]
+        },
+        {
+          "task_id": "task-2-3",
+          "description": "Implement data persistence layer",
+          "details": "Add database operations, caching, or file storage",
+          "status": "pending",
+          "estimated_effort": "2h",
+          "dependencies": ["task-1-3"]
+        }
+      ]
+    },
+    {
+      "phase_name": "Phase 3: Testing and Validation",
+      "description": "Test feature functionality and edge cases",
+      "tasks": [
+        {
+          "task_id": "task-3-1",
+          "description": "Write unit tests",
+          "details": "Create unit tests for core logic and utility functions",
+          "status": "pending",
+          "estimated_effort": "2h",
+          "dependencies": ["task-2-1"]
+        },
+        {
+          "task_id": "task-3-2",
+          "description": "Write integration tests",
+          "details": "Test API endpoints, database interactions, and external integrations",
+          "status": "pending",
+          "estimated_effort": "3h",
+          "dependencies": ["task-2-2", "task-2-3"]
+        },
+        {
+          "task_id": "task-3-3",
+          "description": "Perform manual testing and validation",
+          "details": "Test user workflows, edge cases, and error scenarios",
+          "status": "pending",
+          "estimated_effort": "2h",
+          "dependencies": ["task-3-1", "task-3-2"]
+        }
+      ]
+    },
+    {
+      "phase_name": "Phase 4: Deployment and Documentation",
+      "description": "Deploy feature and create documentation",
+      "tasks": [
+        {
+          "task_id": "task-4-1",
+          "description": "Write user documentation",
+          "details": "Create API docs, user guides, or README updates",
+          "status": "pending",
+          "estimated_effort": "2h"
+        },
+        {
+          "task_id": "task-4-2",
+          "description": "Deploy to production",
+          "details": "Push to production, run migrations, update configs",
+          "status": "pending",
+          "estimated_effort": "1h",
+          "dependencies": ["task-3-3", "task-4-1"]
+        },
+        {
+          "task_id": "task-4-3",
+          "description": "Monitor and validate deployment",
+          "details": "Check logs, metrics, and user feedback post-deployment",
+          "status": "pending",
+          "estimated_effort": "1h",
+          "dependencies": ["task-4-2"]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "work_type": "refactor",
+  "version": "1.0.0",
+  "phases": [
+    {
+      "phase_name": "Phase 1: Analysis",
+      "tasks": [
+        {"task_id": "task-1-1", "description": "Identify code smells and issues", "status": "pending"},
+        {"task_id": "task-1-2", "description": "Plan refactoring approach", "status": "pending"}
+      ]
+    },
+    {
+      "phase_name": "Phase 2: Refactoring",
+      "tasks": [
+        {"task_id": "task-2-1", "description": "Refactor code structure", "status": "pending", "dependencies": ["task-1-2"]},
+        {"task_id": "task-2-2", "description": "Ensure tests pass", "status": "pending", "dependencies": ["task-2-1"]}
+      ]
+    },
+    {
+      "phase_name": "Phase 3: Validation",
+      "tasks": [
+        {"task_id": "task-3-1", "description": "Code review and validation", "status": "pending", "dependencies": ["task-2-2"]},
+        {"task_id": "task-3-2", "description": "Deploy refactored code", "status": "pending", "dependencies": ["task-3-1"]}
+      ]
+    }
+  ]
+}
