@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "requirements-schema.json",
+  "title": "Requirements Schema",
+  "description": "Schema for conceptual planning phase - captures requirements before task breakdown",
+  "type": "object",
+  "required": ["plan_name", "plan_type", "goal", "requirements", "created_at"],
+  "additionalProperties": false,
+  "properties": {
+    "plan_name": {
+      "type": "string",
+      "description": "Unique identifier for the plan",
+      "minLength": 1,
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "plan_type": {
+      "type": "string",
+      "const": "conceptual",
+      "description": "Must be 'conceptual' for requirements format"
+    },
+    "goal": {
+      "type": "string",
+      "description": "High-level goal or objective for this plan",
+      "minLength": 1
+    },
+    "requirements": {
+      "type": "array",
+      "description": "List of requirements captured during planning discussion",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique requirement identifier (e.g., 'req-1')",
+            "pattern": "^req-[0-9]+$"
+          },
+          "description": {
+            "type": "string",
+            "description": "What the user wants (high-level requirement)",
+            "minLength": 1
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional context, constraints, or considerations"
+          },
+          "open_questions": {
+            "type": "array",
+            "description": "Questions or uncertainties that need resolution",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Priority level for this requirement"
+          },
+          "conversation_context": {
+            "type": "string",
+            "description": "Relevant conversation excerpts that led to this requirement"
+          }
+        }
+      }
+    },
+    "discussion_notes": {
+      "type": "string",
+      "description": "Free-form notes from the planning discussion"
+    },
+    "conversation_summary": {
+      "type": "string",
+      "description": "Summary of the conversation that led to these requirements"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when plan was created"
+    },
+    "session_name": {
+      "type": "string",
+      "description": "Name of the session this plan belongs to"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata",
+      "properties": {
+        "work_type": {
+          "type": "string",
+          "enum": ["feature", "bug", "spike", "refactor"],
+          "description": "Detected work type"
+        },
+        "estimated_complexity": {
+          "type": "string",
+          "enum": ["simple", "moderate", "complex"],
+          "description": "Estimated complexity"
+        }
+      }
+    }
+  }
+}

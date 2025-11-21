@@ -1,0 +1,213 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/phase.json",
+  "title": "Phase File",
+  "description": "Individual phase file with tasks and configuration",
+  "type": "object",
+  "required": [
+    "phase",
+    "tasks"
+  ],
+  "properties": {
+    "phase": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Phase identifier (must match orchestration)",
+          "pattern": "^phase-[0-9]+-[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "type": {
+          "type": "string",
+          "enum": ["setup", "implementation", "testing", "deployment", "other"],
+          "default": "implementation"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "default": "medium"
+        }
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "description": "Phase-specific configuration",
+      "properties": {
+        "agent": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "enum": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+              "default": "claude-3-sonnet"
+            },
+            "temperature": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.3
+            },
+            "maxTokens": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 100000,
+              "default": 4000
+            }
+          }
+        },
+        "tools": {
+          "type": "array",
+          "description": "Required tools for this phase",
+          "items": {
+            "type": "string"
+          }
+        },
+        "environment": {
+          "type": "object",
+          "description": "Environment variables",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "workingDirectory": {
+          "type": "string",
+          "description": "Working directory for phase execution"
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "description": "Tasks in this phase",
+      "items": {
+        "type": "object",
+        "required": ["task_id", "description", "status"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^task-[a-z0-9-]+$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 500
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "type": {
+            "type": "string",
+            "enum": ["code", "config", "test", "documentation", "other"],
+            "default": "code"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "failed", "blocked"],
+            "default": "pending"
+          },
+          "dependencies": {
+            "type": "array",
+            "description": "Task IDs this task depends on (within this phase)",
+            "items": {
+              "type": "string",
+              "pattern": "^task-[a-z0-9-]+$"
+            }
+          },
+          "estimatedEffort": {
+            "type": "string",
+            "pattern": "^\\d+[mhd]$"
+          },
+          "estimatedTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "actualTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "technical_notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "output": {
+            "type": "object",
+            "properties": {
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "logs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "artifacts": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "context": {
+      "type": "array",
+      "description": "Phase-specific context from conversation",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Phase execution metrics",
+      "properties": {
+        "estimatedDuration": {
+          "type": "string",
+          "pattern": "^\\d+[mhd]$"
+        },
+        "estimatedTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "actualTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "successRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    }
+  }
+}

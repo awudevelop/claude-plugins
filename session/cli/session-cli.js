@@ -28,6 +28,7 @@
  *   create-plan <session> <name> <json>  Create a new plan
  *   get-plan <session> <name>            Get plan details
  *   list-plans <session>                 List all plans for a session
+ *   finalize-plan <session> <name>       Finalize conceptual plan for execution
  *   update-task-status <session> <plan> <taskId> <status>  Update task status
  *   plan-status <session> <plan>         Get plan execution status
  *   detect-work-type <session>           Detect work type from conversation
@@ -70,10 +71,40 @@ const commands = {
   'delete-plan': require('./lib/commands/plan-ops').deletePlan,
   'list-plans': require('./lib/commands/plan-ops').listPlans,
   'validate-plan': require('./lib/commands/plan-ops').validatePlan,
+  'finalize-plan': require('./lib/commands/plan-ops').finalizePlan,
   'update-task-status': require('./lib/commands/plan-ops').updateTaskStatus,
   'plan-status': require('./lib/commands/plan-ops').getPlanStatus,
   'export-plan': require('./lib/commands/plan-ops').exportPlan,
   'plan-exists': require('./lib/commands/plan-ops').planExists,
+  // Requirements-based workflow operations
+  'save-requirements': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [sessionName, planName, requirementsJson] = args;
+    const requirementsData = JSON.parse(requirementsJson);
+    return await planOps.saveRequirements(sessionName, planName, requirementsData);
+  },
+  'validate-requirements': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [requirementsJson] = args;
+    const requirementsData = JSON.parse(requirementsJson);
+    return await planOps.validateRequirements(requirementsData);
+  },
+  'load-requirements': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [sessionName, planName] = args;
+    return await planOps.loadRequirements(sessionName, planName);
+  },
+  'get-plan-format': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [sessionName, planName] = args;
+    return await planOps.getPlanFormat(sessionName, planName);
+  },
+  'transform-plan': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [sessionName, planName, breakdownJson] = args;
+    const breakdownData = JSON.parse(breakdownJson);
+    return await planOps.transformPlan(sessionName, planName, breakdownData);
+  },
   // Work type and template operations
   'detect-work-type': async (sessionName) => {
     const workTypeDetector = require('./lib/work-type-detector');

@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.12.0] - 2025-11-21
+
+### Added
+
+- **Requirements-Based Planning Workflow** - Complete implementation of two-format approach for planning
+  - **New Schemas** (`session/schemas/`)
+    - `requirements-schema.json`: Lightweight schema for conceptual plans (requirements capture)
+    - Updated `orchestration-schema.json`: Added `derivedFrom` field for requirement traceability
+  - **Transformation Engine** (`session/cli/lib/`)
+    - `requirement-transformer.js`: Core engine that transforms requirements into executable tasks
+    - Organizes tasks by architectural layers (Database → API → UI → Testing)
+    - Provides implementation details (SQL statements, API endpoints, UI components)
+    - Tracks traceability from requirements to tasks via `from_requirement` field
+  - **AI-Powered Breakdown** (`session/prompts/`)
+    - `breakdown-requirement.md`: AI prompt for intelligent task breakdown
+    - Converts high-level requirements (WHAT) into concrete tasks (HOW)
+    - Example: "Restrict products" → 10+ specific tasks across DB/API/UI layers
+  - **Updated Commands** (`session/commands/`)
+    - `plan-save.md`: Now creates requirements.json instead of orchestration.json
+    - `plan-finalize.md`: Implements AI-powered transformation (requirements → tasks)
+    - `plan-execute.md`: Added format validation (blocks conceptual plans from execution)
+  - **Updated Prompts**
+    - `analyze-conversation.md`: Extracts requirements (not tasks) from conversation
+    - Added examples distinguishing requirements vs implementation tasks
+  - **CLI Integration** (`session/cli/`)
+    - Added 5 new commands: save-requirements, validate-requirements, load-requirements, get-plan-format, transform-plan
+    - Updated session-cli.js with new command routes
+    - Updated plan-ops.js with new business logic functions
+
+### Changed
+
+- **Planning Workflow** - Separated conceptual planning from implementation planning
+  - **Before**: plan-save created orchestration.json with vague tasks, plan-finalize only changed planType field
+  - **After**: plan-save creates requirements.json, plan-finalize uses AI to transform into orchestration.json + phases/
+  - **User Benefit**: Planning phase is now lightweight and exploratory, transformation happens when ready
+
+### Fixed
+
+- **Finalize Gap** - Addressed critical gap where finalize step didn't actually transform requirements into tasks
+  - Finalize now performs real AI-powered breakdown instead of just field change
+  - Tasks are now concrete and actionable with implementation details
+  - Proper phase organization by architectural layer
+
+### Technical Details
+
+- **File Structure Changes**:
+  - Conceptual plans: `plans/{name}/requirements.json` only
+  - Implementation plans: `plans/{name}/orchestration.json + phases/*.json + requirements.json` (preserved for traceability)
+- **Transformation Flow**: Requirements (WHAT) → AI Analysis → Tasks (HOW) organized by phases
+- **Total Changes**: 11 files modified/created, ~2,500 lines of code
+- **Token Efficiency**: Maintains 74% token reduction via parallel subagent delegation
+
+---
+
 ## [3.11.0] - 2025-11-20
 
 ### Changed

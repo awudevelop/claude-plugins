@@ -1,0 +1,236 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/orchestration.json",
+  "title": "Plan Orchestration",
+  "description": "Lightweight orchestration file for phase-based plans",
+  "type": "object",
+  "required": [
+    "metadata",
+    "phases",
+    "execution",
+    "progress"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["planId", "name", "version", "created", "status"],
+      "properties": {
+        "planId": {
+          "type": "string",
+          "description": "Unique plan identifier (same as directory name)",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable plan name",
+          "minLength": 10,
+          "maxLength": 200
+        },
+        "description": {
+          "type": "string",
+          "description": "Plan description",
+          "maxLength": 500
+        },
+        "workType": {
+          "type": "string",
+          "enum": ["feature", "bug", "spike", "refactor", "other"]
+        },
+        "planType": {
+          "type": "string",
+          "enum": ["conceptual", "implementation"],
+          "description": "Conceptual = exploration phase with open questions; Implementation = finalized, executable plan",
+          "default": "conceptual"
+        },
+        "derivedFrom": {
+          "type": "array",
+          "description": "Requirement IDs from requirements.json that this implementation plan derives from (traceability)",
+          "items": {
+            "type": "string",
+            "pattern": "^req-[0-9]+$"
+          }
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "modified": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in-progress", "completed", "failed", "paused"]
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "description": "Phase registry with metadata",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "file", "dependencies", "status"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique phase identifier",
+            "pattern": "^phase-[0-9]+-[a-z0-9-]+$"
+          },
+          "name": {
+            "type": "string",
+            "description": "Phase name",
+            "minLength": 3,
+            "maxLength": 100
+          },
+          "file": {
+            "type": "string",
+            "description": "Relative path to phase file",
+            "pattern": "^phases/phase-[0-9]+-[a-z0-9-]+\\.json$"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["sequential", "parallel"],
+            "default": "sequential"
+          },
+          "dependencies": {
+            "type": "array",
+            "description": "Phase IDs this phase depends on",
+            "items": {
+              "type": "string",
+              "pattern": "^phase-[0-9]+-[a-z0-9-]+$"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in-progress", "completed", "failed", "skipped", "blocked"]
+          },
+          "estimatedTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "estimatedDuration": {
+            "type": "string",
+            "description": "Estimated duration (e.g., '30m', '2h')",
+            "pattern": "^\\d+[mhd]$"
+          },
+          "actualTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "execution": {
+      "type": "object",
+      "description": "Execution configuration",
+      "required": ["strategy", "maxParallelPhases", "tokenBudget"],
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["sequential", "parallel", "adaptive"],
+          "description": "Execution strategy"
+        },
+        "maxParallelPhases": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 1
+        },
+        "tokenBudget": {
+          "type": "object",
+          "required": ["total", "perPhase", "warningThreshold"],
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 1000
+            },
+            "perPhase": {
+              "type": "integer",
+              "minimum": 500
+            },
+            "warningThreshold": {
+              "type": "integer",
+              "minimum": 500
+            }
+          }
+        },
+        "retryPolicy": {
+          "type": "object",
+          "properties": {
+            "maxAttempts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5,
+              "default": 3
+            },
+            "backoffMs": {
+              "type": "integer",
+              "minimum": 1000,
+              "default": 5000
+            }
+          }
+        }
+      }
+    },
+    "progress": {
+      "type": "object",
+      "description": "Execution progress tracking",
+      "required": ["completedPhases", "totalPhases", "currentPhases", "lastUpdated"],
+      "properties": {
+        "completedPhases": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "totalPhases": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "currentPhases": {
+          "type": "array",
+          "description": "Currently executing phase IDs",
+          "items": {
+            "type": "string",
+            "pattern": "^phase-[0-9]+-[a-z0-9-]+$"
+          }
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "tokenUsage": {
+          "type": "object",
+          "properties": {
+            "used": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "remaining": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "totalTasks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completedTasks": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

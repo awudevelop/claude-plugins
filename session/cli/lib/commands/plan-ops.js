@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
+const planConverter = require('../plan-converter');
 
 // Get working directory from environment or use current
 const workingDir = process.env.CLAUDE_WORKING_DIR || process.cwd();
@@ -208,10 +209,10 @@ function calculateProgress(phases) {
 }
 
 /**
- * Creates a new plan file
+ * Creates a new plan file (orchestration.json + phase files)
  * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
- * @param {Object} planData - Plan data
+ * @param {Object} planData - Plan data (monolithic format)
  * @returns {Promise<CreateResult>}
  */
 async function createPlan(sessionName, planName, planData) {
@@ -234,14 +235,14 @@ async function createPlan(sessionName, planName, planData) {
     const plansDir = path.join(sessionPath, 'plans');
     await fs.mkdir(plansDir, { recursive: true });
 
-    // Check if plan already exists
-    const planPath = path.join(plansDir, `plan_${planName}.json`);
+    // Check if plan already exists (as directory)
+    const planDir = path.join(plansDir, planName);
     try {
-      await fs.access(planPath);
+      await fs.access(planDir);
       throw { code: 'PLAN_EXISTS' };
     } catch (error) {
       if (error.code === 'PLAN_EXISTS') throw error;
-      // File doesn't exist, which is what we want
+      // Directory doesn't exist, which is what we want
     }
 
     // Validate plan data
@@ -264,20 +265,71 @@ async function createPlan(sessionName, planName, planData) {
     }
     planData.updated_at = new Date().toISOString();
 
-    // Create plan file
+    // Convert monolithic plan to orchestration + phase files
+    const { orchestration, phaseFiles } = planConverter.splitPlanIntoPhases(planData);
+
+    // Create plan directory structure
+    await fs.mkdir(planDir, { recursive: true });
+    await fs.mkdir(path.join(planDir, 'phases'), { recursive: true });
+
+    // Write orchestration.json
     try {
-      await fs.writeFile(planPath, JSON.stringify(planData, null, 2));
+      await fs.writeFile(
+        path.join(planDir, 'orchestration.json'),
+        JSON.stringify(orchestration, null, 2)
+      );
     } catch (error) {
       throw { code: 'FILE_WRITE_ERROR', original: error };
     }
+
+    // Write phase files
+    for (let i = 0; i < phaseFiles.length; i++) {
+      const phaseFile = phaseFiles[i];
+      const phaseFilePath = path.join(planDir, orchestration.phases[i].file);
+
+      try {
+        await fs.writeFile(phaseFilePath, JSON.stringify(phaseFile, null, 2));
+      } catch (error) {
+        throw { code: 'FILE_WRITE_ERROR', original: error };
+      }
+    }
+
+    // Create empty execution-state.json
+    const executionState = {
+      planId: planName,
+      startTime: null,
+      lastUpdate: new Date().toISOString(),
+      tokenUsage: {
+        used: 0,
+        remaining: orchestration.execution.tokenBudget.total,
+        byPhase: {}
+      },
+      phaseStates: {},
+      globalProgress: {
+        percentage: 0,
+        phasesCompleted: 0,
+        phasesTotal: orchestration.phases.length,
+        tasksCompleted: 0,
+        tasksTotal: orchestration.progress.totalTasks
+      },
+      executionLog: []
+    };
+
+    await fs.writeFile(
+      path.join(planDir, 'execution-state.json'),
+      JSON.stringify(executionState, null, 2)
+    );
 
     return {
       success: true,
       data: {
         plan_name: planName,
-        path: planPath
+        path: planDir,
+        orchestration_file: path.join(planDir, 'orchestration.json'),
+        phase_count: phaseFiles.length,
+        total_tasks: orchestration.progress.totalTasks
       },
-      message: `Plan '${planName}' created successfully`
+      message: `Plan '${planName}' created successfully with ${phaseFiles.length} phases`
     };
 
   } catch (error) {
@@ -286,19 +338,36 @@ async function createPlan(sessionName, planName, planData) {
 }
 
 /**
- * Retrieves a plan file
+ * Retrieves a plan file (orchestration.json format)
  * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
+ * @param {boolean} loadPhases - Whether to load all phase files (default: false)
  * @returns {Promise<Object|null>} - Plan data or null if not found
  */
-async function getPlan(sessionName, planName) {
+async function getPlan(sessionName, planName, loadPhases = false) {
   try {
     const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    const planPath = path.join(sessionPath, 'plans', `plan_${planName}.json`);
+    const planDir = path.join(sessionPath, 'plans', planName);
 
+    // Check if plan directory exists
     try {
-      const content = await fs.readFile(planPath, 'utf-8');
-      return JSON.parse(content);
+      const stats = await fs.stat(planDir);
+      if (!stats.isDirectory()) {
+        return null;
+      }
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return null;
+      }
+      throw error;
+    }
+
+    // Read orchestration.json
+    const orchestrationPath = path.join(planDir, 'orchestration.json');
+    let orchestration;
+    try {
+      const content = await fs.readFile(orchestrationPath, 'utf-8');
+      orchestration = JSON.parse(content);
     } catch (error) {
       if (error.code === 'ENOENT') {
         return null;
@@ -308,6 +377,40 @@ async function getPlan(sessionName, planName) {
       }
       throw { code: 'FILE_READ_ERROR', original: error };
     }
+
+    // Optionally load all phase files
+    if (loadPhases) {
+      const phaseFiles = [];
+      for (const phaseMeta of orchestration.phases) {
+        const phaseFilePath = path.join(planDir, phaseMeta.file);
+        try {
+          const phaseContent = await fs.readFile(phaseFilePath, 'utf-8');
+          phaseFiles.push(JSON.parse(phaseContent));
+        } catch (error) {
+          console.warn(`Warning: Could not load phase file ${phaseMeta.file}`);
+          phaseFiles.push(null);
+        }
+      }
+
+      // Return merged plan (for backward compatibility)
+      return planConverter.mergePhasesIntoPlan(orchestration, phaseFiles.filter(p => p !== null));
+    }
+
+    // Return orchestration with helper to load phases on demand
+    return {
+      ...orchestration,
+      _format: 'orchestration',
+      _planDir: planDir,
+      _loadPhase: async (phaseId) => {
+        const phaseMeta = orchestration.phases.find(p => p.id === phaseId);
+        if (!phaseMeta) {
+          throw new Error(`Phase not found: ${phaseId}`);
+        }
+        const phaseFilePath = path.join(planDir, phaseMeta.file);
+        const content = await fs.readFile(phaseFilePath, 'utf-8');
+        return JSON.parse(content);
+      }
+    };
   } catch (error) {
     const result = handleCliError(error, { session: sessionName, plan: planName });
     return null;
@@ -427,11 +530,21 @@ async function listPlans(sessionName) {
       };
     }
 
-    // Read plans directory
-    const files = await fs.readdir(plansDir);
-    const planNames = files
-      .filter(f => f.startsWith('plan_') && f.endsWith('.json'))
-      .map(f => f.replace('plan_', '').replace('.json', ''));
+    // Read plans directory - now looking for subdirectories
+    const entries = await fs.readdir(plansDir, { withFileTypes: true });
+    const planDirs = entries.filter(entry => entry.isDirectory());
+
+    // Validate each directory has orchestration.json
+    const planNames = [];
+    for (const dir of planDirs) {
+      const orchestrationPath = path.join(plansDir, dir.name, 'orchestration.json');
+      try {
+        await fs.access(orchestrationPath);
+        planNames.push(dir.name);
+      } catch {
+        // Skip directories without orchestration.json
+      }
+    }
 
     return {
       success: true,
@@ -482,46 +595,94 @@ async function validatePlan(planData) {
 async function updateTaskStatus(sessionName, planName, taskId, status) {
   try {
     // Validate status
-    const validStatuses = ['pending', 'in_progress', 'completed', 'blocked'];
+    const validStatuses = ['pending', 'in_progress', 'completed', 'blocked', 'failed'];
     if (!validStatuses.includes(status)) {
       throw { code: 'INVALID_STATUS' };
     }
 
-    // Get plan
-    const plan = await getPlan(sessionName, planName);
-    if (!plan) {
+    // Get orchestration
+    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
+    const planDir = path.join(sessionPath, 'plans', planName);
+    const orchestrationPath = path.join(planDir, 'orchestration.json');
+
+    let orchestration;
+    try {
+      const content = await fs.readFile(orchestrationPath, 'utf-8');
+      orchestration = JSON.parse(content);
+    } catch (error) {
       throw { code: 'PLAN_NOT_FOUND' };
     }
 
-    // Find task
+    // Find which phase contains this task
+    let targetPhaseId = null;
     let taskFound = false;
     let oldStatus = null;
 
-    for (const phase of plan.phases) {
-      for (const task of phase.tasks) {
-        if (task.task_id === taskId) {
-          taskFound = true;
-          oldStatus = task.status;
-          task.status = status;
-          break;
+    for (const phaseMeta of orchestration.phases) {
+      const phaseFilePath = path.join(planDir, phaseMeta.file);
+      try {
+        const phaseContent = await fs.readFile(phaseFilePath, 'utf-8');
+        const phaseData = JSON.parse(phaseContent);
+
+        // Check if task is in this phase
+        for (const task of phaseData.tasks) {
+          if (task.task_id === taskId) {
+            taskFound = true;
+            oldStatus = task.status;
+            task.status = status;
+            targetPhaseId = phaseMeta.id;
+
+            // Update phase file
+            await fs.writeFile(phaseFilePath, JSON.stringify(phaseData, null, 2));
+
+            // Update phase status based on task statuses
+            const newPhaseStatus = planConverter.derivePhaseStatus(phaseData.tasks);
+            phaseMeta.status = newPhaseStatus;
+
+            break;
+          }
         }
+
+        if (taskFound) break;
+      } catch (error) {
+        // Continue checking other phases
       }
-      if (taskFound) break;
     }
 
     if (!taskFound) {
       throw { code: 'TASK_NOT_FOUND' };
     }
 
-    // Update progress counts
-    plan.progress = calculateProgress(plan.phases);
-    plan.updated_at = new Date().toISOString();
+    // Recalculate overall progress
+    let totalTasks = 0;
+    let completedTasks = 0;
 
-    // Save plan
-    const updateResult = await updatePlan(sessionName, planName, plan);
-    if (!updateResult.success) {
-      throw { code: 'FILE_WRITE_ERROR' };
+    for (const phaseMeta of orchestration.phases) {
+      const phaseFilePath = path.join(planDir, phaseMeta.file);
+      try {
+        const phaseContent = await fs.readFile(phaseFilePath, 'utf-8');
+        const phaseData = JSON.parse(phaseContent);
+
+        totalTasks += phaseData.tasks.length;
+        completedTasks += phaseData.tasks.filter(t => t.status === 'completed').length;
+      } catch (error) {
+        // Skip if can't read phase
+      }
     }
+
+    orchestration.progress.totalTasks = totalTasks;
+    orchestration.progress.completedTasks = completedTasks;
+    orchestration.progress.completedPhases = orchestration.phases.filter(p => p.status === 'completed').length;
+    orchestration.progress.lastUpdated = new Date().toISOString();
+    orchestration.metadata.modified = new Date().toISOString();
+
+    // Update overall plan status
+    orchestration.metadata.status = planConverter.derivePlanStatus(
+      orchestration.phases.map(p => ({ tasks: [], ...p })) // Mock structure for status derivation
+    );
+
+    // Save updated orchestration
+    await fs.writeFile(orchestrationPath, JSON.stringify(orchestration, null, 2));
 
     return {
       success: true,
@@ -529,7 +690,12 @@ async function updateTaskStatus(sessionName, planName, taskId, status) {
         task_id: taskId,
         old_status: oldStatus,
         new_status: status,
-        progress: plan.progress
+        phase_id: targetPhaseId,
+        progress: {
+          total_tasks: totalTasks,
+          completed: completedTasks,
+          percent_complete: Math.round((completedTasks / totalTasks) * 100)
+        }
       },
       message: 'Task status updated successfully'
     };
@@ -541,6 +707,61 @@ async function updateTaskStatus(sessionName, planName, taskId, status) {
       taskId,
       status
     });
+  }
+}
+
+/**
+ * Finalizes a conceptual plan to make it implementation-ready
+ * @param {string} sessionName - Session name
+ * @param {string} planName - Plan name
+ * @returns {Promise<FinalizeResult>}
+ */
+async function finalizePlan(sessionName, planName) {
+  try {
+    // Get orchestration
+    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
+    const planDir = path.join(sessionPath, 'plans', planName);
+    const orchestrationPath = path.join(planDir, 'orchestration.json');
+
+    let orchestration;
+    try {
+      const content = await fs.readFile(orchestrationPath, 'utf-8');
+      orchestration = JSON.parse(content);
+    } catch (error) {
+      throw { code: 'PLAN_NOT_FOUND' };
+    }
+
+    // Check if already finalized
+    if (orchestration.metadata.planType === 'implementation') {
+      return {
+        success: true,
+        alreadyFinalized: true,
+        message: `Plan '${planName}' is already finalized`
+      };
+    }
+
+    // Update plan type to implementation
+    orchestration.metadata.planType = 'implementation';
+    orchestration.metadata.modified = new Date().toISOString();
+
+    // Save updated orchestration
+    await fs.writeFile(orchestrationPath, JSON.stringify(orchestration, null, 2));
+
+    return {
+      success: true,
+      alreadyFinalized: false,
+      data: {
+        plan_name: planName,
+        old_type: 'conceptual',
+        new_type: 'implementation',
+        phases: orchestration.phases.length,
+        total_tasks: orchestration.progress.totalTasks
+      },
+      message: `Plan '${planName}' finalized and ready for implementation`
+    };
+
+  } catch (error) {
+    return handleCliError(error, { session: sessionName, plan: planName });
   }
 }
 
@@ -694,6 +915,186 @@ async function planExists(sessionName, planName) {
   };
 }
 
+/**
+ * Save requirements.json (conceptual plan)
+ * @param {string} sessionName - Session name
+ * @param {string} planName - Plan name
+ * @param {object} requirementsData - Requirements data
+ * @returns {Promise<Result>}
+ */
+async function saveRequirements(sessionName, planName, requirementsData) {
+  try {
+    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
+    const planDir = path.join(sessionPath, 'plans', planName);
+
+    // Create plan directory
+    await fs.mkdir(planDir, { recursive: true });
+
+    // Save requirements.json
+    const requirementsPath = path.join(planDir, 'requirements.json');
+    await fs.writeFile(requirementsPath, JSON.stringify(requirementsData, null, 2), 'utf8');
+
+    return {
+      success: true,
+      data: {
+        plan_name: planName,
+        format: 'conceptual',
+        requirements_count: requirementsData.requirements.length,
+        path: requirementsPath
+      },
+      message: `Requirements saved for plan '${planName}'`
+    };
+  } catch (error) {
+    return handleCliError(error, { session: sessionName, plan: planName });
+  }
+}
+
+/**
+ * Validate requirements against schema
+ * @param {object} requirementsData - Requirements data to validate
+ * @returns {Promise<Result>}
+ */
+async function validateRequirements(requirementsData) {
+  const errors = [];
+
+  // Required fields
+  if (!requirementsData.plan_name) errors.push('Missing plan_name');
+  if (requirementsData.plan_type !== 'conceptual') errors.push('plan_type must be "conceptual"');
+  if (!requirementsData.goal) errors.push('Missing goal');
+  if (!Array.isArray(requirementsData.requirements) || requirementsData.requirements.length === 0) {
+    errors.push('requirements must be a non-empty array');
+  }
+
+  // Validate each requirement
+  if (Array.isArray(requirementsData.requirements)) {
+    requirementsData.requirements.forEach((req, index) => {
+      if (!req.id || !req.id.match(/^req-\d+$/)) {
+        errors.push(`Requirement ${index + 1}: id must match pattern "req-N"`);
+      }
+      if (!req.description) {
+        errors.push(`Requirement ${index + 1}: Missing description`);
+      }
+    });
+  }
+
+  if (errors.length > 0) {
+    return {
+      success: false,
+      errors,
+      message: 'Requirements validation failed'
+    };
+  }
+
+  return {
+    success: true,
+    message: 'Requirements validation passed'
+  };
+}
+
+/**
+ * Load requirements.json
+ * @param {string} sessionName - Session name
+ * @param {string} planName - Plan name
+ * @returns {Promise<Result>}
+ */
+async function loadRequirements(sessionName, planName) {
+  try {
+    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
+    const requirementsPath = path.join(sessionPath, 'plans', planName, 'requirements.json');
+
+    const content = await fs.readFile(requirementsPath, 'utf8');
+    const requirements = JSON.parse(content);
+
+    return {
+      success: true,
+      data: requirements,
+      message: 'Requirements loaded successfully'
+    };
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return handleCliError({ code: 'PLAN_NOT_FOUND' }, { session: sessionName, plan: planName });
+    }
+    return handleCliError(error, { session: sessionName, plan: planName });
+  }
+}
+
+/**
+ * Get plan format (conceptual or implementation)
+ * @param {string} sessionName - Session name
+ * @param {string} planName - Plan name
+ * @returns {Promise<Result>}
+ */
+async function getPlanFormat(sessionName, planName) {
+  try {
+    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
+    const planDir = path.join(sessionPath, 'plans', planName);
+
+    // Check if requirements.json exists
+    const requirementsPath = path.join(planDir, 'requirements.json');
+    const orchestrationPath = path.join(planDir, 'orchestration.json');
+
+    const hasRequirements = await fs.access(requirementsPath).then(() => true).catch(() => false);
+    const hasOrchestration = await fs.access(orchestrationPath).then(() => true).catch(() => false);
+
+    // If has orchestration.json, it's implementation format
+    // If only requirements.json, it's conceptual format
+    let format;
+    if (hasOrchestration) {
+      format = 'implementation';
+    } else if (hasRequirements) {
+      format = 'conceptual';
+    } else {
+      throw { code: 'PLAN_NOT_FOUND' };
+    }
+
+    return {
+      success: true,
+      data: {
+        format,
+        has_requirements: hasRequirements,
+        has_orchestration: hasOrchestration
+      },
+      message: `Plan is in ${format} format`
+    };
+  } catch (error) {
+    return handleCliError(error, { session: sessionName, plan: planName });
+  }
+}
+
+/**
+ * Transform requirements into implementation plan
+ * @param {string} sessionName - Session name
+ * @param {string} planName - Plan name
+ * @param {object} breakdownData - AI-generated task breakdown
+ * @returns {Promise<Result>}
+ */
+async function transformPlan(sessionName, planName, breakdownData) {
+  try {
+    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
+    const requirementTransformer = require('../requirement-transformer');
+
+    // Transform using the transformer module
+    const result = await requirementTransformer.transformRequirements(
+      sessionPath,
+      planName,
+      breakdownData
+    );
+
+    return {
+      success: true,
+      data: {
+        plan_name: planName,
+        format: 'implementation',
+        phases: result.phaseCount,
+        tasks: result.taskCount
+      },
+      message: `Plan '${planName}' transformed to implementation format`
+    };
+  } catch (error) {
+    return handleCliError(error, { session: sessionName, plan: planName });
+  }
+}
+
 module.exports = {
   createPlan,
   getPlan,
@@ -702,7 +1103,14 @@ module.exports = {
   listPlans,
   validatePlan,
   updateTaskStatus,
+  finalizePlan,
   getPlanStatus,
   exportPlan,
-  planExists
+  planExists,
+  // New requirements-based workflow functions
+  saveRequirements,
+  validateRequirements,
+  loadRequirements,
+  getPlanFormat,
+  transformPlan
 };
