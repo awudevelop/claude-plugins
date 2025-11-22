@@ -48,7 +48,7 @@ Or use the interactive menu to browse and install.
 
 ## 📦 Available Plugins
 
-### Session Management (v3.13.0)
+### Session Management (v3.14.0)
 
 **Intelligent session management with parallel subagent architecture (72% token reduction), reliable cleanup system, and smart state tracking**
 

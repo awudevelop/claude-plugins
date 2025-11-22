@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.14.0] - 2025-11-22
+
+### Fixed
+
+- **Node.js v24.7.0 Compatibility** - Resolved syntax errors causing parser failures
+  - Fixed glob pattern `src/*/index)` in JSDoc comment (module-detector.js:10)
+  - Wrapped database schema methods in proper class structure (db-schema-methods.js)
+  - All 95 JavaScript files now pass Node.js v24.7.0 syntax validation
+
+- **Marketplace Repository URLs** - Corrected GitHub repository references
+  - Updated all plugin configurations from `automatewithus/claude-plugins` to `awudevelop/claude-plugins`
+  - Fixed marketplace.json, devops/plugin.json, deployment/plugin.json
+  - Added missing repository field in deployment plugin
+  - Updated deployment guide documentation with correct URLs
+
+### Changed
+
+- **Database Schema Methods** - Restructured for better modularity
+  - Converted 12 loose method definitions into DatabaseSchemaMethods class
+  - Added proper module exports and dependency imports
+  - Enhanced code organization for MapGenerator integration
+  - Methods now properly encapsulated: generateDatabaseSchema, extractTableSchemas, parsePrismaSchema, parseSequelizeModel, parseTypeORMEntity, parseMongooseSchema, parseDjangoModel, parseSQLAlchemyModel, parseActiveRecordModel, generateTableModuleMapping, plus utility helpers
+
+---
+
 ## [3.13.0] - 2025-11-21
 
 ### Added
