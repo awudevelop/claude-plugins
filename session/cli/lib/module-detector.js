@@ -7,7 +7,7 @@ const ConfigManager = require('./config');
  * and file co-location. Supports custom module definitions.
  *
  * Detection strategies:
- * 1. Directory grouping (features/, modules/, src/*/index)
+ * 1. Directory grouping (features/, modules/, src/[name]/index)
  * 2. Naming conventions (auth*, user*, product*, tenant*)
  * 3. File co-location (related files in same directory)
  * 4. Custom definitions from config
