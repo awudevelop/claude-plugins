@@ -33,6 +33,43 @@ All development work happens here:
 - `devops/` - DevOps automation plugin
 - `deployment/` - Deployment utilities
 
+## 🔧 Required Environment Variables
+
+### CLAUDE_PLUGIN_ROOT
+
+**Purpose:** Points to the session plugin source directory for command execution.
+
+**Value (Development):**
+```bash
+export CLAUDE_PLUGIN_ROOT="/Users/prajyot/Documents/Work/Matt/claude-plugins/session"
+```
+
+**Why it's needed:**
+- Plugin command templates use `${CLAUDE_PLUGIN_ROOT}` to reference CLI scripts
+- Ensures commands always run from SOURCE repo, never marketplace
+- Prevents the "wrong repository" mistake
+
+**Setup:**
+
+Option 1 - Add to your shell profile (~/.zshrc or ~/.bashrc):
+```bash
+echo 'export CLAUDE_PLUGIN_ROOT="/Users/prajyot/Documents/Work/Matt/claude-plugins/session"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+Option 2 - Set per-session (temporary):
+```bash
+export CLAUDE_PLUGIN_ROOT="/Users/prajyot/Documents/Work/Matt/claude-plugins/session"
+```
+
+**Verify it's set:**
+```bash
+echo $CLAUDE_PLUGIN_ROOT
+# Should output: /Users/prajyot/Documents/Work/Matt/claude-plugins/session
+```
+
+**For production/users:** This variable would point to the marketplace installation instead.
+
 ## Project Structure
 
 ```

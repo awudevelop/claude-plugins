@@ -30,7 +30,7 @@ Use /session:start {name} or /session:continue {name}
 Check if the plan exists:
 
 ```bash
-node {plugin_root}/cli/session-cli.js plan-exists {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js plan-exists {session_name} {plan_name}
 ```
 
 If the plan doesn't exist, show error and STOP:
@@ -46,7 +46,7 @@ Use /session:list-plans to see available plans.
 Before executing, verify the plan is in implementation format (not conceptual):
 
 ```bash
-node {plugin_root}/cli/session-cli.js get-plan-format {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-plan-format {session_name} {plan_name}
 ```
 
 This returns JSON with `format: "conceptual"` or `format: "implementation"`.
@@ -74,7 +74,7 @@ If the format is "implementation", continue to next step.
 Get the current plan status to show what will be executed:
 
 ```bash
-node {plugin_root}/cli/session-cli.js plan-status {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js plan-status {session_name} {plan_name}
 ```
 
 This returns JSON with plan metadata, progress, and current phase.
@@ -110,7 +110,7 @@ Ready to execute this plan?
 2. The user implements the task manually
 3. After completing a task, update its status:
    ```bash
-   node {plugin_root}/cli/session-cli.js update-task-status {session_name} {plan_name} {task_id} completed
+   node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-task-status {session_name} {plan_name} {task_id} completed
    ```
 4. Show progress after each task completion
 5. Repeat until all tasks are completed
@@ -153,7 +153,7 @@ After the user completes work:
 1. Ask: "Have you completed task {task_id}?"
 2. If yes, update task status:
    ```bash
-   node {plugin_root}/cli/session-cli.js update-task-status {session_name} {plan_name} {task_id} completed
+   node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-task-status {session_name} {plan_name} {task_id} completed
    ```
 3. Show updated progress
 4. Load next task

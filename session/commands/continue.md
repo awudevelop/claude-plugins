@@ -70,11 +70,11 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
 
   **Absolute paths for this task:**
   - Working directory: {working_directory}
-  - Plugin root: {plugin_root}
+  - Plugin root: ${CLAUDE_PLUGIN_ROOT}
   - Session path: {session_path}
 
-  Read the prompt file: {plugin_root}/prompts/consolidate-log.md
-  That file contains template placeholders like "{session_name}", "{session_path}", "{plugin_root}".
+  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/consolidate-log.md
+  That file contains template placeholders like "{session_name}", "{session_path}", "${CLAUDE_PLUGIN_ROOT}".
   Replace all such placeholders with the actual values provided above.
   Then execute the resulting instructions.
 
@@ -87,11 +87,11 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
 
   **Absolute paths for this task:**
   - Working directory: {working_directory}
-  - Plugin root: {plugin_root}
+  - Plugin root: ${CLAUDE_PLUGIN_ROOT}
   - Session path: {session_path}
 
-  Read the prompt file: {plugin_root}/prompts/refresh-git.md
-  That file contains template placeholders like "{session_name}", "{session_path}", "{plugin_root}".
+  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/refresh-git.md
+  That file contains template placeholders like "{session_name}", "{session_path}", "${CLAUDE_PLUGIN_ROOT}".
   Replace all such placeholders with the actual values provided above.
   Then execute the resulting instructions.
 
@@ -104,11 +104,11 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
 
   **Absolute paths for this task:**
   - Working directory: {working_directory}
-  - Plugin root: {plugin_root}
+  - Plugin root: ${CLAUDE_PLUGIN_ROOT}
   - Session path: {session_path}
 
-  Read the prompt file: {plugin_root}/prompts/extract-goal.md
-  That file contains template placeholders like "{session_name}", "{session_path}", "{plugin_root}".
+  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/extract-goal.md
+  That file contains template placeholders like "{session_name}", "{session_path}", "${CLAUDE_PLUGIN_ROOT}".
   Replace all such placeholders with the actual values provided above.
   Then execute the resulting instructions.
 

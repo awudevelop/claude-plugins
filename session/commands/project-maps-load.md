@@ -43,7 +43,7 @@ First, verify maps exist for current project:
 
 ```bash
 cd {working_directory}
-node {plugin_root}/cli/lib/map-loader.js . --staleness-only
+node ${CLAUDE_PLUGIN_ROOT}/cli/lib/map-loader.js . --staleness-only
 ```
 
 If no maps exist (exit code 1), show error:
@@ -82,13 +82,13 @@ if (args.includes('--map')) {
 **For Tier Loading:**
 
 ```bash
-node {plugin_root}/cli/lib/map-loader.js . --tier {tier_level}
+node ${CLAUDE_PLUGIN_ROOT}/cli/lib/map-loader.js . --tier {tier_level}
 ```
 
 **For Single Map Loading:**
 
 ```bash
-node {plugin_root}/cli/lib/map-loader.js . {map_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/lib/map-loader.js . {map_name}
 ```
 
 The loader will:

@@ -2,7 +2,7 @@ Session: {session_name}
 
 **Absolute Paths** (use these exact paths):
 - Session path: {session_path}
-- Plugin root: {plugin_root}
+- Plugin root: ${CLAUDE_PLUGIN_ROOT}
 - Working directory: {working_directory}
 
 Goal: Consolidate conversation log into auto-snapshot (if log exists)
@@ -64,7 +64,7 @@ Steps:
 
 5. Create consolidated snapshot with this exact format (use heredoc):
 
-cat <<'SNAPSHOT_EOF' | node {plugin_root}/cli/session-cli.js write-snapshot "{session_name}" --stdin --type auto
+cat <<'SNAPSHOT_EOF' | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot "{session_name}" --stdin --type auto
 # Consolidated Snapshot: {session_name}
 **Timestamp**: [current ISO timestamp]
 **Method**: Claude Inline Analysis (Free)
@@ -135,7 +135,7 @@ SNAPSHOT_EOF
 
 7. Update state file (with correct JSON syntax):
    TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-   node {plugin_root}/cli/session-cli.js update-state "{session_name}" "{\"interactions_since_snapshot\": 0, \"interactions_since_context_update\": 0, \"last_snapshot_timestamp\": \"$TIMESTAMP\"}"
+   node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-state "{session_name}" "{\"interactions_since_snapshot\": 0, \"interactions_since_context_update\": 0, \"last_snapshot_timestamp\": \"$TIMESTAMP\"}"
 
    if [ $? -ne 0 ]; then
      echo '{"success": false, "error": "Failed to update state file", "step_failed": 7}'
@@ -153,7 +153,7 @@ SNAPSHOT_EOF
    fi
 
    # Verify state reset
-   STATE=$(node {plugin_root}/cli/session-cli.js get-state "{session_name}")
+   STATE=$(node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-state "{session_name}")
    if ! echo "$STATE" | grep -q '"interactions_since_snapshot":0'; then
      echo '{"success": false, "error": "State counters not reset", "step_failed": 7}'
      exit 1

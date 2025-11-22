@@ -2,14 +2,14 @@ Session: {session_name}
 
 **Absolute Paths** (use these exact paths):
 - Session path: {session_path}
-- Plugin root: {plugin_root}
+- Plugin root: ${CLAUDE_PLUGIN_ROOT}
 - Working directory: {working_directory}
 
 Goal: Refresh git history context for session
 
 Steps:
 1. Run git history capture CLI:
-   node {plugin_root}/cli/session-cli.js capture-git "{session_name}"
+   node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{session_name}"
 
 2. The CLI will:
    - Get last 50 commits (git log)

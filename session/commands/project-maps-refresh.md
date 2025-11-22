@@ -21,7 +21,7 @@ Refresh project context maps (full or incremental).
 First, check if maps have been generated for this project:
 
 ```bash
-node {plugin_root}/cli/lib/map-loader.js . --staleness-only
+node ${CLAUDE_PLUGIN_ROOT}/cli/lib/map-loader.js . --staleness-only
 ```
 
 If no maps exist (exit code 1), show error and suggest running generation first:
@@ -56,7 +56,7 @@ Run the map generator to regenerate all maps:
 
 ```bash
 cd {working_directory}
-node {plugin_root}/cli/lib/map-generator-cli.js refresh --full --project .
+node ${CLAUDE_PLUGIN_ROOT}/cli/lib/map-generator-cli.js refresh --full --project .
 ```
 
 This will:
@@ -71,7 +71,7 @@ Run the incremental updater:
 
 ```bash
 cd {working_directory}
-node {plugin_root}/cli/lib/incremental-updater-cli.js --project . --hash {project_hash}
+node ${CLAUDE_PLUGIN_ROOT}/cli/lib/incremental-updater-cli.js --project . --hash {project_hash}
 ```
 
 This will:
@@ -138,7 +138,7 @@ Staleness: 0/100 (fresh)
 After refresh, automatically verify staleness:
 
 ```bash
-node {plugin_root}/cli/lib/staleness-checker.js . {maps_dir}/summary.json
+node ${CLAUDE_PLUGIN_ROOT}/cli/lib/staleness-checker.js . {maps_dir}/summary.json
 ```
 
 Expected result: Score should be 0/100 (fresh)

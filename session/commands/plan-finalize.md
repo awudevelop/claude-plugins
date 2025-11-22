@@ -59,7 +59,7 @@ Use /session:start {name} or /session:continue {name}
 Check what format the plan is in:
 
 ```bash
-node {plugin_root}/cli/session-cli.js get-plan-format {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-plan-format {session_name} {plan_name}
 ```
 
 This returns `format: "conceptual"` or `format: "implementation"`.
@@ -81,7 +81,7 @@ Then STOP.
 Load the requirements.json file:
 
 ```bash
-node {plugin_root}/cli/session-cli.js load-requirements {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js load-requirements {session_name} {plan_name}
 ```
 
 This returns the requirements data:
@@ -154,7 +154,7 @@ This will take 30-60 seconds.
 Invoke the Task tool with:
 - subagent_type: "general-purpose"
 - model: "sonnet"  (use sonnet for better quality breakdown)
-- prompt: Read the file at `{plugin_root}/prompts/breakdown-requirement.md`, replace `[REQUIREMENTS JSON INSERTED HERE]` with the actual requirements JSON, then execute those instructions
+- prompt: Read the file at `${CLAUDE_PLUGIN_ROOT}/prompts/breakdown-requirement.md`, replace `[REQUIREMENTS JSON INSERTED HERE]` with the actual requirements JSON, then execute those instructions
 
 The subagent will analyze requirements and return structured breakdown:
 ```json
@@ -272,7 +272,7 @@ Creating implementation structure...
 
 Call the transformation function:
 ```bash
-node {plugin_root}/cli/session-cli.js transform-plan {session_name} {plan_name} '{breakdown_json}'
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js transform-plan {session_name} {plan_name} '{breakdown_json}'
 ```
 
 This will:

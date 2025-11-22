@@ -27,7 +27,7 @@ Verify maps exist for current project:
 
 ```bash
 cd {working_directory}
-node {plugin_root}/cli/lib/map-loader.js . --staleness-only
+node ${CLAUDE_PLUGIN_ROOT}/cli/lib/map-loader.js . --staleness-only
 ```
 
 If no maps exist, show error and stop.

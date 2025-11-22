@@ -35,7 +35,7 @@ Check if maps have already been generated for this project:
 
 ```bash
 cd {working_directory}
-node {plugin_root}/cli/lib/map-loader.js {project_path} --staleness-only 2>&1
+node ${CLAUDE_PLUGIN_ROOT}/cli/lib/map-loader.js {project_path} --staleness-only 2>&1
 ```
 
 If maps exist (exit code 0), ask user if they want to regenerate:
@@ -73,7 +73,7 @@ Run the map generator:
 
 ```bash
 cd {working_directory}
-node {plugin_root}/cli/lib/map-generator.js {project_path}
+node ${CLAUDE_PLUGIN_ROOT}/cli/lib/map-generator.js {project_path}
 ```
 
 The map generator will:

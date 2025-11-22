@@ -29,13 +29,13 @@ Use /session:start {name} or /session:continue {name}
 If plan_name is provided, get status for that specific plan:
 
 ```bash
-node {plugin_root}/cli/session-cli.js plan-status {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js plan-status {session_name} {plan_name}
 ```
 
 If no plan_name, list all plans first:
 
 ```bash
-node {plugin_root}/cli/session-cli.js list-plans {session_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js list-plans {session_name}
 ```
 
 Then get status for each plan.

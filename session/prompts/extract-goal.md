@@ -2,7 +2,7 @@ Session: {session_name}
 
 **Absolute Paths** (use these exact paths):
 - Session path: {session_path}
-- Plugin root: {plugin_root}
+- Plugin root: ${CLAUDE_PLUGIN_ROOT}
 - Working directory: {working_directory}
 
 Goal: Extract session goal from session.md

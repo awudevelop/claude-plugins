@@ -50,7 +50,7 @@ Have a discussion first, then use /save-plan {name}
 Detect the work type from the conversation for metadata purposes:
 
 ```bash
-node {plugin_root}/cli/session-cli.js detect-work-type {session_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js detect-work-type {session_name}
 ```
 
 This returns a JSON object with:
@@ -78,7 +78,7 @@ Use a subagent to analyze the conversation and extract requirements (not tasks!)
 Invoke the Task tool with:
 - subagent_type: "general-purpose"
 - model: "haiku"
-- prompt: Read the file at `{plugin_root}/prompts/analyze-conversation.md`, replace placeholders with actual values, then execute those instructions
+- prompt: Read the file at `${CLAUDE_PLUGIN_ROOT}/prompts/analyze-conversation.md`, replace placeholders with actual values, then execute those instructions
 
 The subagent will return extracted requirements:
 ```json
@@ -166,7 +166,7 @@ Handle the response:
 Validate the requirements against requirements-schema.json:
 
 ```bash
-node {plugin_root}/cli/session-cli.js validate-requirements '{requirements_json}'
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js validate-requirements '{requirements_json}'
 ```
 
 If validation fails, show the errors and STOP:
@@ -185,7 +185,7 @@ If validation succeeds, continue.
 Create the requirements.json file:
 
 ```bash
-node {plugin_root}/cli/session-cli.js save-requirements {session_name} {plan_name} '{requirements_json}'
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js save-requirements {session_name} {plan_name} '{requirements_json}'
 ```
 
 This creates:
@@ -267,7 +267,7 @@ The transformation from requirements → tasks happens in /session:plan-finalize
 
 ## Notes
 
-- The {plugin_root} variable should be replaced with the absolute path to the session plugin
+- The ${CLAUDE_PLUGIN_ROOT} environment variable should point to the session plugin source directory
 - The {session_name} variable comes from the active session
 - All CLI commands should use absolute paths
 - Error messages should be user-friendly and actionable
