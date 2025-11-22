@@ -18,7 +18,7 @@
 
 1. Go to https://github.com/new
 2. **Repository name:** `claude-plugins`
-3. **Owner:** Select `automatewithus` organization (or create it first)
+3. **Owner:** Select `awudevelop` organization (or create it first)
 4. **Description:** "Production-ready Claude Code plugins for workflow automation"
 5. **Visibility:** Public (recommended) or Private
 6. **DO NOT** initialize with README, .gitignore, or license (we have these)
@@ -28,7 +28,7 @@
 
 ```bash
 # If you have gh CLI installed
-gh repo create automatewithus/claude-plugins --public --description "Production-ready Claude Code plugins for workflow automation"
+gh repo create awudevelop/claude-plugins --public --description "Production-ready Claude Code plugins for workflow automation"
 ```
 
 ---
@@ -56,7 +56,7 @@ git commit -m "Initial commit: Session Management plugin v2.1.0
 - Configure marketplace.json for plugin distribution"
 
 # Add GitHub remote (replace with your actual repo URL)
-git remote add origin https://github.com/automatewithus/claude-plugins.git
+git remote add origin https://github.com/awudevelop/claude-plugins.git
 
 # Push to GitHub
 git branch -M main
@@ -67,7 +67,7 @@ git push -u origin main
 
 ## Step 3: Verify Deployment
 
-1. Go to your GitHub repository: `https://github.com/automatewithus/claude-plugins`
+1. Go to your GitHub repository: `https://github.com/awudevelop/claude-plugins`
 2. Verify these files exist:
    - `.claude-plugin/marketplace.json` ✅
    - `session-management/plugin.json` ✅
@@ -84,7 +84,7 @@ Before sharing with your team, test it yourself:
 
 ```bash
 # Add your marketplace
-/plugin marketplace add automatewithus/claude-plugins
+/plugin marketplace add awudevelop/claude-plugins
 
 # Verify it appears in the list
 /plugin
@@ -120,14 +120,14 @@ We now have a Claude Code plugin marketplace for our standardized workflows.
 **To install:**
 
 1. In Claude Code, run:
-   /plugin marketplace add automatewithus/claude-plugins
+   /plugin marketplace add awudevelop/claude-plugins
 
 2. Then install the session management plugin:
    /plugin install session-management
 
 This gives you automatic session snapshots and 8 new commands for managing your work sessions.
 
-Questions? Check the docs: https://github.com/automatewithus/claude-plugins
+Questions? Check the docs: https://github.com/awudevelop/claude-plugins
 ```
 
 ### For Team Settings (Advanced):
@@ -139,7 +139,7 @@ If you want the plugin **automatically available** for the whole team, add to yo
   "extraKnownMarketplaces": [
     {
       "source": "github",
-      "repo": "automatewithus/claude-plugins"
+      "repo": "awudevelop/claude-plugins"
     }
   ],
   "enabledPlugins": [
@@ -274,7 +274,7 @@ Once deployed:
 
 ## Support
 
-**Issues:** https://github.com/automatewithus/claude-plugins/issues
+**Issues:** https://github.com/awudevelop/claude-plugins/issues
 **Questions:** Create a GitHub Discussion
 **Updates:** Watch the repo for new releases
 

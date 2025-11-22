@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "v1.0.0 - Safe deployment automation with CICD integration. Manages branch-based deployments to dev/uat/prod environments with safety checks and build validation.",
   "author": "AutomateWith.Us",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/awudevelop/claude-plugins.git"
+  },
   "commands": {
     "/deploy:init": "commands/init.md",
     "/deploy": "commands/deploy.md"
