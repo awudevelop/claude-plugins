@@ -9,23 +9,22 @@ ARGUMENTS: {name}
 
 ## Workflow
 
-### Step 1: Validate Session
+### Step 1: Check for Active Session (Optional)
 
-First, check that there is an active session by running:
+Plans are now global and don't require a session. However, if there's an active session, we can extract requirements from the conversation.
+
+Check for active session:
 
 ```bash
 [ -f .claude/sessions/.active-session ] && cat .claude/sessions/.active-session || echo "none"
 ```
 
-If the result is "none", show this error and STOP:
-```
-❌ Error: No active session
+- If result is "none": Skip Steps 2-3, create an empty plan with placeholder requirements (go to Step 4)
+- If there's an active session: Continue to Step 2 to extract from conversation
 
-You must start or continue a session before creating a plan.
-Use /session:start {name} or /session:continue {name}
-```
+### Step 2: Read Conversation Log (If Session Active)
 
-### Step 2: Read Conversation Log (Chunked for Large Files)
+**Only execute this step if there's an active session.**
 
 Load the conversation log for the active session. The conversation log file is at:
 `.claude/sessions/{session_name}/conversation-log.jsonl`
@@ -37,15 +36,11 @@ Load the conversation log for the active session. The conversation log file is a
 4. If > 2000 lines: Read in chunks of 2000 using Read tool's offset/limit parameters
 5. Concatenate all chunks into full conversation log
 
-If the file doesn't exist or is empty, show this error and STOP:
-```
-❌ Error: No conversation found
+If the file doesn't exist or is empty:
+- Show warning: "⚠️ No conversation log found. Creating empty plan template."
+- Continue to Step 4 with empty requirements
 
-Cannot create plan without conversation history.
-Have a discussion first, then use /save-plan {name}
-```
-
-### Step 3: Detect Work Type (Optional Metadata)
+### Step 3: Detect Work Type (Optional - If Session Active)
 
 Detect the work type from the conversation for metadata purposes:
 
@@ -105,7 +100,7 @@ The subagent will return extracted requirements:
 
 Requirements are exploratory and high-level during planning.
 
-### Step 5: Build Requirements Plan
+### Step 4: Build Requirements Plan
 
 Create the requirements.json structure:
 
@@ -113,18 +108,20 @@ Create the requirements.json structure:
 {
   "plan_name": "{plan_name}",
   "plan_type": "conceptual",
-  "goal": "{extracted_goal}",
-  "requirements": [...extracted_requirements],
-  "discussion_notes": "{discussion_notes}",
-  "conversation_summary": "{conversation_summary}",
+  "goal": "{extracted_goal_or_placeholder}",
+  "requirements": [...extracted_requirements_or_empty],
+  "discussion_notes": "{discussion_notes_or_empty}",
+  "conversation_summary": "{conversation_summary_or_empty}",
   "created_at": "{ISO_8601_timestamp}",
-  "session_name": "{session_name}",
   "metadata": {
-    "work_type": "{detected_work_type}",
-    "estimated_complexity": "simple|moderate|complex"
+    "work_type": "{detected_work_type_or_unknown}",
+    "estimated_complexity": "simple|moderate|complex",
+    "source_session": "{session_name_if_available_else_null}"
   }
 }
 ```
+
+**Note:** The `session_name` field is no longer required. Plans are global and can be created with or without session context.
 
 ### Step 6: Show Requirements Preview
 
@@ -182,47 +179,52 @@ If validation succeeds, continue.
 
 ### Step 9: Save Requirements File
 
-Create the requirements.json file:
+Create the requirements.json file using the global plans directory:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js save-requirements {session_name} {plan_name} '{requirements_json}'
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js save-requirements {plan_name} '{requirements_json}'
 ```
 
 This creates:
-- `.claude/sessions/{session_name}/plans/{plan_name}/requirements.json`
+- `.claude/sessions/plans/{plan_name}/requirements.json`
 
-Also create a conversation context markdown file for reference:
-- Path: `.claude/sessions/{session_name}/plans/{plan_name}/conversation-context.md`
+Also create a conversation context markdown file for reference (if conversation was analyzed):
+- Path: `.claude/sessions/plans/{plan_name}/conversation-context.md`
 - Content: Include conversation summary, key decisions, requirements discussion, etc.
+- If no session context, skip this file or create with placeholder noting manual plan creation
 
 ### Step 10: Display Success
 
 Show success message with next steps:
 
 ```
-✓ Conceptual plan saved: {plan_name}
+✓ Global plan saved: {plan_name}
 
 📋 Plan Details:
    • Type: Conceptual (requirements captured)
    • Work type: {type} (detected with {confidence}% confidence)
    • Requirements: {requirement_count}
-   • Location: .claude/sessions/{session_name}/plans/{plan_name}/requirements.json
+   • Location: .claude/sessions/plans/{plan_name}/requirements.json
+   • Scope: Global (accessible from any session)
 
 📝 Next Steps:
 
    1. Review requirements:
-      /session:plan-status {plan_name}
+      /plan-status {plan_name}
 
-   2. Transform into executable plan:
-      /session:plan-finalize {plan_name}
+   2. List all plans:
+      /plan-list
+
+   3. Transform into executable plan:
+      /plan-finalize {plan_name}
 
       This will use AI to break down requirements into concrete tasks
       organized by implementation phases (Database, API, UI, etc.)
 
-   3. After finalization, execute:
-      /session:plan-execute {plan_name}
+   4. After finalization, execute:
+      /plan-execute {plan_name}
 
-💡 Conceptual plans are lightweight and flexible. Finalize when you're ready to implement.
+💡 Plans are now global and accessible from any session. No need to be in a specific session to work with plans.
 ```
 
 ---
@@ -268,8 +270,10 @@ The transformation from requirements → tasks happens in /session:plan-finalize
 ## Notes
 
 - The ${CLAUDE_PLUGIN_ROOT} environment variable should point to the session plugin source directory
-- The {session_name} variable comes from the active session
+- Plans are now global - stored in `.claude/sessions/plans/` regardless of active session
+- The {session_name} variable is optional - used only if there's an active session for conversation context
 - All CLI commands should use absolute paths
 - Error messages should be user-friendly and actionable
 - The workflow is designed to be interruptible - user can cancel at any point
 - Conceptual plans use requirements.json format (not orchestration.json)
+- Plans can be created with or without session context (conversation analysis is optional)

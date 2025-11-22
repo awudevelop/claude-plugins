@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.14.2] - 2025-11-22
+
+### Changed
+
+- **Plan Feature - Global Storage** - Plans are now global and independent of sessions
+  - Plans stored in `.claude/sessions/plans/` instead of per-session directories
+  - All plan operations no longer require an active session
+  - Removed `sessionName` parameter from all 15 plan functions in plan-ops.js
+  - Updated CLI commands: `create-plan`, `get-plan`, `list-plans`, `plan-status`, `finalize-plan`, `update-task-status`, etc.
+  - Added `plan-list` alias for `list-plans` command
+  - Plans are now project-level resources accessible from any session
+
+### Added
+
+- **New Command** - `/plan-list` to list all global plans
+  - Shows both conceptual (requirements-only) and implementation (executable) plans
+  - Displays progress, status, and last updated information
+  - Works without requiring an active session
+
+### Updated
+
+- **Plan Commands** - All plan slash commands updated for global storage
+  - `/save-plan` - Session context now optional (can create plans without active session)
+  - `/plan-status` - Removed session requirement, shows global plan status
+  - `/plan-execute` - Works globally, no session validation needed
+  - `/plan-finalize` - Transforms requirements to tasks without session dependency
+  - All commands reference `.claude/sessions/plans/` as global storage location
+
+---
+
 ## [3.14.1] - 2025-11-22
 
 ### Fixed

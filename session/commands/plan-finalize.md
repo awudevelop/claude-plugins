@@ -1,4 +1,6 @@
-You are executing the /session:plan-finalize command to transform requirements into executable tasks.
+You are executing the /plan-finalize command to transform requirements into executable tasks.
+
+**NOTE:** Plans are now global and independent of sessions.
 
 ## Arguments
 
@@ -39,27 +41,12 @@ Phase 3: UI Layer
 
 ## Workflow
 
-### Step 1: Validate Active Session
+### Step 1: Load Plan and Validate Format
 
-Check that there is an active session:
-
-```bash
-[ -f .claude/sessions/.active-session ] && cat .claude/sessions/.active-session || echo "none"
-```
-
-If the result is "none", show this error and STOP:
-```
-❌ Error: No active session
-
-Use /session:start {name} or /session:continue {name}
-```
-
-### Step 2: Load Plan and Validate Format
-
-Check what format the plan is in:
+Plans are global and stored in `.claude/sessions/plans/`. Check what format the plan is in:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-plan-format {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-plan-format {plan_name}
 ```
 
 This returns `format: "conceptual"` or `format: "implementation"`.
@@ -70,18 +57,18 @@ This returns `format: "conceptual"` or `format: "implementation"`.
 
 This plan has already been transformed into executable tasks.
 
-Use /session:plan-execute {plan_name} to start implementation.
+Use /plan-execute {plan_name} to start implementation.
 ```
 Then STOP.
 
 **If format is "conceptual":** Continue to next step.
 
-### Step 3: Load Requirements
+### Step 2: Load Requirements
 
-Load the requirements.json file:
+Load the requirements.json file from the global plans directory:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js load-requirements {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js load-requirements {plan_name}
 ```
 
 This returns the requirements data:
@@ -272,7 +259,7 @@ Creating implementation structure...
 
 Call the transformation function:
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js transform-plan {session_name} {plan_name} '{breakdown_json}'
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js transform-plan {plan_name} '{breakdown_json}'
 ```
 
 This will:
@@ -318,10 +305,10 @@ Next Steps:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. Review the finalized plan:
-   /session:plan-status {plan_name}
+   /plan-status {plan_name}
 
 2. Start execution:
-   /session:plan-execute {plan_name}
+   /plan-execute {plan_name}
 
 3. Track progress as you implement each task
 

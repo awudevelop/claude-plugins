@@ -1,7 +1,7 @@
 {
   "name": "session",
-  "version": "3.14.1",
-  "description": "v3.14.1 - Consolidation Format v2.0: Numbered lists for comprehensive topic capture (95%+ coverage). Anti-recency bias improvements ensure full conversation analysis. Backward compatible with v1.0 format. Planning Feature Phase 1 complete. Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis at resume (2-4s). Fast, efficient, never lose context!",
+  "version": "3.14.2",
+  "description": "v3.14.2 - Consolidation Format v2.0: Numbered lists for comprehensive topic capture (95%+ coverage). Anti-recency bias improvements ensure full conversation analysis. Backward compatible with v1.0 format. Planning Feature Phase 1 complete. Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis at resume (2-4s). Fast, efficient, never lose context!",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"
@@ -101,8 +101,8 @@
     ]
   },
   "versionMetadata": {
-    "lastUpdateCommit": "4b72b91576bdec26917020a2dc068087f8259144",
-    "lastUpdateDate": "2025-11-22T05:25:21.947Z",
+    "lastUpdateCommit": "daee038501b845d02b454e9a35b7ed1cc8e96584",
+    "lastUpdateDate": "2025-11-22T06:19:10.377Z",
     "lastBumpType": "patch"
   }
 }

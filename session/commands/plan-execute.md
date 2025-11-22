@@ -1,4 +1,6 @@
-You are executing the /session:plan-execute command to start executing a plan.
+You are executing the /plan-execute command to start executing a plan.
+
+**NOTE:** Plans are now global and independent of sessions.
 
 ## Arguments
 
@@ -9,44 +11,28 @@ ARGUMENTS: {name}
 
 ## Workflow
 
-### Step 1: Validate Active Session
+### Step 1: Validate Plan Exists
 
-Check that there is an active session:
-
-```bash
-[ -f .claude/sessions/.active-session ] && cat .claude/sessions/.active-session || echo "none"
-```
-
-If the result is "none", show this error and STOP:
-```
-❌ Error: No active session
-
-You must start or continue a session before executing a plan.
-Use /session:start {name} or /session:continue {name}
-```
-
-### Step 2: Validate Plan Exists
-
-Check if the plan exists:
+Plans are stored globally in `.claude/sessions/plans/`. Check if the plan exists:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js plan-exists {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js plan-exists {plan_name}
 ```
 
 If the plan doesn't exist, show error and STOP:
 ```
 ❌ Error: Plan '{plan_name}' not found
 
-Use /session:plan-save to create a plan first.
-Use /session:list-plans to see available plans.
+Use /save-plan {name} to create a plan first.
+Use /plan-list to see available plans.
 ```
 
-### Step 3: Validate Plan Format
+### Step 2: Validate Plan Format
 
 Before executing, verify the plan is in implementation format (not conceptual):
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-plan-format {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-plan-format {plan_name}
 ```
 
 This returns JSON with `format: "conceptual"` or `format: "implementation"`.
@@ -59,7 +45,7 @@ Plan '{plan_name}' is still in conceptual format (requirements only).
 
 You must finalize the plan first to transform requirements into executable tasks:
 
-  /session:plan-finalize {plan_name}
+  /plan-finalize {plan_name}
 
 This will use AI to break down requirements into concrete implementation tasks
 organized by phases (Database, API, UI, Testing, etc.)

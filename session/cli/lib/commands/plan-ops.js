@@ -6,14 +6,18 @@ const planConverter = require('../plan-converter');
 const workingDir = process.env.CLAUDE_WORKING_DIR || process.cwd();
 
 /**
+ * Get global plans directory path
+ * @returns {string} - Path to global plans directory
+ */
+function getPlansDirectory() {
+  return path.join(workingDir, '.claude/sessions/plans');
+}
+
+/**
  * Centralized error handler for CLI operations
  */
 function handleCliError(error, context = {}) {
   const errorMap = {
-    INVALID_SESSION: {
-      message: `Session '${context.session}' not found`,
-      suggestion: 'Use /session list to see available sessions'
-    },
     INVALID_PLAN_NAME: {
       message: 'Invalid plan name format',
       suggestion: 'Use lowercase letters, numbers, and hyphens only (1-50 chars)'
@@ -210,21 +214,12 @@ function calculateProgress(phases) {
 
 /**
  * Creates a new plan file (orchestration.json + phase files)
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @param {Object} planData - Plan data (monolithic format)
  * @returns {Promise<CreateResult>}
  */
-async function createPlan(sessionName, planName, planData) {
+async function createPlan(planName, planData) {
   try {
-    // Validate session exists
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    try {
-      await fs.access(sessionPath);
-    } catch {
-      throw { code: 'INVALID_SESSION' };
-    }
-
     // Validate plan name
     const nameValidation = validatePlanName(planName);
     if (!nameValidation.valid) {
@@ -232,7 +227,7 @@ async function createPlan(sessionName, planName, planData) {
     }
 
     // Ensure plans directory exists
-    const plansDir = path.join(sessionPath, 'plans');
+    const plansDir = getPlansDirectory();
     await fs.mkdir(plansDir, { recursive: true });
 
     // Check if plan already exists (as directory)
@@ -333,21 +328,20 @@ async function createPlan(sessionName, planName, planData) {
     };
 
   } catch (error) {
-    return handleCliError(error, { session: sessionName, plan: planName });
+    return handleCliError(error, { plan: planName });
   }
 }
 
 /**
  * Retrieves a plan file (orchestration.json format)
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @param {boolean} loadPhases - Whether to load all phase files (default: false)
  * @returns {Promise<Object|null>} - Plan data or null if not found
  */
-async function getPlan(sessionName, planName, loadPhases = false) {
+async function getPlan(planName, loadPhases = false) {
   try {
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    const planDir = path.join(sessionPath, 'plans', planName);
+    const plansDir = getPlansDirectory();
+    const planDir = path.join(plansDir, planName);
 
     // Check if plan directory exists
     try {
@@ -433,25 +427,24 @@ async function getPlan(sessionName, planName, loadPhases = false) {
       }
     };
   } catch (error) {
-    const result = handleCliError(error, { session: sessionName, plan: planName });
+    const result = handleCliError(error, { plan: planName });
     return null;
   }
 }
 
 /**
  * Updates an existing plan
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @param {Object} updates - Partial or complete plan data to update
  * @returns {Promise<UpdateResult>}
  */
-async function updatePlan(sessionName, planName, updates) {
+async function updatePlan(planName, updates) {
   try {
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    const planPath = path.join(sessionPath, 'plans', `plan_${planName}.json`);
+    const plansDir = getPlansDirectory();
+    const planPath = path.join(plansDir, `plan_${planName}.json`);
 
     // Get existing plan
-    const existingPlan = await getPlan(sessionName, planName);
+    const existingPlan = await getPlan(planName);
     if (!existingPlan) {
       throw { code: 'PLAN_NOT_FOUND' };
     }
@@ -488,23 +481,22 @@ async function updatePlan(sessionName, planName, updates) {
     };
 
   } catch (error) {
-    return handleCliError(error, { session: sessionName, plan: planName });
+    return handleCliError(error, { plan: planName });
   }
 }
 
 /**
  * Deletes a plan file
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @returns {Promise<DeleteResult>}
  */
-async function deletePlan(sessionName, planName) {
+async function deletePlan(planName) {
   try {
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    const planPath = path.join(sessionPath, 'plans', `plan_${planName}.json`);
+    const plansDir = getPlansDirectory();
+    const planPath = path.join(plansDir, `plan_${planName}.json`);
 
     // Check if plan exists
-    const plan = await getPlan(sessionName, planName);
+    const plan = await getPlan(planName);
     if (!plan) {
       throw { code: 'PLAN_NOT_FOUND' };
     }
@@ -522,19 +514,17 @@ async function deletePlan(sessionName, planName) {
     };
 
   } catch (error) {
-    return handleCliError(error, { session: sessionName, plan: planName });
+    return handleCliError(error, { plan: planName });
   }
 }
 
 /**
- * Lists all plans for a session
- * @param {string} sessionName - Session name
+ * Lists all global plans
  * @returns {Promise<Array<string>>} - Plan names
  */
-async function listPlans(sessionName) {
+async function listPlans() {
   try {
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    const plansDir = path.join(sessionPath, 'plans');
+    const plansDir = getPlansDirectory();
 
     // Check if plans directory exists
     try {
@@ -584,7 +574,7 @@ async function listPlans(sessionName) {
     };
 
   } catch (error) {
-    return handleCliError(error, { session: sessionName });
+    return handleCliError(error, {});
   }
 }
 
@@ -614,13 +604,12 @@ async function validatePlan(planData) {
 
 /**
  * Updates task status in a plan
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @param {string} taskId - Task ID
  * @param {string} status - New status (pending|in_progress|completed|blocked)
  * @returns {Promise<UpdateResult>}
  */
-async function updateTaskStatus(sessionName, planName, taskId, status) {
+async function updateTaskStatus(planName, taskId, status) {
   try {
     // Validate status
     const validStatuses = ['pending', 'in_progress', 'completed', 'blocked', 'failed'];
@@ -629,8 +618,8 @@ async function updateTaskStatus(sessionName, planName, taskId, status) {
     }
 
     // Get orchestration
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    const planDir = path.join(sessionPath, 'plans', planName);
+    const plansDir = getPlansDirectory();
+    const planDir = path.join(plansDir, planName);
     const orchestrationPath = path.join(planDir, 'orchestration.json');
 
     let orchestration;
@@ -730,7 +719,6 @@ async function updateTaskStatus(sessionName, planName, taskId, status) {
 
   } catch (error) {
     return handleCliError(error, {
-      session: sessionName,
       plan: planName,
       taskId,
       status
@@ -740,15 +728,14 @@ async function updateTaskStatus(sessionName, planName, taskId, status) {
 
 /**
  * Finalizes a conceptual plan to make it implementation-ready
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @returns {Promise<FinalizeResult>}
  */
-async function finalizePlan(sessionName, planName) {
+async function finalizePlan(planName) {
   try {
     // Get orchestration
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    const planDir = path.join(sessionPath, 'plans', planName);
+    const plansDir = getPlansDirectory();
+    const planDir = path.join(plansDir, planName);
     const orchestrationPath = path.join(planDir, 'orchestration.json');
 
     let orchestration;
@@ -789,19 +776,18 @@ async function finalizePlan(sessionName, planName) {
     };
 
   } catch (error) {
-    return handleCliError(error, { session: sessionName, plan: planName });
+    return handleCliError(error, { plan: planName });
   }
 }
 
 /**
  * Gets plan execution status
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @returns {Promise<StatusResult>}
  */
-async function getPlanStatus(sessionName, planName) {
+async function getPlanStatus(planName) {
   try {
-    const plan = await getPlan(sessionName, planName);
+    const plan = await getPlan(planName);
     if (!plan) {
       throw { code: 'PLAN_NOT_FOUND' };
     }
@@ -866,20 +852,19 @@ async function getPlanStatus(sessionName, planName) {
     };
 
   } catch (error) {
-    return handleCliError(error, { session: sessionName, plan: planName });
+    return handleCliError(error, { plan: planName });
   }
 }
 
 /**
  * Exports plan to different format
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @param {string} format - Export format (json|markdown|csv)
  * @returns {Promise<string>} - Formatted output
  */
-async function exportPlan(sessionName, planName, format = 'json') {
+async function exportPlan(planName, format = 'json') {
   try {
-    const plan = await getPlan(sessionName, planName);
+    const plan = await getPlan(planName);
     if (!plan) {
       throw { code: 'PLAN_NOT_FOUND' };
     }
@@ -922,18 +907,17 @@ async function exportPlan(sessionName, planName, format = 'json') {
     }
 
   } catch (error) {
-    return handleCliError(error, { session: sessionName, plan: planName, format });
+    return handleCliError(error, { plan: planName, format });
   }
 }
 
 /**
  * Checks if plan exists
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @returns {Promise<boolean>}
  */
-async function planExists(sessionName, planName) {
-  const plan = await getPlan(sessionName, planName);
+async function planExists(planName) {
+  const plan = await getPlan(planName);
   return {
     success: true,
     data: {
@@ -945,15 +929,14 @@ async function planExists(sessionName, planName) {
 
 /**
  * Save requirements.json (conceptual plan)
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @param {object} requirementsData - Requirements data
  * @returns {Promise<Result>}
  */
-async function saveRequirements(sessionName, planName, requirementsData) {
+async function saveRequirements(planName, requirementsData) {
   try {
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    const planDir = path.join(sessionPath, 'plans', planName);
+    const plansDir = getPlansDirectory();
+    const planDir = path.join(plansDir, planName);
 
     // Create plan directory
     await fs.mkdir(planDir, { recursive: true });
@@ -973,7 +956,7 @@ async function saveRequirements(sessionName, planName, requirementsData) {
       message: `Requirements saved for plan '${planName}'`
     };
   } catch (error) {
-    return handleCliError(error, { session: sessionName, plan: planName });
+    return handleCliError(error, { plan: planName });
   }
 }
 
@@ -1021,14 +1004,13 @@ async function validateRequirements(requirementsData) {
 
 /**
  * Load requirements.json
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @returns {Promise<Result>}
  */
-async function loadRequirements(sessionName, planName) {
+async function loadRequirements(planName) {
   try {
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    const requirementsPath = path.join(sessionPath, 'plans', planName, 'requirements.json');
+    const plansDir = getPlansDirectory();
+    const requirementsPath = path.join(plansDir, planName, 'requirements.json');
 
     const content = await fs.readFile(requirementsPath, 'utf8');
     const requirements = JSON.parse(content);
@@ -1040,22 +1022,21 @@ async function loadRequirements(sessionName, planName) {
     };
   } catch (error) {
     if (error.code === 'ENOENT') {
-      return handleCliError({ code: 'PLAN_NOT_FOUND' }, { session: sessionName, plan: planName });
+      return handleCliError({ code: 'PLAN_NOT_FOUND' }, { plan: planName });
     }
-    return handleCliError(error, { session: sessionName, plan: planName });
+    return handleCliError(error, { plan: planName });
   }
 }
 
 /**
  * Get plan format (conceptual or implementation)
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @returns {Promise<Result>}
  */
-async function getPlanFormat(sessionName, planName) {
+async function getPlanFormat(planName) {
   try {
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
-    const planDir = path.join(sessionPath, 'plans', planName);
+    const plansDir = getPlansDirectory();
+    const planDir = path.join(plansDir, planName);
 
     // Check if requirements.json exists
     const requirementsPath = path.join(planDir, 'requirements.json');
@@ -1085,25 +1066,24 @@ async function getPlanFormat(sessionName, planName) {
       message: `Plan is in ${format} format`
     };
   } catch (error) {
-    return handleCliError(error, { session: sessionName, plan: planName });
+    return handleCliError(error, { plan: planName });
   }
 }
 
 /**
  * Transform requirements into implementation plan
- * @param {string} sessionName - Session name
  * @param {string} planName - Plan name
  * @param {object} breakdownData - AI-generated task breakdown
  * @returns {Promise<Result>}
  */
-async function transformPlan(sessionName, planName, breakdownData) {
+async function transformPlan(planName, breakdownData) {
   try {
-    const sessionPath = path.join(workingDir, '.claude/sessions', sessionName);
+    const plansDir = getPlansDirectory();
     const requirementTransformer = require('../requirement-transformer');
 
     // Transform using the transformer module
     const result = await requirementTransformer.transformRequirements(
-      sessionPath,
+      plansDir,
       planName,
       breakdownData
     );
@@ -1119,7 +1099,7 @@ async function transformPlan(sessionName, planName, breakdownData) {
       message: `Plan '${planName}' transformed to implementation format`
     };
   } catch (error) {
-    return handleCliError(error, { session: sessionName, plan: planName });
+    return handleCliError(error, { plan: planName });
   }
 }
 

@@ -1,4 +1,6 @@
-You are executing the /session:plan-status command to show plan execution status.
+You are executing the /plan-status command to show plan execution status.
+
+**NOTE:** Plans are now global and independent of sessions.
 
 ## Arguments
 
@@ -9,38 +11,25 @@ ARGUMENTS: {name}
 
 ## Workflow
 
-### Step 1: Validate Active Session
+### Step 1: Get Plan Status
 
-Check that there is an active session:
-
-```bash
-[ -f .claude/sessions/.active-session ] && cat .claude/sessions/.active-session || echo "none"
-```
-
-If the result is "none", show this error and STOP:
-```
-❌ Error: No active session
-
-Use /session:start {name} or /session:continue {name}
-```
-
-### Step 2: Get Plan Status
+Plans are stored globally in `.claude/sessions/plans/` and can be accessed without an active session.
 
 If plan_name is provided, get status for that specific plan:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js plan-status {session_name} {plan_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js plan-status {plan_name}
 ```
 
-If no plan_name, list all plans first:
+If no plan_name, list all global plans first:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js list-plans {session_name}
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js plan-list
 ```
 
 Then get status for each plan.
 
-### Step 3: Display Status
+### Step 2: Display Status
 
 **For a specific plan:**
 
@@ -49,6 +38,7 @@ Then get status for each plan.
 
 Goal: {goal}
 Work Type: {work_type}
+Scope: Global (accessible from any session)
 Created: {created_date}
 Last Updated: {updated_date}
 
@@ -85,14 +75,14 @@ Current Task: {current_task_id}
   Phase: {phase_name}
 
 Next Steps:
-  /session:plan-execute {plan_name} - Continue execution
+  /plan-execute {plan_name} - Continue execution
   /update-task-status {task_id} completed - Mark current task complete
 ```
 
 **For all plans:**
 
 ```
-📋 All Plans for Session: {session_name}
+📋 All Global Plans
 
 1. oauth-implementation (feature)
    ├─ Progress: 15/22 tasks (68%)
@@ -110,11 +100,12 @@ Next Steps:
    ├─ Status: pending
    └─ Created: 3 days ago
 
-Use /session:plan-status {plan_name} for detailed status.
-Use /session:plan-execute {plan_name} to start/continue execution.
+Use /plan-status {plan_name} for detailed status.
+Use /plan-execute {plan_name} to start/continue execution.
+Use /plan-list to see all available plans.
 ```
 
-### Step 4: Show Recommendations
+### Step 3: Show Recommendations
 
 Based on plan status, show context-aware recommendations:
 
@@ -172,6 +163,6 @@ Phase 2: OAuth Flow Implementation (in-progress)
 
 ## Error Handling
 
-- Plan not found: Show available plans
-- Invalid session: Guide to start/continue session
+- Plan not found: Show available plans using /plan-list
 - Corrupted plan data: Show error with recovery steps
+- No plans exist: Show message about creating first plan with /save-plan {name}
