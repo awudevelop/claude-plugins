@@ -1,0 +1,9 @@
+{
+  "name": "@monorepo/backend",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "dependencies": {
+    "express": "^4.18.0",
+    "@monorepo/shared": "^1.0.0"
+  }
+}
