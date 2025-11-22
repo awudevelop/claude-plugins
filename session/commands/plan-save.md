@@ -25,10 +25,17 @@ You must start or continue a session before creating a plan.
 Use /session:start {name} or /session:continue {name}
 ```
 
-### Step 2: Read Conversation Log
+### Step 2: Read Conversation Log (Chunked for Large Files)
 
 Load the conversation log for the active session. The conversation log file is at:
 `.claude/sessions/{session_name}/conversation-log.jsonl`
+
+**Chunked Reading Strategy:**
+1. Check if file exists
+2. Count lines: `wc -l .claude/sessions/{session_name}/conversation-log.jsonl`
+3. If <= 2000 lines: Read entire file
+4. If > 2000 lines: Read in chunks of 2000 using Read tool's offset/limit parameters
+5. Concatenate all chunks into full conversation log
 
 If the file doesn't exist or is empty, show this error and STOP:
 ```

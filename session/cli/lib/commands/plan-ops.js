@@ -370,7 +370,28 @@ async function getPlan(sessionName, planName, loadPhases = false) {
       orchestration = JSON.parse(content);
     } catch (error) {
       if (error.code === 'ENOENT') {
-        return null;
+        // Try requirements.json (conceptual format)
+        const requirementsPath = path.join(planDir, 'requirements.json');
+        try {
+          const reqContent = await fs.readFile(requirementsPath, 'utf-8');
+          const requirements = JSON.parse(reqContent);
+
+          // Return conceptual plan with metadata indicating it needs finalization
+          return {
+            ...requirements,
+            _format: 'conceptual',
+            _planDir: planDir,
+            _needsFinalization: true
+          };
+        } catch (reqError) {
+          if (reqError.code === 'ENOENT') {
+            return null; // Neither file exists
+          }
+          if (reqError instanceof SyntaxError) {
+            throw { code: 'PARSE_ERROR' };
+          }
+          throw { code: 'FILE_READ_ERROR', original: reqError };
+        }
       }
       if (error instanceof SyntaxError) {
         throw { code: 'PARSE_ERROR' };
@@ -534,15 +555,22 @@ async function listPlans(sessionName) {
     const entries = await fs.readdir(plansDir, { withFileTypes: true });
     const planDirs = entries.filter(entry => entry.isDirectory());
 
-    // Validate each directory has orchestration.json
+    // Validate each directory has orchestration.json OR requirements.json
     const planNames = [];
     for (const dir of planDirs) {
       const orchestrationPath = path.join(plansDir, dir.name, 'orchestration.json');
+      const requirementsPath = path.join(plansDir, dir.name, 'requirements.json');
       try {
         await fs.access(orchestrationPath);
         planNames.push(dir.name);
       } catch {
-        // Skip directories without orchestration.json
+        // Try requirements.json (conceptual format)
+        try {
+          await fs.access(requirementsPath);
+          planNames.push(dir.name);
+        } catch {
+          // Skip directories without either file
+        }
       }
     }
 

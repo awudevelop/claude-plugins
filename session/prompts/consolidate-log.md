@@ -14,15 +14,34 @@ Steps:
    - Return JSON: { "skipped": true, "reason": "No conversation log found" }
    - STOP (do not proceed)
 
-3. If file exists:
-   - Read the conversation log file
-   - Parse JSONL format (each line = JSON entry)
-   - Extract entries (COMPACT FORMAT v3.8.9+):
+3. If file exists - Read in chunks to handle large files:
+
+   **Step 3a: Count total lines**
+   - Use Bash: wc -l {session_path}/conversation-log.jsonl
+   - Extract line count from output
+
+   **Step 3b: Read file in chunks if large**
+   - If line count <= 2000: Read entire file normally
+   - If line count > 2000: Read in chunks of 2000 lines
+     - Chunk 1: Read with offset=0, limit=2000
+     - Chunk 2: Read with offset=2000, limit=2000
+     - Chunk 3: Read with offset=4000, limit=2000
+     - Continue until all lines processed
+
+   **Step 3c: Parse JSONL format (each line = JSON entry)**
+   - Extract entries from all chunks (COMPACT FORMAT v3.8.9+):
      - Interaction entries (have "p" key = user prompt text)
      - Response entries (have "r" key = Claude's response text)
      - Timestamps: "ts" field = Unix timestamp in seconds (convert to date if needed)
      - File status codes: 1=Modified, 2=Added, 3=Deleted, 4=Renamed
      - Modified files: "f" = [[path, status_code], ...] array format
+
+   **Step 3d: Aggregate across chunks**
+   - Combine all topics from all chunks
+   - Combine all suggestions from all chunks
+   - Combine all decisions from all chunks
+   - Combine all tasks from all chunks
+   - Combine all file modifications from all chunks
 
 4. ⚠️ CRITICAL INSTRUCTION - Analyze the ENTIRE conversation from beginning to end:
 
