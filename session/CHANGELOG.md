@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.14.1] - 2025-11-22
+
+### Fixed
+
+- **Work Type Detection** - Resolved data structure mismatch causing detection failures
+  - Updated work-type-detector.js to support compact JSONL format (`.p` and `.r` fields)
+  - Maintains backward compatibility with old format (`.content` field)
+  - Detection now correctly analyzes conversation logs created by v3.8.9+ conversation logger
+  - Eliminates "work type detection failed" errors during `/plan-save` operations
+
+---
+
 ## [3.14.0] - 2025-11-22
 
 ### Fixed

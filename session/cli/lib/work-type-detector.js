@@ -115,7 +115,12 @@ async function detectWorkType(conversationLog) {
 
   // Step 1: Analyze keywords
   const conversationText = conversationLog
-    .map(entry => entry.content)
+    .map(entry => {
+      // Support both old format (.content) and compact format (.p and .r)
+      if (entry.content) return entry.content;
+      // Compact format: combine user prompt and assistant response
+      return [entry.p, entry.r].filter(Boolean).join(' ');
+    })
     .join(' ')
     .toLowerCase();
 
