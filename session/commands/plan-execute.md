@@ -1,4 +1,4 @@
-You are executing the /plan-execute command to start executing a plan.
+You are executing the /session:plan-execute command to start executing a plan.
 
 **NOTE:** Plans are now global and independent of sessions.
 
@@ -23,8 +23,8 @@ If the plan doesn't exist, show error and STOP:
 ```
 ❌ Error: Plan '{plan_name}' not found
 
-Use /save-plan {name} to create a plan first.
-Use /plan-list to see available plans.
+Use /session:save-plan {name} to create a plan first.
+Use /session:plan-list to see available plans.
 ```
 
 ### Step 2: Validate Plan Format
@@ -45,7 +45,7 @@ Plan '{plan_name}' is still in conceptual format (requirements only).
 
 You must finalize the plan first to transform requirements into executable tasks:
 
-  /plan-finalize {plan_name}
+  /session:plan-finalize {plan_name}
 
 This will use AI to break down requirements into concrete implementation tasks
 organized by phases (Database, API, UI, Testing, etc.)

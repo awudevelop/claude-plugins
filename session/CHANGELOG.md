@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Plan Transformation Path Bug** - Resolved double `/plans/plans/` path error in plan finalization
   - Fixed `requirement-transformer.js` to accept `plansDir` instead of `sessionPath`
   - Fixed `orchestrator.js` constructor to use `plansDir` parameter consistently
-  - Eliminates ENOENT errors when running `/plan-finalize` command
+  - Eliminates ENOENT errors when running `/session:plan-finalize` command
   - Tested with end-to-end dummy plan workflow to verify file operations
   - This was the blocker preventing plan finalization in v3.14.x
 
@@ -75,7 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **New Command** - `/plan-list` to list all global plans
+- **New Command** - `/session:plan-list` to list all global plans
   - Shows both conceptual (requirements-only) and implementation (executable) plans
   - Displays progress, status, and last updated information
   - Works without requiring an active session
@@ -83,10 +83,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Updated
 
 - **Plan Commands** - All plan slash commands updated for global storage
-  - `/save-plan` - Session context now optional (can create plans without active session)
-  - `/plan-status` - Removed session requirement, shows global plan status
-  - `/plan-execute` - Works globally, no session validation needed
-  - `/plan-finalize` - Transforms requirements to tasks without session dependency
+  - `/session:save-plan` - Session context now optional (can create plans without active session)
+  - `/session:plan-status` - Removed session requirement, shows global plan status
+  - `/session:plan-execute` - Works globally, no session validation needed
+  - `/session:plan-finalize` - Transforms requirements to tasks without session dependency
   - All commands reference `.claude/sessions/plans/` as global storage location
 
 ---
@@ -99,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated work-type-detector.js to support compact JSONL format (`.p` and `.r` fields)
   - Maintains backward compatibility with old format (`.content` field)
   - Detection now correctly analyzes conversation logs created by v3.8.9+ conversation logger
-  - Eliminates "work type detection failed" errors during `/plan-save` operations
+  - Eliminates "work type detection failed" errors during `/session:plan-save` operations
 
 ---
 

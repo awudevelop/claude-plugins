@@ -1,4 +1,4 @@
-You are executing the /plan-finalize command to transform requirements into executable tasks.
+You are executing the /session:plan-finalize command to transform requirements into executable tasks.
 
 **NOTE:** Plans are now global and independent of sessions.
 
@@ -57,7 +57,7 @@ This returns `format: "conceptual"` or `format: "implementation"`.
 
 This plan has already been transformed into executable tasks.
 
-Use /plan-execute {plan_name} to start implementation.
+Use /session:plan-execute {plan_name} to start implementation.
 ```
 Then STOP.
 
@@ -305,10 +305,10 @@ Next Steps:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. Review the finalized plan:
-   /plan-status {plan_name}
+   /session:plan-status {plan_name}
 
 2. Start execution:
-   /plan-execute {plan_name}
+   /session:plan-execute {plan_name}
 
 3. Track progress as you implement each task
 

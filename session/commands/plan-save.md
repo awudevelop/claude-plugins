@@ -1,4 +1,4 @@
-You are executing the /save-plan command to create a conceptual plan from the current conversation.
+You are executing the /session:save-plan command to create a conceptual plan from the current conversation.
 
 ## Arguments
 
@@ -210,19 +210,19 @@ Show success message with next steps:
 📝 Next Steps:
 
    1. Review requirements:
-      /plan-status {plan_name}
+      /session:plan-status {plan_name}
 
    2. List all plans:
-      /plan-list
+      /session:plan-list
 
    3. Transform into executable plan:
-      /plan-finalize {plan_name}
+      /session:plan-finalize {plan_name}
 
       This will use AI to break down requirements into concrete tasks
       organized by implementation phases (Database, API, UI, etc.)
 
    4. After finalization, execute:
-      /plan-execute {plan_name}
+      /session:plan-execute {plan_name}
 
 💡 Plans are now global and accessible from any session. No need to be in a specific session to work with plans.
 ```

@@ -1,4 +1,4 @@
-You are executing the /plan-status command to show plan execution status.
+You are executing the /session:plan-status command to show plan execution status.
 
 **NOTE:** Plans are now global and independent of sessions.
 
@@ -75,7 +75,7 @@ Current Task: {current_task_id}
   Phase: {phase_name}
 
 Next Steps:
-  /plan-execute {plan_name} - Continue execution
+  /session:plan-execute {plan_name} - Continue execution
   /update-task-status {task_id} completed - Mark current task complete
 ```
 
@@ -100,9 +100,9 @@ Next Steps:
    ├─ Status: pending
    └─ Created: 3 days ago
 
-Use /plan-status {plan_name} for detailed status.
-Use /plan-execute {plan_name} to start/continue execution.
-Use /plan-list to see all available plans.
+Use /session:plan-status {plan_name} for detailed status.
+Use /session:plan-execute {plan_name} to start/continue execution.
+Use /session:plan-list to see all available plans.
 ```
 
 ### Step 3: Show Recommendations
@@ -163,6 +163,6 @@ Phase 2: OAuth Flow Implementation (in-progress)
 
 ## Error Handling
 
-- Plan not found: Show available plans using /plan-list
+- Plan not found: Show available plans using /session:plan-list
 - Corrupted plan data: Show error with recovery steps
-- No plans exist: Show message about creating first plan with /save-plan {name}
+- No plans exist: Show message about creating first plan with /session:save-plan {name}

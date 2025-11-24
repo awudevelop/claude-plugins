@@ -1,4 +1,4 @@
-You are executing the /plan-list command to list all global plans.
+You are executing the /session:plan-list command to list all global plans.
 
 **NOTE:** Plans are now global and stored in `.claude/sessions/plans/`. This command works without requiring an active session.
 
@@ -58,13 +58,13 @@ Conceptual Plans (Requirements Only):
      ├─ Goal: Redesign API for better performance
      ├─ Requirements: 12
      ├─ Created: 3 days ago
-     └─ Next: Use /plan-finalize api-redesign to create executable tasks
+     └─ Next: Use /session:plan-finalize api-redesign to create executable tasks
 
   2. user-permissions
      ├─ Goal: Implement role-based permissions system
      ├─ Requirements: 8
      ├─ Created: 1 week ago
-     └─ Next: Use /plan-finalize user-permissions to create executable tasks
+     └─ Next: Use /session:plan-finalize user-permissions to create executable tasks
 
 Implementation Plans (Executable):
   3. oauth-implementation (feature)
@@ -79,10 +79,10 @@ Implementation Plans (Executable):
      └─ Completed: 1 day ago
 
 Helpful Commands:
-  /plan-status {name}       - Show detailed plan status
-  /plan-execute {name}      - Start/continue plan execution
-  /plan-finalize {name}     - Transform conceptual plan to executable
-  /save-plan {name}         - Create a new plan
+  /session:plan-status {name}       - Show detailed plan status
+  /session:plan-execute {name}      - Start/continue plan execution
+  /session:plan-finalize {name}     - Transform conceptual plan to executable
+  /session:save-plan {name}         - Create a new plan
 ```
 
 ### Step 4: Handle Empty Case
@@ -96,9 +96,9 @@ You haven't created any plans yet.
 
 Get started:
   1. Have a conversation about what you want to build
-  2. Run /save-plan {name} to capture requirements
-  3. Run /plan-finalize {name} to create executable tasks
-  4. Run /plan-execute {name} to start implementation
+  2. Run /session:save-plan {name} to capture requirements
+  3. Run /session:plan-finalize {name} to create executable tasks
+  4. Run /session:plan-execute {name} to start implementation
 
 💡 Plans are global and accessible from any session.
 ```
@@ -139,4 +139,4 @@ Progress: [████████████░░░░░░░░] 68% (15
 - Plans are stored globally in `.claude/sessions/plans/`
 - Both conceptual and implementation plans are shown
 - The list is sorted by last updated (most recent first)
-- Use /plan-status {name} for detailed information about a specific plan
+- Use /session:plan-status {name} for detailed information about a specific plan

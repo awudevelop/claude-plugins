@@ -10,7 +10,7 @@ const workingDir = process.env.CLAUDE_WORKING_DIR || process.cwd();
  * @returns {string} - Path to global plans directory
  */
 function getPlansDirectory() {
-  return path.join(workingDir, '.claude/sessions/plans');
+  return path.join(workingDir, '.claude/plans');
 }
 
 /**
