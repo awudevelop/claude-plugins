@@ -13,7 +13,7 @@ ARGUMENTS: {name}
 
 ### Step 1: Validate Plan Exists
 
-Plans are stored globally in `.claude/sessions/plans/`. Check if the plan exists:
+Plans are stored globally in `.claude/plans/`. Check if the plan exists:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js plan-exists {plan_name}

@@ -11,7 +11,7 @@ const path = require('path');
 /**
  * Transform requirements.json into orchestration.json + phases/
  *
- * @param {string} plansDir - Absolute path to plans directory (.claude/sessions/plans)
+ * @param {string} plansDir - Absolute path to plans directory (.claude/plans)
  * @param {string} planName - Plan name
  * @param {object} breakdownData - AI-generated task breakdown from breakdown-requirement.md
  * @returns {Promise<object>} - Transformation result

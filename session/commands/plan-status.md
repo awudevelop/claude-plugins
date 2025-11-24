@@ -13,7 +13,7 @@ ARGUMENTS: {name}
 
 ### Step 1: Get Plan Status
 
-Plans are stored globally in `.claude/sessions/plans/` and can be accessed without an active session.
+Plans are stored globally in `.claude/plans/` and can be accessed without an active session.
 
 If plan_name is provided, get status for that specific plan:
 

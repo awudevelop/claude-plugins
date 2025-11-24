@@ -43,7 +43,7 @@ Phase 3: UI Layer
 
 ### Step 1: Load Plan and Validate Format
 
-Plans are global and stored in `.claude/sessions/plans/`. Check what format the plan is in:
+Plans are global and stored in `.claude/plans/`. Check what format the plan is in:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-plan-format {plan_name}

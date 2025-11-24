@@ -186,10 +186,10 @@ node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js save-requirements {plan_name} '{re
 ```
 
 This creates:
-- `.claude/sessions/plans/{plan_name}/requirements.json`
+- `.claude/plans/{plan_name}/requirements.json`
 
 Also create a conversation context markdown file for reference (if conversation was analyzed):
-- Path: `.claude/sessions/plans/{plan_name}/conversation-context.md`
+- Path: `.claude/plans/{plan_name}/conversation-context.md`
 - Content: Include conversation summary, key decisions, requirements discussion, etc.
 - If no session context, skip this file or create with placeholder noting manual plan creation
 
@@ -204,7 +204,7 @@ Show success message with next steps:
    • Type: Conceptual (requirements captured)
    • Work type: {type} (detected with {confidence}% confidence)
    • Requirements: {requirement_count}
-   • Location: .claude/sessions/plans/{plan_name}/requirements.json
+   • Location: .claude/plans/{plan_name}/requirements.json
    • Scope: Global (accessible from any session)
 
 📝 Next Steps:
@@ -270,7 +270,7 @@ The transformation from requirements → tasks happens in /session:plan-finalize
 ## Notes
 
 - The ${CLAUDE_PLUGIN_ROOT} environment variable should point to the session plugin source directory
-- Plans are now global - stored in `.claude/sessions/plans/` regardless of active session
+- Plans are now global - stored in `.claude/plans/` regardless of active session
 - The {session_name} variable is optional - used only if there's an active session for conversation context
 - All CLI commands should use absolute paths
 - Error messages should be user-friendly and actionable

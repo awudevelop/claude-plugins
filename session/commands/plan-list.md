@@ -1,6 +1,6 @@
 You are executing the /session:plan-list command to list all global plans.
 
-**NOTE:** Plans are now global and stored in `.claude/sessions/plans/`. This command works without requiring an active session.
+**NOTE:** Plans are now global and stored in `.claude/plans/`. This command works without requiring an active session.
 
 ## Arguments
 
@@ -136,7 +136,7 @@ Progress: [████████████░░░░░░░░] 68% (15
 ## Notes
 
 - This command does NOT require an active session
-- Plans are stored globally in `.claude/sessions/plans/`
+- Plans are stored globally in `.claude/plans/`
 - Both conceptual and implementation plans are shown
 - The list is sorted by last updated (most recent first)
 - Use /session:plan-status {name} for detailed information about a specific plan
