@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.15.1] - 2025-11-24
+
+### Changed
+
+- **Plugin Description Format** - Migrated to bullet-point changelog format
+  - plugin.json now displays version history in bullet points (latest on top)
+  - Keeps last 6 versions for quick reference
+  - Format: `• vX.Y.Z: Summary of changes`
+  - Marketplace description remains static with version prefix only
+
+### Added
+
+- **Version Manager Enhancements** - Automatic changelog-based description updates
+  - `extractChangelogSummary()` parses CHANGELOG.md for version-specific changes
+  - `buildBulletDescription()` constructs bullet-point format with latest changes on top
+  - Automatically extracts and prepends changelog bullets on version updates
+  - Maintains separation: plugin.json (technical changes) vs marketplace.json (static marketing)
+
+---
+
 ## [3.15.0] - 2025-11-24
 
 ### Fixed
