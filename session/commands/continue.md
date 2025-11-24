@@ -131,9 +131,9 @@ After all 3 subagents complete, you'll receive their results. Handle errors grac
 - If `success: true` → Use the extracted goal
 - If `success: false` → Use fallback goal from result
 
-### Step 3.5: Extract Snapshot Pointer with Teaser (Hybrid Approach)
+### Step 3.5: Extract Full Snapshot Summary (Complete Context Approach)
 
-Provide Claude with pointer to full context + 2-3 line teaser for immediate orientation using Claude Code tools.
+Provide Claude with complete snapshot summary including all topics, decisions, and tasks for full context visibility using Claude Code tools.
 
 **IMPORTANT**: This step uses Claude Code's Read and Glob tools instead of bash pipelines to avoid parse errors with command substitution.
 
@@ -149,20 +149,24 @@ Provide Claude with pointer to full context + 2-3 line teaser for immediate orie
    - **Format Detection**: Check if snapshot contains "**Format Version**: 2.0"
 
    **For v2.0 Format (numbered lists)**:
-   - Extract three teaser lines:
-     - **Line 1 (Done)**: First 3 topics from "## Topics Discussed" section
+   - Extract all snapshot items with titles only:
+     - **Topics Discussed**: Extract ALL topic titles from "## Topics Discussed" section
        - Format: "1. **Category**: Description"
-       - Extract category + brief description for first 3 topics
-       - Join with semicolons: "Topic1; Topic2; Topic3"
-       - Limit 120 chars total
-     - **Line 2 (Status)**: Progress line from "## Current Status" section
-       - Look for "- **Progress**:" line
-       - Extract the text after "**Progress**:"
-       - Limit 120 chars
-     - **Line 3 (Next)**: Next Steps line from "## Current Status" section
-       - Look for "- **Next Steps**:" line
-       - Extract the text after "**Next Steps**:"
-       - Limit 80 chars
+       - Extract only the category/title (bold text between ** markers)
+       - Store as array of titles
+     - **Decisions Made**: Extract ALL decision titles from "## Decisions Made" section
+       - Format: "1. **Decision**: Rationale"
+       - Extract only the decision title (bold text between ** markers)
+       - Store as array of titles
+     - **Tasks Completed**: Extract ALL tasks from "## Tasks Completed" section
+       - Format: "1. Task description"
+       - Extract full task line (simple numbered list)
+       - Store as array of tasks
+     - **Current Status**: Extract status lines from "## Current Status" section
+       - Look for "- **Progress**:" line and extract text after it
+       - Look for "- **Next Steps**:" line and extract text after it
+       - Look for "- **Blockers**:" line and extract text after it
+       - Store as object with progress, nextSteps, blockers
 
    **For v1.0 Format (paragraphs) - Backward Compatibility**:
    - Extract three teaser lines (legacy behavior):
@@ -170,12 +174,36 @@ Provide Claude with pointer to full context + 2-3 line teaser for immediate orie
      - **Line 2 (Status)**: First 1-2 sentences from "## Current State" section (after heading, skip blank line, take lines 1-2, join with space, limit 120 chars)
      - **Line 3 (Next)**: Look for "what's next" or similar forward-looking text in "## Current State" section (limit 80 chars)
 
-   - Use fallback text if any extraction fails:
-     - Done: "Session work consolidated"
-     - Status: "See snapshot for current status"
-     - Next: "See snapshot for next steps"
+3. **Build full snapshot summary output:**
 
-3. **Build teaser output:**
+   For v2.0 format, display all extracted items:
+   ```
+   📋 Latest: {snapshot_filename}
+
+   Topics Discussed ({count}):
+   - {topic_1}
+   - {topic_2}
+   ... (all topics)
+
+   Decisions Made ({count}):
+   - {decision_1}
+   - {decision_2}
+   ... (all decisions)
+
+   Tasks Completed ({count}):
+   - {task_1}
+   - {task_2}
+   ... (all tasks)
+
+   Current Status:
+   • Progress: {progress_text}
+   • Next Steps: {next_steps_text}
+   • Blockers: {blockers_text}
+
+   💡 Read {snapshot_path} for full details
+   ```
+
+   For v1.0 format (legacy), display the 3-line teaser:
    ```
    📋 Latest: {snapshot_filename} (recently)
       • Done: {LINE_DONE}
@@ -184,19 +212,20 @@ Provide Claude with pointer to full context + 2-3 line teaser for immediate orie
    💡 Read {snapshot_path} for full context
    ```
 
-4. **Display the teaser in Step 6** (after showing the session goal)
+4. **Display the summary in Step 6** (after showing the session goal)
 
 **Graceful Handling**:
-- If no snapshot exists → Skip teaser display (OK, fresh session)
-- If extraction fails → Use fallback text (still shows pointer)
+- If no snapshot exists → Skip summary display (OK, fresh session)
+- If extraction fails → Show generic message "See snapshot for details"
 - If Read fails → Silent failure, continue (don't break resume)
 
-**Why Hybrid Pointer Works Better**:
-- Teaser gives immediate context (what/status/next) in ~80 tokens
-- Full snapshot available on demand (Claude can read if needed)
-- Lazy loading: Only loads full context when relevant (zero waste)
-- Solves: "Wave never started" - teaser shows execution completed
-- Better than auto-inject: Complete sentences, not truncated mid-word
+**Why Full Snapshot Summary Works Better**:
+- Complete visibility: All topics, decisions, and tasks visible immediately (~300 tokens)
+- No information loss: User sees everything without needing to read snapshot file
+- Better context continuity: Claude knows full scope of work done
+- Improved decision-making: All context available for next steps
+- Tradeoff: +200-400 tokens per resume vs 3-line teaser (~80 tokens)
+- User benefit: Worth the token cost for comprehensive context restoration
 - **No bash parse errors** - uses Claude Code tools (Glob, Read) natively
 
 ### Step 4: Activate Session (CLI)
@@ -227,13 +256,44 @@ Update the "Last Updated" line in session.md to current time using the Edit tool
 **Last Updated**: {current ISO timestamp}
 ```
 
-### Step 6: Display Summary with Hybrid Pointer
+### Step 6: Display Summary with Full Snapshot Details
 
-Show session goal plus snapshot pointer with 2-3 line teaser for context continuity.
+Show session goal plus complete snapshot summary with all topics, decisions, and tasks for full context visibility.
 
-**Implementation**: Use Glob and Read tools (from Step 3.5) to extract and display the teaser.
+**Implementation**: Use Glob and Read tools (from Step 3.5) to extract and display the full summary.
 
-**Display Format**:
+**Display Format for v2.0 Snapshots**:
+```
+✓ Session ready: {goal}
+
+📋 Latest: {snapshot_filename}
+
+Topics Discussed ({count}):
+- {topic_1}
+- {topic_2}
+... (all topics)
+
+Decisions Made ({count}):
+- {decision_1}
+- {decision_2}
+... (all decisions)
+
+Tasks Completed ({count}):
+- {task_1}
+- {task_2}
+... (all tasks)
+
+Current Status:
+• Progress: {progress_text}
+• Next Steps: {next_steps_text}
+• Blockers: {blockers_text}
+
+💡 Read {snapshot_path} for full details
+
+What's next?
+```
+
+**Display Format for v1.0 Snapshots (Legacy)**:
 ```
 ✓ Session ready: {goal}
 
@@ -246,33 +306,64 @@ Show session goal plus snapshot pointer with 2-3 line teaser for context continu
 What's next?
 ```
 
-**Example Output**:
+**Example Output** (v2.0):
 ```
 ✓ Session ready: Implement product permission system
 
-📋 Latest: auto_2025-11-16_05-24.md (recently)
-   • Done: Orchestrator executed 17 of 22 tasks (70% complete).
-   • Status: Database migrations ✓, Tests ✗ (Docker not running, Vitest errors)
-   • Next: Fix test environment setup, retry Wave 2 deployment
-💡 Read .claude/sessions/product-permission/auto_2025-11-16_05-24.md for full context
+📋 Latest: auto_2025-11-16_05-24.md
+
+Topics Discussed (8):
+- Database Schema Design
+- API Endpoint Implementation
+- Permission Middleware
+- Frontend Components
+- Testing Strategy
+- Deployment Planning
+- Documentation Updates
+- Performance Optimization
+
+Decisions Made (3):
+- Use RBAC Model for Permission System
+- Implement Middleware-based Authorization
+- Store Permissions in PostgreSQL
+
+Tasks Completed (12):
+- Created users, roles, permissions tables
+- Implemented role assignment API
+- Built permission checking middleware
+- Added frontend permission components
+- Wrote unit tests for permission logic
+- Created integration tests
+- Documented API endpoints
+- Updated deployment guide
+- Fixed TypeScript errors
+- Ran build successfully
+- Deployed to staging
+- Verified permission checks work
+
+Current Status:
+• Progress: 12 of 12 tasks completed (100%)
+• Next Steps: Deploy to production and monitor
+• Blockers: None
+
+💡 Read .claude/sessions/product-permission/auto_2025-11-16_05-24.md for full details
 
 What's next?
 ```
 
 **Notes**:
-- If no snapshot exists, skip the teaser and only show "✓ Session ready: {goal}" and "What's next?"
-- Use Read tool to extract teaser lines (avoids bash parse errors)
+- If no snapshot exists, only show "✓ Session ready: {goal}" and "What's next?"
+- Use Read tool to extract all items (avoids bash parse errors)
 - Fallback gracefully if extraction fails (show generic pointer text)
+- v1.0 snapshots continue using 3-line teaser for backward compatibility
 
 **IMPORTANT**:
-- Do show hybrid pointer + teaser (Step 3.5) if available ← HYBRID APPROACH
-- Teaser gives enough context to continue OR read full snapshot ← LAZY LOADING
-- Do NOT show comprehensive summaries (keep it concise)
-- Do NOT auto-inject full snapshot (use pointer instead)
-- Claude can read snapshot file if more context needed ← ON DEMAND
-- User can run `/session status` for detailed view
-- Do NOT list files, milestones, decisions, snapshots
-- Keep it minimal for token efficiency
+- DO show full snapshot summary (all topics/decisions/tasks) for v2.0 format ← FULL VISIBILITY
+- This provides complete context in ~300 tokens (vs 80 token teaser) ← WORTH THE COST
+- User doesn't need to read snapshot file separately ← CONVENIENCE
+- All relevant context immediately available for decision-making ← BETTER UX
+- v1.0 snapshots keep minimal teaser for backward compatibility
+- User can still read snapshot file for additional details if needed
 - The heavy analysis already happened in the subagents
 - User can run `/session status` for detailed view
 
@@ -290,10 +381,17 @@ What's next?
   - Lazy loading: Only loads full context when relevant (zero waste if not needed)
   - Solves: "Wave never started" confusion - teaser shows execution completed
   - Better than auto-inject: Complete sentences (not truncated mid-word)
+- After (v3.15.0): ~20.3k tokens with full snapshot summary (74% reduction, +300 token tradeoff)
+  - Changed: Full snapshot summary with all topics/decisions/tasks (~300 tokens vs 80-token teaser)
+  - Complete visibility: All snapshot items visible immediately (no need to read file)
+  - Benefit: Complete context for better decision-making and continuity
+  - Tradeoff: +220 tokens per resume for comprehensive context (worth it for UX)
+  - User feedback: Full context is more valuable than minimal teaser
+  - Result: Better context visibility with acceptable token cost increase
 - Heavy work (consolidation, git analysis) happens in isolated subagent contexts
 - Parallel execution: 3 subagents run simultaneously (~2-4 seconds total)
 - Lazy-loaded prompts: Subagents read their own prompts (~1.7k token savings)
-- Result: Faster session resume, massive token savings, intelligent context restoration via hybrid pointer
+- Result: Faster session resume, massive token savings vs v3.6.4, complete context restoration via full summary
 
 **ERROR HANDLING:**
 - If all subagents fail: Still activate session, show generic message "✓ Session ready. What's next?"

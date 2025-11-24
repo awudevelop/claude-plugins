@@ -1,40 +1,24 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.15.1** - Consolidation Format v2.0: Numbered lists for comprehensive topic capture with anti-recency bias improvements
+**Version 3.15.2** - Enhanced snapshot summary visibility: Full context display on session resume
 
 Intelligent session management with **72% token reduction** through parallel subagent delegation. Zero-blocking conversation logging (<2ms), intelligent analysis via isolated subagents (2-4s), hybrid cleanup on all exit paths. Fast, efficient session resume with minimal main context usage.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-v3.15.1-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-v3.15.2-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.15.1 (Latest Update)
+## 🚀 What's New in v3.15.2 (Latest Update)
 
-### 🔧 Hotfix: Subagent Reliability Fixes
-- **CLI Syntax Bug Fixed** - `update-state` command now uses correct JSON format (was causing 100% failure)
-- **Error Checking Added** - Proper `set -e` and verification steps prevent silent failures
-- **Model Upgraded** - Consolidation uses Sonnet instead of Haiku for better reliability
-- **Verification Added** - All steps verified before returning success (snapshot exists, log deleted, counters reset)
-- **Reliability Improved** - From ~60% to ~95% completion rate
-- **Impact** - The 72% token reduction from v3.7.0 now actually works as designed!
+### 📊 Enhanced Snapshot Summary Display
+- **Full Context Visibility** - Session resume now displays ALL topics, decisions, and tasks (not just 3-line teaser)
+- **Better UX** - Complete snapshot summary with ~300 tokens vs previous 80-token teaser
+- **Comprehensive Context** - See all work done immediately without reading snapshot file
+- **Backward Compatible** - v1.0 snapshots continue using minimal teaser format
+- **Token Tradeoff** - +220 tokens per resume for complete context (worth it for improved UX)
 
-### What Was Fixed
-```
-❌ Before v3.7.1:
-- State updates failed 100% (wrong CLI syntax)
-- Log files not deleted (no verification)
-- Success returned even when steps failed
-- Counters never reset properly
-
-✅ After v3.7.1:
-- State updates work correctly
-- All files cleaned up properly
-- Success only on verified completion
-- Full 8-step process completes reliably
-```
-
-See [CHANGELOG.md](./CHANGELOG.md) for detailed technical notes.
+See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 ---
 
@@ -111,7 +95,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 
 ### Previous Update: v3.6.2
 
-## 🚀 What's New in v3.15.1
+## 🚀 What's New in v3.15.3
 
 ### 📝 Self-Contained Conversation Logs
 - 🎯 **Complete Capture** - Both user prompts AND Claude's full responses
@@ -131,7 +115,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 
 ### Previous Update: v3.6.0
 
-## 🚀 What's New in v3.15.1
+## 🚀 What's New in v3.15.3
 
 ### 🔍 Automatic Git History Capture
 - 📊 **Repository Context** - Last 50 commits captured automatically at session boundaries

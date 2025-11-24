@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.15.2] - 2025-11-24
+
+### Changed
+
+- **Session Continue Summary Display** - Enhanced snapshot summary visibility
+  - Changed from 3-line teaser (~80 tokens) to full snapshot summary (~300 tokens)
+  - Now displays ALL topics, decisions, and tasks with titles (not just first 3)
+  - Complete context visibility immediately on session resume
+  - Better user experience: No need to read snapshot file separately
+  - Acceptable token tradeoff: +220 tokens per resume for comprehensive context
+  - Maintains backward compatibility: v1.0 snapshots still use minimal teaser
+  - Updated Step 3.5 and Step 6 in continue.md with new extraction and display logic
+
+---
+
 ## [3.15.1] - 2025-11-24
 
 ### Changed
