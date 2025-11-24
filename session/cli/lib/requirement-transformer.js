@@ -11,13 +11,13 @@ const path = require('path');
 /**
  * Transform requirements.json into orchestration.json + phases/
  *
- * @param {string} sessionPath - Absolute path to session directory
+ * @param {string} plansDir - Absolute path to plans directory (.claude/sessions/plans)
  * @param {string} planName - Plan name
  * @param {object} breakdownData - AI-generated task breakdown from breakdown-requirement.md
  * @returns {Promise<object>} - Transformation result
  */
-async function transformRequirements(sessionPath, planName, breakdownData) {
-  const planDir = path.join(sessionPath, 'plans', planName);
+async function transformRequirements(plansDir, planName, breakdownData) {
+  const planDir = path.join(plansDir, planName);
   const requirementsPath = path.join(planDir, 'requirements.json');
 
   // Load requirements.json

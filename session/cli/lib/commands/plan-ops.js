@@ -787,7 +787,7 @@ async function finalizePlan(planName) {
  */
 async function getPlanStatus(planName) {
   try {
-    const plan = await getPlan(planName);
+    const plan = await getPlan(planName, true);  // Load phases with tasks
     if (!plan) {
       throw { code: 'PLAN_NOT_FOUND' };
     }

@@ -6,10 +6,10 @@ const path = require('path');
  * Executes plans sequentially (no parallel optimization yet)
  */
 class BasicOrchestrator {
-  constructor(sessionPath, planName) {
-    this.sessionPath = sessionPath;
+  constructor(plansDir, planName) {
+    this.plansDir = plansDir;
     this.planName = planName;
-    this.planDir = path.join(sessionPath, 'plans', planName);
+    this.planDir = path.join(plansDir, planName);
     this.orchestration = null;
     this.executionState = null;
   }
