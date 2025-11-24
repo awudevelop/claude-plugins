@@ -250,19 +250,16 @@ class VersionManager {
       isValid = false;
     }
 
-    // Check 4: Description has version prefix
+    // Check 4: Plugin.json description should NOT have version prefix
+    // (version prefix belongs only in marketplace.json)
     const pluginJsonPath = path.join(pluginRoot, 'plugin.json');
     const pluginData = JSON.parse(fs.readFileSync(pluginJsonPath, 'utf8'));
-    const descriptionPrefix = pluginData.description.match(/^v(\d+\.\d+\.\d+)\s*-\s*/);
+    const hasVersionPrefix = pluginData.description.match(/^v\d+\.\d+\.\d+\s*-\s*/);
 
-    if (!descriptionPrefix) {
-      this.errors.push(`${plugin}: plugin.json description missing version prefix (should start with "vX.Y.Z - ")`);
-      isValid = false;
-    } else if (descriptionPrefix[1] !== versions.pluginJson) {
-      this.errors.push(
-        `${plugin}: plugin.json description prefix (v${descriptionPrefix[1]}) doesn't match version (${versions.pluginJson})`
+    if (hasVersionPrefix) {
+      this.warnings.push(
+        `${plugin}: plugin.json description has version prefix (should be removed - only marketplace.json needs version prefix)`
       );
-      isValid = false;
     }
 
     // Check 5: marketplace.json description has version prefix
@@ -465,8 +462,10 @@ class VersionManager {
 
     data.version = newVersion;
 
-    // Update description version prefix
-    data.description = data.description.replace(/^v\d+\.\d+\.\d+/, `v${newVersion}`);
+    // Remove version prefix from description (if it exists)
+    // Plugin.json should only have latest updates, NOT version prefix
+    // Version prefix belongs only in marketplace.json (static evergreen description)
+    data.description = data.description.replace(/^v\d+\.\d+\.\d+\s*-\s*/, '');
 
     // Add/update versionMetadata
     data.versionMetadata = {

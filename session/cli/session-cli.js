@@ -67,17 +67,53 @@ const commands = {
   'capture-git': require('./lib/commands/capture-git'),
   // Plan operations
   'create-plan': require('./lib/commands/plan-ops').createPlan,
-  'get-plan': require('./lib/commands/plan-ops').getPlan,
-  'update-plan': require('./lib/commands/plan-ops').updatePlan,
-  'delete-plan': require('./lib/commands/plan-ops').deletePlan,
+  'get-plan': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName, loadPhases] = args;
+    return await planOps.getPlan(planName, loadPhases === 'true');
+  },
+  'update-plan': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName, updates] = args;
+    return await planOps.updatePlan(planName, JSON.parse(updates));
+  },
+  'delete-plan': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName] = args;
+    return await planOps.deletePlan(planName);
+  },
   'list-plans': require('./lib/commands/plan-ops').listPlans,
   'plan-list': require('./lib/commands/plan-ops').listPlans,  // Alias for list-plans
-  'validate-plan': require('./lib/commands/plan-ops').validatePlan,
-  'finalize-plan': require('./lib/commands/plan-ops').finalizePlan,
-  'update-task-status': require('./lib/commands/plan-ops').updateTaskStatus,
-  'plan-status': require('./lib/commands/plan-ops').getPlanStatus,
-  'export-plan': require('./lib/commands/plan-ops').exportPlan,
-  'plan-exists': require('./lib/commands/plan-ops').planExists,
+  'validate-plan': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName] = args;
+    return await planOps.validatePlan(planName);
+  },
+  'finalize-plan': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName] = args;
+    return await planOps.finalizePlan(planName);
+  },
+  'update-task-status': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName, taskId, status] = args;
+    return await planOps.updateTaskStatus(planName, taskId, status);
+  },
+  'plan-status': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName] = args;
+    return await planOps.getPlanStatus(planName);
+  },
+  'export-plan': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName, format] = args;
+    return await planOps.exportPlan(planName, format);
+  },
+  'plan-exists': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName] = args;
+    return await planOps.planExists(planName);
+  },
   // Requirements-based workflow operations
   'save-requirements': async (args) => {
     const planOps = require('./lib/commands/plan-ops');

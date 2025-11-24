@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.15.0] - 2025-11-24
+
+### Fixed
+
+- **Plan Transformation Path Bug** - Resolved double `/plans/plans/` path error in plan finalization
+  - Fixed `requirement-transformer.js` to accept `plansDir` instead of `sessionPath`
+  - Fixed `orchestrator.js` constructor to use `plansDir` parameter consistently
+  - Eliminates ENOENT errors when running `/plan-finalize` command
+  - Tested with end-to-end dummy plan workflow to verify file operations
+  - This was the blocker preventing plan finalization in v3.14.x
+
+### Changed
+
+- **Plan Status Enhancement** - `getPlanStatus()` now loads full phase data with tasks
+  - Previously only loaded orchestration metadata without task details
+  - Now provides complete status information including task-level progress
+
+---
+
 ## [3.14.2] - 2025-11-22
 
 ### Changed

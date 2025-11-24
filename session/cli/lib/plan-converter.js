@@ -251,8 +251,8 @@ function mergePhasesIntoPlan(orchestration, phaseFiles) {
       const phaseMeta = orchestration.phases[idx];
 
       return {
-        phase_name: phaseFile.phase.name,
-        description: phaseFile.phase.description,
+        phase_name: phaseFile.phase_name,  // Use top-level phase_name
+        description: phaseFile.description,  // Use top-level description
         tasks: phaseFile.tasks.map(task => ({
           task_id: task.task_id,
           description: task.description,
