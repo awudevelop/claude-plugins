@@ -455,6 +455,91 @@ class VersionManager {
     this.updateRootReadme(plugin, newVersion);
   }
 
+  /**
+   * Extract changelog summary for a specific version
+   * @param {string} plugin - Plugin name
+   * @param {string} version - Version to extract (e.g., "3.15.0")
+   * @returns {string|null} - One-line summary of changes, or null if not found
+   */
+  extractChangelogSummary(plugin, version) {
+    const changelogPath = path.join(PROJECT_ROOT, plugin, 'CHANGELOG.md');
+    if (!fs.existsSync(changelogPath)) {
+      return null;
+    }
+
+    try {
+      const content = fs.readFileSync(changelogPath, 'utf8');
+
+      // Find the section for this version: ## [X.Y.Z] - DATE
+      const versionRegex = new RegExp(`##\\s*\\[${version.replace(/\./g, '\\.')}\\].*?\\n([\\s\\S]*?)(?=\\n##\\s*\\[|$)`, 'i');
+      const match = content.match(versionRegex);
+
+      if (!match) {
+        return null;
+      }
+
+      const sectionContent = match[1];
+
+      // Extract key changes (first bullet from each ### section)
+      const changes = [];
+      const sections = sectionContent.split(/###\s+/);
+
+      for (const section of sections) {
+        if (!section.trim()) continue;
+
+        const lines = section.split('\n').filter(l => l.trim());
+        if (lines.length < 2) continue;
+
+        const sectionName = lines[0].trim(); // e.g., "Fixed", "Added", "Changed"
+        const firstBullet = lines.find(l => l.trim().startsWith('-'));
+
+        if (firstBullet) {
+          // Extract just the summary (remove markdown and excess details)
+          let summary = firstBullet.replace(/^-\s*\*\*/, '').replace(/\*\*.*?-\s*/, '');
+          summary = summary.split('\n')[0].trim(); // Take first line only
+          summary = summary.substring(0, 100); // Limit length
+          changes.push(summary);
+        }
+      }
+
+      return changes.join(', ') || null;
+    } catch (error) {
+      this.warnings.push(`Could not extract changelog for v${version}: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Build bullet-point description with latest changes on top
+   * @param {string} currentDescription - Current plugin.json description
+   * @param {string} newVersion - New version being released
+   * @param {string} summary - Summary of changes for this version
+   * @returns {string} - Updated description in bullet format
+   */
+  buildBulletDescription(currentDescription, newVersion, summary) {
+    const MAX_VERSIONS = 6; // Keep last 6 versions in description
+
+    // Extract existing bullets (if any)
+    const bulletRegex = /^•\s*v(\d+\.\d+\.\d+):\s*(.+)$/gm;
+    const existingBullets = [];
+    let match;
+
+    while ((match = bulletRegex.exec(currentDescription)) !== null) {
+      existingBullets.push({ version: match[1], text: match[2] });
+    }
+
+    // Create new bullet for this version
+    const newBullet = `• v${newVersion}: ${summary || 'Version update'}`;
+
+    // Combine: new bullet + existing bullets (limited to MAX_VERSIONS - 1)
+    const allBullets = [newBullet];
+    for (let i = 0; i < Math.min(existingBullets.length, MAX_VERSIONS - 1); i++) {
+      allBullets.push(`• v${existingBullets[i].version}: ${existingBullets[i].text}`);
+    }
+
+    return allBullets.join('\n');
+  }
+
   updatePluginJson(plugin, newVersion, bumpType, currentCommit) {
     const filePath = path.join(PROJECT_ROOT, plugin, 'plugin.json');
     const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -462,10 +547,18 @@ class VersionManager {
 
     data.version = newVersion;
 
-    // Remove version prefix from description (if it exists)
-    // Plugin.json should only have latest updates, NOT version prefix
-    // Version prefix belongs only in marketplace.json (static evergreen description)
-    data.description = data.description.replace(/^v\d+\.\d+\.\d+\s*-\s*/, '');
+    // Extract changelog summary for this version
+    const changelogSummary = this.extractChangelogSummary(plugin, newVersion);
+
+    if (changelogSummary) {
+      // Build bullet-point description with latest changes on top
+      data.description = this.buildBulletDescription(data.description, newVersion, changelogSummary);
+      this.changes.push(`${plugin}/plugin.json: Updated description with v${newVersion} changes`);
+    } else {
+      // Fallback: just remove version prefix if no changelog found
+      data.description = data.description.replace(/^v\d+\.\d+\.\d+\s*-\s*/, '');
+      this.warnings.push(`${plugin}: Could not extract changelog for v${newVersion}, description not updated`);
+    }
 
     // Add/update versionMetadata
     data.versionMetadata = {

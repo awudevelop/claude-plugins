@@ -1,7 +1,7 @@
 {
   "name": "session",
   "version": "3.15.0",
-  "description": "Consolidation Format v2.0: Numbered lists for comprehensive topic capture (95%+ coverage). Anti-recency bias improvements ensure full conversation analysis. Backward compatible with v1.0 format. Planning Feature Phase 1 complete. Parallel Subagent Architecture (72% token reduction). Zero-blocking conversation logging (<2ms), intelligent analysis at resume (2-4s). Fast, efficient, never lose context!",
+  "description": "• v3.15.0: Plan transformation path bug fix, enhanced plan status\n• v3.14.2: Global plan storage, removed session dependency\n• v3.14.1: Work type detection fix\n• v3.14.0: Node.js v24.7.0 compatibility, repository URL fixes\n• v3.13.0: Project context maps system (multi-layered project analysis)\n• v3.12.0: Requirements-based planning workflow, AI-powered task breakdown",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"
