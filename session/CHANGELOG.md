@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.15.3] - 2025-11-24
+
+### Fixed
+
+- **Global Plans Directory Path** - Corrected plans storage location from session-scoped to global
+  - Fixed `getPlansDirectory()` in plan-ops.js to return `.claude/plans` instead of `.claude/sessions/plans`
+  - Migrated 4 existing plans from session folder to global directory
+  - Plans now correctly accessible without session context
+  - Resolves path mismatch between code and documentation
+
+- **Command Reference Consistency** - Updated all plan command references to use proper slash command syntax
+  - Changed `/plan-*` to `/session:plan-*` across all documentation (27 references)
+  - Updated: plan-list.md, plan-status.md, plan-execute.md, plan-finalize.md, plan-save.md
+  - Fixed historical references in CHANGELOG.md for accuracy
+  - Ensures users see correct command syntax in all help text
+
+---
+
 ## [3.15.2] - 2025-11-24
 
 ### Changed
