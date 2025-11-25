@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.17.4] - 2025-11-25
+
+### Fixed
+
+- **Glob Pattern Matching for Map Generator** - Fixed critical bug preventing nested directory scanning
+  - Pattern `**/*.ts` now correctly matches files at any depth (not just depth 1)
+  - Root cause: Glob-to-regex conversion was replacing `*` inside `.*` and `?` inside `(.*/)?`
+  - Solution: Use placeholder strings to protect special patterns during conversion
+  - Before: product-sdk mapped only 4 files
+  - After: product-sdk correctly maps 29 files
+
+---
+
 ## [3.17.3] - 2025-11-25
 
 ### Fixed
