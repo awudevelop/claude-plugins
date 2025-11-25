@@ -114,6 +114,10 @@ const commands = {
     const [planName] = args;
     return await planOps.planExists(planName);
   },
+  'plan-update': async (args) => {
+    const planUpdate = require('./lib/commands/plan-update');
+    return await planUpdate(args);
+  },
   // Requirements-based workflow operations
   'save-requirements': async (args) => {
     const planOps = require('./lib/commands/plan-ops');
