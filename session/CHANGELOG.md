@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.16.0] - 2025-11-25
+
+### Added
+
+- **Plan Update Feature** - Modify implementation plans with atomic operations and execution safety
+  - **Core Operations** - Add, update, delete, move, and reorder phases and tasks
+  - **Execution Modes** - Selective update (protects completed work) and rollback-replan (full reset)
+  - **Atomic Transactions** - All operations backed up before execution with automatic rollback on failure
+  - **UUID-based ID System** - Unique identifiers for all plan elements
+  - **Comprehensive Validation** - Schema validation, dependency checking, and integrity verification
+  - New operations: `phase-operations.js`, `task-operations.js`, `metadata-operations.js`, `update-orchestrator.js`
+  - New validators: `schema-validator.js`, `integrity-validator.js`, `update-validator.js`
+  - New execution handlers: `execution-updates.js`, `execution-analyzer.js`
+  - New documentation: `docs/plan-updates.md`
+  - New tests: 203 total tests across 4 test suites
+
+---
+
 ## [3.15.6] - 2025-11-25
 
 ### Fixed

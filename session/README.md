@@ -1,22 +1,22 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.15.6** - Enhanced snapshot summary visibility: Full context display on session resume
+**Version 3.16.0** - Plan Update Feature: Atomic operations for modifying plans with execution safety
 
 Intelligent session management with **72% token reduction** through parallel subagent delegation. Zero-blocking conversation logging (<2ms), intelligent analysis via isolated subagents (2-4s), hybrid cleanup on all exit paths. Fast, efficient session resume with minimal main context usage.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-v3.15.6-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-v3.16.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.15.6 (Latest Update)
+## 🚀 What's New in v3.16.0 (Latest Update)
 
-### 📊 Enhanced Snapshot Summary Display
-- **Full Context Visibility** - Session resume now displays ALL topics, decisions, and tasks (not just 3-line teaser)
-- **Better UX** - Complete snapshot summary with ~300 tokens vs previous 80-token teaser
-- **Comprehensive Context** - See all work done immediately without reading snapshot file
-- **Backward Compatible** - v1.0 snapshots continue using minimal teaser format
-- **Token Tradeoff** - +220 tokens per resume for complete context (worth it for improved UX)
+### 📝 Plan Update Feature
+- **Atomic Operations** - Add, update, delete, move, and reorder phases and tasks
+- **Execution Safety** - Selective update protects completed work, rollback-replan for major changes
+- **Automatic Backups** - Full backup before changes with automatic rollback on failure
+- **Comprehensive Validation** - Schema validation, dependency checking, and integrity verification
+- **203 Tests** - Comprehensive test coverage across 4 test suites
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
