@@ -443,7 +443,7 @@ function extractChanges(input, targetType, operationType) {
 
   // For add operations, extract description
   if (operationType === 'add') {
-    const descMatch = input.match(/(?:called|named|titled|with\s+(?:the\s+)?(?:name|title|description))\s*["']?([^"'\n]+)["']?/i);
+    const descMatch = input.match(/(?:called|named|titled|description|with\s+(?:the\s+)?(?:name|title|description))\s*["']?([^"'\n]+)["']?/i);
     if (descMatch) {
       if (targetType === 'task') {
         changes.description = descMatch[1].trim();
