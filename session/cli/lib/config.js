@@ -256,14 +256,30 @@ class ConfigManager {
 
   /**
    * Simple glob matching (basic implementation)
+   *
+   * Converts glob patterns to regex:
+   * - Double-star-slash matches zero or more directories (including root-level files)
+   * - Double-star matches any path (including nested directories)
+   * - Single star matches any filename component (no slashes)
+   * - Question mark matches any single character
+   * - Dots are escaped
    */
   matchGlob(filePath, pattern) {
+    // Use placeholders to protect special patterns from being affected by later replacements
+    const DOUBLE_STAR_SLASH = '\x00DOUBLESTARSLASH\x00';
+    const DOUBLE_STAR = '\x00DOUBLESTAR\x00';
+    const QUESTION_MARK = '\x00QUESTIONMARK\x00';
+
     // Convert glob to regex
     const regexPattern = pattern
-      .replace(/\./g, '\\.')
-      .replace(/\*\*/g, '.*')
-      .replace(/\*/g, '[^/]*')
-      .replace(/\?/g, '.');
+      .replace(/\./g, '\\.')                                           // Escape dots first
+      .replace(/\?/g, QUESTION_MARK)                                   // Protect ? early (glob single-char match)
+      .replace(/\*\*\//g, DOUBLE_STAR_SLASH)                           // Protect **/ (zero or more dirs)
+      .replace(/\*\*/g, DOUBLE_STAR)                                   // Protect standalone **
+      .replace(/\*/g, '[^/]*')                                         // Single * matches non-slash chars
+      .replace(new RegExp(DOUBLE_STAR_SLASH, 'g'), '(.*/)?')           // **/ = optional path prefix
+      .replace(new RegExp(DOUBLE_STAR, 'g'), '.*')                     // ** = any characters
+      .replace(new RegExp(QUESTION_MARK, 'g'), '.');                   // ? matches any single char
 
     const regex = new RegExp(`^${regexPattern}$`);
     return regex.test(filePath);

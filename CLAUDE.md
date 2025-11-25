@@ -9,6 +9,17 @@
 /Users/prajyot/.claude/plugins/marketplaces/automatewithus-plugins/
 ```
 
+**AUTH_HUB PROJECT - STRICTLY OBSERVE ONLY:**
+```
+/Users/prajyot/Documents/Work/Matt/auth_hub/
+```
+
+**Why:**
+- This is a separate project used for testing/analysis only
+- Do NOT create, modify, or delete any files in this directory
+- Read-only access for debugging and investigation purposes
+- All observations should be reported, not acted upon
+
 **Why:**
 - This is the plugin marketplace installation directory
 - Managed by the plugin system, NOT by development
