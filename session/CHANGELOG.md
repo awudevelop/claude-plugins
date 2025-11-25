@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.17.3] - 2025-11-25
+
+### Fixed
+
+- **NL Parser Description Extraction** - Fixed bug where `description 'X'` wasn't recognized
+  - Previously required `with description 'X'` syntax
+  - Fallback regex was incorrectly capturing `"task to"` as description
+  - Now accepts standalone `description` keyword
+
+---
+
 ## [3.17.2] - 2025-11-25
 
 ### Changed
