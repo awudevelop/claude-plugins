@@ -144,11 +144,8 @@ Provide Claude with complete snapshot summary including all topics, decisions, a
    - Glob returns files sorted by modification time (newest first)
    - Take the first result as the latest snapshot
 
-2. **If snapshot exists, use Read tool to extract teaser:**
+2. **If snapshot exists, use Read tool to extract content:**
    - Read the snapshot file (first 80 lines should contain all needed sections)
-   - **Format Detection**: Check if snapshot contains "**Format Version**: 2.0"
-
-   **For v2.0 Format (numbered lists)**:
    - Extract all snapshot items with titles only:
      - **Topics Discussed**: Extract ALL topic titles from "## Topics Discussed" section
        - Format: "1. **Category**: Description"
@@ -168,15 +165,8 @@ Provide Claude with complete snapshot summary including all topics, decisions, a
        - Look for "- **Blockers**:" line and extract text after it
        - Store as object with progress, nextSteps, blockers
 
-   **For v1.0 Format (paragraphs) - Backward Compatibility**:
-   - Extract three teaser lines (legacy behavior):
-     - **Line 1 (Done)**: First sentence from "## Conversation Summary" section (after heading, skip blank line, take line 1, truncate at first period, limit 100 chars)
-     - **Line 2 (Status)**: First 1-2 sentences from "## Current State" section (after heading, skip blank line, take lines 1-2, join with space, limit 120 chars)
-     - **Line 3 (Next)**: Look for "what's next" or similar forward-looking text in "## Current State" section (limit 80 chars)
-
 3. **Build full snapshot summary output:**
 
-   For v2.0 format, display all extracted items:
    ```
    📋 Latest: {snapshot_filename}
 
@@ -203,15 +193,6 @@ Provide Claude with complete snapshot summary including all topics, decisions, a
    💡 Read {snapshot_path} for full details
    ```
 
-   For v1.0 format (legacy), display the 3-line teaser:
-   ```
-   📋 Latest: {snapshot_filename} (recently)
-      • Done: {LINE_DONE}
-      • Status: {LINE_STATUS}
-      • Next: {LINE_NEXT}
-   💡 Read {snapshot_path} for full context
-   ```
-
 4. **Display the summary in Step 6** (after showing the session goal)
 
 **Graceful Handling**:
@@ -224,8 +205,6 @@ Provide Claude with complete snapshot summary including all topics, decisions, a
 - No information loss: User sees everything without needing to read snapshot file
 - Better context continuity: Claude knows full scope of work done
 - Improved decision-making: All context available for next steps
-- Tradeoff: +200-400 tokens per resume vs 3-line teaser (~80 tokens)
-- User benefit: Worth the token cost for comprehensive context restoration
 - **No bash parse errors** - uses Claude Code tools (Glob, Read) natively
 
 ### Step 4: Activate Session (CLI)
@@ -262,7 +241,7 @@ Show session goal plus complete snapshot summary with all topics, decisions, and
 
 **Implementation**: Use Glob and Read tools (from Step 3.5) to extract and display the full summary.
 
-**Display Format for v2.0 Snapshots**:
+**Display Format**:
 ```
 ✓ Session ready: {goal}
 
@@ -293,20 +272,7 @@ Current Status:
 What's next?
 ```
 
-**Display Format for v1.0 Snapshots (Legacy)**:
-```
-✓ Session ready: {goal}
-
-📋 Latest: {snapshot_filename} (recently)
-   • Done: {LINE_DONE}
-   • Status: {LINE_STATUS}
-   • Next: {LINE_NEXT}
-💡 Read {snapshot_path} for full context
-
-What's next?
-```
-
-**Example Output** (v2.0):
+**Example Output**:
 ```
 ✓ Session ready: Implement product permission system
 
@@ -355,14 +321,12 @@ What's next?
 - If no snapshot exists, only show "✓ Session ready: {goal}" and "What's next?"
 - Use Read tool to extract all items (avoids bash parse errors)
 - Fallback gracefully if extraction fails (show generic pointer text)
-- v1.0 snapshots continue using 3-line teaser for backward compatibility
 
 **IMPORTANT**:
-- DO show full snapshot summary (all topics/decisions/tasks) for v2.0 format ← FULL VISIBILITY
-- This provides complete context in ~300 tokens (vs 80 token teaser) ← WORTH THE COST
+- DO show full snapshot summary (all topics/decisions/tasks) ← FULL VISIBILITY
+- This provides complete context in ~300 tokens ← WORTH THE COST
 - User doesn't need to read snapshot file separately ← CONVENIENCE
 - All relevant context immediately available for decision-making ← BETTER UX
-- v1.0 snapshots keep minimal teaser for backward compatibility
 - User can still read snapshot file for additional details if needed
 - The heavy analysis already happened in the subagents
 - User can run `/session status` for detailed view
@@ -370,28 +334,14 @@ What's next?
 ---
 
 **TOKEN OPTIMIZATION BENEFITS:**
-- Before (v3.6.4): 77k tokens in main conversation
-- After (v3.7.0): ~22k tokens in main conversation (72% reduction)
-- After (v3.7.1): ~20k tokens in main conversation (74% reduction)
-- After (v3.7.2): ~20.08k tokens with hybrid pointer + teaser (74% reduction maintained)
-  - Added: 80-token teaser (3 lines: done/status/next) for context orientation
-  - Hybrid approach: Pointer to full snapshot + concise teaser
-  - Benefit: Claude knows what happened, where things stand, what's next
-  - Full context available: Claude can read snapshot (500-1000 tokens) if needed
-  - Lazy loading: Only loads full context when relevant (zero waste if not needed)
-  - Solves: "Wave never started" confusion - teaser shows execution completed
-  - Better than auto-inject: Complete sentences (not truncated mid-word)
-- After (v3.15.0): ~20.3k tokens with full snapshot summary (74% reduction, +300 token tradeoff)
-  - Changed: Full snapshot summary with all topics/decisions/tasks (~300 tokens vs 80-token teaser)
-  - Complete visibility: All snapshot items visible immediately (no need to read file)
+- Current: ~20.3k tokens with full snapshot summary (74% reduction from v3.6.4)
+  - Full snapshot summary with all topics/decisions/tasks (~300 tokens)
+  - Complete visibility: All snapshot items visible immediately
   - Benefit: Complete context for better decision-making and continuity
-  - Tradeoff: +220 tokens per resume for comprehensive context (worth it for UX)
-  - User feedback: Full context is more valuable than minimal teaser
-  - Result: Better context visibility with acceptable token cost increase
 - Heavy work (consolidation, git analysis) happens in isolated subagent contexts
 - Parallel execution: 3 subagents run simultaneously (~2-4 seconds total)
 - Lazy-loaded prompts: Subagents read their own prompts (~1.7k token savings)
-- Result: Faster session resume, massive token savings vs v3.6.4, complete context restoration via full summary
+- Result: Faster session resume, massive token savings, complete context restoration
 
 **ERROR HANDLING:**
 - If all subagents fail: Still activate session, show generic message "✓ Session ready. What's next?"

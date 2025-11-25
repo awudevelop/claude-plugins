@@ -336,18 +336,48 @@ class IndexManager {
   }
 
   /**
-   * Extract summary from snapshot file
+   * Extract summary from snapshot file (v2.0 format)
    * @param {string} snapshotPath
-   * @returns {string} Summary (max 200 chars)
+   * @returns {string} Summary formatted as "Progress: X | Next: Y"
    */
   extractSnapshotSummary(snapshotPath) {
     try {
       const content = fs.readFileSync(snapshotPath, 'utf8');
-      const summaryMatch = content.match(/##\s+Conversation Summary\s*\n(.+?)(?=\n##|$)/s);
 
-      if (summaryMatch) {
-        let summary = summaryMatch[1].trim();
-        // Remove markdown formatting
+      // v2.0 format: Look for ## Current Status section
+      const statusMatch = content.match(/##\s+Current Status\s*\n([\s\S]*?)(?=\n##|$)/);
+
+      if (statusMatch) {
+        const section = statusMatch[1];
+
+        // Extract Progress, Next Steps, Blockers from bullet format
+        const progressMatch = section.match(/-\s*\*\*Progress\*\*:\s*(.+)/);
+        const nextMatch = section.match(/-\s*\*\*Next Steps\*\*:\s*(.+)/);
+        const blockersMatch = section.match(/-\s*\*\*Blockers\*\*:\s*(.+)/);
+
+        const progress = progressMatch ? progressMatch[1].trim() : '';
+        const nextSteps = nextMatch ? nextMatch[1].trim() : '';
+        const blockers = blockersMatch ? blockersMatch[1].trim() : '';
+
+        // Build summary string (prioritize Progress and Next Steps)
+        let summary = '';
+        if (progress) {
+          summary = progress.length > 100 ? progress.substring(0, 97) + '...' : progress;
+        }
+        if (nextSteps && summary.length < 150) {
+          const nextTruncated = nextSteps.length > 80 ? nextSteps.substring(0, 77) + '...' : nextSteps;
+          summary += (summary ? ' | Next: ' : 'Next: ') + nextTruncated;
+        }
+
+        if (summary) {
+          return summary.length > 200 ? summary.substring(0, 197) + '...' : summary;
+        }
+      }
+
+      // Fallback: Try legacy ## Conversation Summary for old snapshots
+      const legacyMatch = content.match(/##\s+Conversation Summary\s*\n(.+?)(?=\n##|$)/s);
+      if (legacyMatch) {
+        let summary = legacyMatch[1].trim();
         summary = summary.replace(/\*\*|__/g, '').replace(/\n/g, ' ');
         if (summary.length > 200) {
           summary = summary.substring(0, 197) + '...';
