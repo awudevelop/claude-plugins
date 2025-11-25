@@ -135,7 +135,7 @@ Progress: [████████████░░░░░░░░] 68% (15
 
 - No plans directory: Show empty state message
 - Corrupted plan files: Skip and show warning for specific plan
-- CLI command failures: Show error message with suggestion to run /session rebuild-index
+- CLI command failures: Show error message with suggestion to run /session:rebuild-index
 
 ---
 

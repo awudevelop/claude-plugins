@@ -1,8 +1,14 @@
 You are managing a session memory system. The user wants to start a new named session.
 
+**CRITICAL - Command Format:**
+All session plugin commands use the `/session:` prefix. DO NOT suggest commands without this prefix.
+- ✅ Correct: `/session:list`, `/session:start`, `/session:continue`, `/session:status`
+- ❌ Wrong: `/session list`, `/session start`, `/session continue`, `/session status`
+Use ONLY the exact command formats specified in this template.
+
 ## Task: Start New Session
 
-Parse the session name from the command arguments. The command format is: `/session start [name]`
+Parse the session name from the command arguments. The command format is: `/session:start [name]`
 
 **OPTIMIZATION:** This command now updates the metadata index after creating the session.
 
@@ -32,8 +38,8 @@ Parse the session name from the command arguments. The command format is: `/sess
    - If exists, show error:
      ```
      ❌ Error: Session directory '{name}' already exists
-     💡 Use /session continue {name} to resume
-     💡 Or use /session list to see all sessions
+     💡 Use /session:continue {name} to resume
+     💡 Or use /session:list to see all sessions
      ```
      Then STOP.
 
@@ -46,7 +52,7 @@ Parse the session name from the command arguments. The command format is: `/sess
    - If a session with this name exists (even if directory name is different), show error:
      ```
      ❌ Error: A session named '{name}' already exists
-     💡 Use /session list to see all sessions
+     💡 Use /session:list to see all sessions
      💡 Choose a different name for this session
      ```
      Then STOP.
@@ -103,7 +109,7 @@ Working on: {name}
 - Auto-capture: enabled
 
 ## Notes
-Session started. Use /session save to capture important milestones.
+Session started. Use /session:save to capture important milestones.
 ```
 
 ### Step 6: Initialize context.md
@@ -159,7 +165,7 @@ Run the CLI command to add the new session to the metadata index:
 node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-index --session {name}
 ```
 
-This ensures the new session appears immediately in `/session list` without requiring a full rebuild.
+This ensures the new session appears immediately in `/session:list` without requiring a full rebuild.
 
 ### Step 9: Display Success Message
 
@@ -168,8 +174,8 @@ Show this confirmation to the user:
 ```
 ✓ Session '{name}' started
 📁 Location: .claude/sessions/{name}/
-💡 Use /session save to capture important milestones
-📊 Check /session status to monitor tokens
+💡 Use /session:save to capture important milestones
+📊 Check /session:status to monitor tokens
 
 Ready to work! What would you like to accomplish in this session?
 ```

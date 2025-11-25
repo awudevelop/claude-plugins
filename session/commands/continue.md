@@ -1,8 +1,14 @@
 You are managing a session memory system. The user wants to resume an existing session.
 
+**CRITICAL - Command Format:**
+All session plugin commands use the `/session:` prefix. DO NOT suggest commands without this prefix.
+- ✅ Correct: `/session:list`, `/session:start`, `/session:continue`, `/session:status`
+- ❌ Wrong: `/session list`, `/session start`, `/session continue`, `/session status`
+Use ONLY the exact command formats specified in this template.
+
 ## Task: Continue Existing Session
 
-Parse the session name from the command arguments. The command format is: `/session continue [name]`
+Parse the session name from the command arguments. The command format is: `/session:continue [name]`
 
 **OPTIMIZATION**: v3.7.0 uses parallel subagent delegation for 72% token reduction (77k → 22k tokens).
 
@@ -17,8 +23,8 @@ node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get {session_name}
 If this returns an error (exit code 2), the session doesn't exist. Show:
 ```
 ❌ Error: Session '{name}' not found
-💡 Use /session list to see available sessions
-💡 Use /session start {name} to create a new session
+💡 Use /session:list to see available sessions
+💡 Use /session:start {name} to create a new session
 ```
 Then STOP.
 
@@ -329,7 +335,7 @@ What's next?
 - All relevant context immediately available for decision-making ← BETTER UX
 - User can still read snapshot file for additional details if needed
 - The heavy analysis already happened in the subagents
-- User can run `/session status` for detailed view
+- User can run `/session:status` for detailed view
 
 ---
 
@@ -346,7 +352,7 @@ What's next?
 **ERROR HANDLING:**
 - If all subagents fail: Still activate session, show generic message "✓ Session ready. What's next?"
 - If session.md missing: Show corrupted session warning
-- If CLI fails: Suggest rebuilding index with `/session rebuild-index`
+- If CLI fails: Suggest rebuilding index with `/session:rebuild-index`
 
 ---
 

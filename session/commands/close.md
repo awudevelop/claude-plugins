@@ -1,5 +1,11 @@
 You are managing a session memory system. The user wants to close and finalize the current session.
 
+**CRITICAL - Command Format:**
+All session plugin commands use the `/session:` prefix. DO NOT suggest commands without this prefix.
+- ✅ Correct: `/session:list`, `/session:start`, `/session:continue`, `/session:status`
+- ❌ Wrong: `/session list`, `/session start`, `/session continue`, `/session status`
+Use ONLY the exact command formats specified in this template.
+
 ## Task: Close Session
 
 Finalize the session by creating a final snapshot, updating metadata, and generating a summary.
@@ -11,8 +17,8 @@ Finalize the session by creating a final snapshot, updating metadata, and genera
    ```
    ❌ Error: No active session to close
 
-   💡 Use /session start [name] to create a new session
-   💡 Or use /session continue [name] to resume an existing session
+   💡 Use /session:start [name] to create a new session
+   💡 Or use /session:continue [name] to resume an existing session
    ```
    Then STOP.
 3. Read the active session name from `.active-session`
@@ -43,7 +49,7 @@ Read `.claude/sessions/{active_session}/session.md` and extract:
 
 ### Step 4: Generate Final Snapshot
 
-Create a final snapshot using the same process as `/session save`:
+Create a final snapshot using the same process as `/session:save`:
 
 1. Generate timestamp filename: `YYYY-MM-DD_HH-MM.md`
 2. Capture:
@@ -126,8 +132,8 @@ Show comprehensive closing summary:
 
 📁 Session saved to: .claude/sessions/{session_name}/
 
-💡 Use /session continue {session_name} to resume later
-💡 Use /session list to see all sessions
+💡 Use /session:continue {session_name} to resume later
+💡 Use /session:list to see all sessions
 ```
 
 ### Example Output:
@@ -153,8 +159,8 @@ Show comprehensive closing summary:
 
 📁 Session saved to: .claude/sessions/feature-auth-system/
 
-💡 Use /session continue feature-auth-system to resume later
-💡 Use /session list to see all sessions
+💡 Use /session:continue feature-auth-system to resume later
+💡 Use /session:list to see all sessions
 ```
 
 ### Step 9: Offer Next Steps
@@ -162,8 +168,8 @@ Show comprehensive closing summary:
 Ask the user:
 ```
 Session closed successfully. Would you like to:
-1. Start a new session (/session start [name])
-2. Review another session (/session list)
+1. Start a new session (/session:start [name])
+2. Review another session (/session:list)
 3. Continue with other work
 ```
 

@@ -1,5 +1,11 @@
 You are managing a session memory system. The user wants to manually save a snapshot of the current session state.
 
+**CRITICAL - Command Format:**
+All session plugin commands use the `/session:` prefix. DO NOT suggest commands without this prefix.
+- ✅ Correct: `/session:list`, `/session:start`, `/session:continue`, `/session:status`
+- ❌ Wrong: `/session list`, `/session start`, `/session continue`, `/session status`
+Use ONLY the exact command formats specified in this template.
+
 ## Task: Save Session Snapshot
 
 Capture the current context and save it as a timestamped snapshot.
@@ -12,8 +18,8 @@ Capture the current context and save it as a timestamped snapshot.
 2. If NOT exists, show error:
    ```
    ❌ Error: No active session
-   💡 Use /session start [name] to create a new session
-   💡 Or use /session continue [name] to resume an existing session
+   💡 Use /session:start [name] to create a new session
+   💡 Or use /session:continue [name] to resume an existing session
    ```
    Then STOP.
 3. Read the active session name from `.active-session`
