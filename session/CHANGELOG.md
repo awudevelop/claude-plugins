@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.17.0] - 2025-11-25
+
+### Fixed
+
+- **Plan Update Command Wiring** - Connected plan-update implementation to CLI
+  - The plan-update.js handler existed but was never registered in session-cli.js
+  - Added command registration enabling `/session:plan-update` functionality
+  - Natural language parsing, dry-run preview, and execution modes now accessible
+
+---
+
 ## [3.16.0] - 2025-11-25
 
 ### Added
