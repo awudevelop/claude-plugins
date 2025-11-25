@@ -2,6 +2,12 @@ You are executing the /session:plan-update command to modify an existing plan.
 
 **NOTE:** Plans are now global and independent of sessions.
 
+**CRITICAL - Command Format:**
+All session plugin commands use the `/session:` prefix. DO NOT suggest commands without this prefix.
+- ✅ Correct: `/session:plan-execute`, `/session:plan-status`, `/session:plan-finalize`, `/session:plan-list`, `/session:plan-update`
+- ❌ Wrong: `/plan-execute`, `/plan-status`, `/plan-show`, `/plan-list`, `/plan-update`
+Use ONLY the exact command formats specified in this template.
+
 ## Arguments
 
 Parsed from user input:

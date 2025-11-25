@@ -2,6 +2,12 @@ You are executing the /session:plan-list command to list all global plans.
 
 **NOTE:** Plans are now global and stored in `.claude/plans/`. This command works without requiring an active session.
 
+**CRITICAL - Command Format:**
+All session plugin commands use the `/session:` prefix. DO NOT suggest commands without this prefix.
+- ✅ Correct: `/session:plan-execute`, `/session:plan-status`, `/session:plan-finalize`, `/session:plan-list`
+- ❌ Wrong: `/plan-execute`, `/plan-status`, `/plan-show`, `/plan-list`
+Use ONLY the exact command formats specified in this template.
+
 ## Arguments
 
 No arguments required.

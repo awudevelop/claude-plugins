@@ -2,6 +2,12 @@ You are executing the /session:plan-status command to show plan execution status
 
 **NOTE:** Plans are now global and independent of sessions.
 
+**CRITICAL - Command Format:**
+All session plugin commands use the `/session:` prefix. DO NOT suggest commands without this prefix.
+- ✅ Correct: `/session:plan-execute`, `/session:plan-status`, `/session:plan-finalize`, `/session:plan-list`
+- ❌ Wrong: `/plan-execute`, `/plan-status`, `/plan-show`, `/plan-list`
+Use ONLY the exact command formats specified in this template.
+
 ## Arguments
 
 Parsed from user input:

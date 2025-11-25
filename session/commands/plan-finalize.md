@@ -2,6 +2,12 @@ You are executing the /session:plan-finalize command to transform requirements i
 
 **NOTE:** Plans are now global and independent of sessions.
 
+**CRITICAL - Command Format:**
+All session plugin commands use the `/session:` prefix. DO NOT suggest commands without this prefix.
+- ✅ Correct: `/session:plan-execute`, `/session:plan-status`, `/session:plan-finalize`
+- ❌ Wrong: `/plan-execute`, `/plan-status`, `/plan-show`
+Use ONLY the exact command formats specified in this template.
+
 ## Arguments
 
 Parsed from user input:

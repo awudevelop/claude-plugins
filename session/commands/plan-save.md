@@ -1,5 +1,11 @@
 You are executing the /session:save-plan command to create a conceptual plan from the current conversation.
 
+**CRITICAL - Command Format:**
+All session plugin commands use the `/session:` prefix. DO NOT suggest commands without this prefix.
+- ✅ Correct: `/session:plan-execute`, `/session:plan-status`, `/session:plan-finalize`, `/session:plan-list`, `/session:save-plan`
+- ❌ Wrong: `/plan-execute`, `/plan-status`, `/plan-show`, `/plan-list`, `/save-plan`
+Use ONLY the exact command formats specified in this template.
+
 ## Arguments
 
 Parsed from user input:
