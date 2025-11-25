@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.17.1] - 2025-11-25
+
+### Fixed
+
+- **Command Format Instructions** - Added CRITICAL command format section to all session commands
+  - All commands now have explicit `/session:` prefix requirement at the top
+  - Fixed incorrect command suggestions (e.g., `/session list` → `/session:list`)
+  - Affected commands: continue, start, close, save, plan-list
+
+---
+
 ## [3.17.0] - 2025-11-25
 
 ### Fixed
