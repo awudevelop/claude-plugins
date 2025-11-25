@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.17.2] - 2025-11-25
+
+### Changed
+
+- **Session List Badge** - Changed `⚠️ INACTIVE` to `🧊 COLD` for visual consistency
+  - Hot/cold concept: 🔥 HOT (recent) vs 🧊 COLD (stale >7 days)
+
+---
+
 ## [3.17.1] - 2025-11-25
 
 ### Fixed
