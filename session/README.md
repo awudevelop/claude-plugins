@@ -1,15 +1,15 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.15.4** - Enhanced snapshot summary visibility: Full context display on session resume
+**Version 3.15.5** - Enhanced snapshot summary visibility: Full context display on session resume
 
 Intelligent session management with **72% token reduction** through parallel subagent delegation. Zero-blocking conversation logging (<2ms), intelligent analysis via isolated subagents (2-4s), hybrid cleanup on all exit paths. Fast, efficient session resume with minimal main context usage.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-v3.15.4-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-v3.15.5-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.15.4 (Latest Update)
+## 🚀 What's New in v3.15.5 (Latest Update)
 
 ### 📊 Enhanced Snapshot Summary Display
 - **Full Context Visibility** - Session resume now displays ALL topics, decisions, and tasks (not just 3-line teaser)
@@ -95,7 +95,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 
 ### Previous Update: v3.6.2
 
-## 🚀 What's New in v3.15.4
+## 🚀 What's New in v3.15.5
 
 ### 📝 Self-Contained Conversation Logs
 - 🎯 **Complete Capture** - Both user prompts AND Claude's full responses
@@ -115,7 +115,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 
 ### Previous Update: v3.6.0
 
-## 🚀 What's New in v3.15.4
+## 🚀 What's New in v3.15.5
 
 ### 🔍 Automatic Git History Capture
 - 📊 **Repository Context** - Last 50 commits captured automatically at session boundaries

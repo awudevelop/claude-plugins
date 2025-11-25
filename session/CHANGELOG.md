@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.15.5] - 2025-11-25
+
+### Fixed
+
+- **Plan Progress Data Inconsistency** - Implemented single source of truth for progress calculation
+  - Created `progress-service.js` module using `execution-state.json` as authoritative source
+  - Fixed `getPlanStatus()` reading from wrong data source (phase files instead of execution-state)
+  - Fixed `updateTaskStatus()` not updating `execution-state.json`
+  - Added `sync-phase-files.js` utility to repair existing inconsistent data
+  - Resolves bug where plan-status showed incorrect progress (e.g., 36% instead of actual 79%)
+
+---
+
 ## [3.15.4] - 2025-11-24
 
 ### Fixed
