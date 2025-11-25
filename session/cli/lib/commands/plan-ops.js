@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const planConverter = require('../plan-converter');
+const progressService = require('../../services/progress-service');
 
 // Get working directory from environment or use current
 const workingDir = process.env.CLAUDE_WORKING_DIR || process.cwd();
@@ -604,12 +605,14 @@ async function validatePlan(planData) {
 
 /**
  * Updates task status in a plan
+ * Uses progress-service to ensure execution-state.json (source of truth) is updated
  * @param {string} planName - Plan name
  * @param {string} taskId - Task ID
- * @param {string} status - New status (pending|in_progress|completed|blocked)
+ * @param {string} status - New status (pending|in_progress|completed|blocked|failed)
+ * @param {Object} options - Optional { result: string } to store task result
  * @returns {Promise<UpdateResult>}
  */
-async function updateTaskStatus(planName, taskId, status) {
+async function updateTaskStatus(planName, taskId, status, options = {}) {
   try {
     // Validate status
     const validStatuses = ['pending', 'in_progress', 'completed', 'blocked', 'failed'];
@@ -617,89 +620,17 @@ async function updateTaskStatus(planName, taskId, status) {
       throw { code: 'INVALID_STATUS' };
     }
 
-    // Get orchestration
-    const plansDir = getPlansDirectory();
-    const planDir = path.join(plansDir, planName);
-    const orchestrationPath = path.join(planDir, 'orchestration.json');
+    // Get old status before update
+    const oldStatus = await progressService.getTaskStatus(planName, taskId);
 
-    let orchestration;
-    try {
-      const content = await fs.readFile(orchestrationPath, 'utf-8');
-      orchestration = JSON.parse(content);
-    } catch (error) {
-      throw { code: 'PLAN_NOT_FOUND' };
-    }
+    // Use progress service to update (this updates execution-state.json AND syncs files)
+    const result = await progressService.setTaskStatus(planName, taskId, status, {
+      result: options.result,
+      syncFiles: true
+    });
 
-    // Find which phase contains this task
-    let targetPhaseId = null;
-    let taskFound = false;
-    let oldStatus = null;
-
-    for (const phaseMeta of orchestration.phases) {
-      const phaseFilePath = path.join(planDir, phaseMeta.file);
-      try {
-        const phaseContent = await fs.readFile(phaseFilePath, 'utf-8');
-        const phaseData = JSON.parse(phaseContent);
-
-        // Check if task is in this phase
-        for (const task of phaseData.tasks) {
-          if (task.task_id === taskId) {
-            taskFound = true;
-            oldStatus = task.status;
-            task.status = status;
-            targetPhaseId = phaseMeta.id;
-
-            // Update phase file
-            await fs.writeFile(phaseFilePath, JSON.stringify(phaseData, null, 2));
-
-            // Update phase status based on task statuses
-            const newPhaseStatus = planConverter.derivePhaseStatus(phaseData.tasks);
-            phaseMeta.status = newPhaseStatus;
-
-            break;
-          }
-        }
-
-        if (taskFound) break;
-      } catch (error) {
-        // Continue checking other phases
-      }
-    }
-
-    if (!taskFound) {
-      throw { code: 'TASK_NOT_FOUND' };
-    }
-
-    // Recalculate overall progress
-    let totalTasks = 0;
-    let completedTasks = 0;
-
-    for (const phaseMeta of orchestration.phases) {
-      const phaseFilePath = path.join(planDir, phaseMeta.file);
-      try {
-        const phaseContent = await fs.readFile(phaseFilePath, 'utf-8');
-        const phaseData = JSON.parse(phaseContent);
-
-        totalTasks += phaseData.tasks.length;
-        completedTasks += phaseData.tasks.filter(t => t.status === 'completed').length;
-      } catch (error) {
-        // Skip if can't read phase
-      }
-    }
-
-    orchestration.progress.totalTasks = totalTasks;
-    orchestration.progress.completedTasks = completedTasks;
-    orchestration.progress.completedPhases = orchestration.phases.filter(p => p.status === 'completed').length;
-    orchestration.progress.lastUpdated = new Date().toISOString();
-    orchestration.metadata.modified = new Date().toISOString();
-
-    // Update overall plan status
-    orchestration.metadata.status = planConverter.derivePlanStatus(
-      orchestration.phases.map(p => ({ tasks: [], ...p })) // Mock structure for status derivation
-    );
-
-    // Save updated orchestration
-    await fs.writeFile(orchestrationPath, JSON.stringify(orchestration, null, 2));
+    // Get updated progress for response
+    const progress = await progressService.getProgress(planName);
 
     return {
       success: true,
@@ -707,22 +638,28 @@ async function updateTaskStatus(planName, taskId, status) {
         task_id: taskId,
         old_status: oldStatus,
         new_status: status,
-        phase_id: targetPhaseId,
+        phase_id: result.phaseId,
         progress: {
-          total_tasks: totalTasks,
-          completed: completedTasks,
-          percent_complete: Math.round((completedTasks / totalTasks) * 100)
+          total_tasks: progress.totalTasks,
+          completed: progress.completedTasks,
+          percent_complete: progress.percentComplete
         }
       },
       message: 'Task status updated successfully'
     };
 
   } catch (error) {
-    return handleCliError(error, {
-      plan: planName,
-      taskId,
-      status
-    });
+    // Handle specific errors from progress service
+    if (error.message?.includes('not found')) {
+      if (error.message.includes('Task')) {
+        return handleCliError({ code: 'TASK_NOT_FOUND' }, { plan: planName, taskId, status });
+      }
+      return handleCliError({ code: 'PLAN_NOT_FOUND' }, { plan: planName, taskId, status });
+    }
+    if (error.message?.includes('Invalid status')) {
+      return handleCliError({ code: 'INVALID_STATUS' }, { plan: planName, taskId, status });
+    }
+    return handleCliError(error, { plan: planName, taskId, status });
   }
 }
 
@@ -782,70 +719,42 @@ async function finalizePlan(planName) {
 
 /**
  * Gets plan execution status
+ * Uses progress-service (execution-state.json) as source of truth
  * @param {string} planName - Plan name
  * @returns {Promise<StatusResult>}
  */
 async function getPlanStatus(planName) {
   try {
-    const plan = await getPlan(planName, true);  // Load phases with tasks
+    // Use progress service to get accurate status from execution-state.json
+    const progress = await progressService.getProgress(planName);
+
+    // Also load plan metadata
+    const plan = await getPlan(planName, false);
     if (!plan) {
       throw { code: 'PLAN_NOT_FOUND' };
-    }
-
-    const progress = plan.progress || calculateProgress(plan.phases);
-    const percentComplete = progress.total_tasks > 0
-      ? Math.round((progress.completed / progress.total_tasks) * 100)
-      : 0;
-
-    // Find current task (first in_progress task, or first pending if none in progress)
-    let currentTask = null;
-    let currentPhase = null;
-
-    for (const phase of plan.phases) {
-      for (const task of phase.tasks) {
-        if (task.status === 'in_progress') {
-          currentTask = task;
-          currentPhase = phase;
-          break;
-        }
-      }
-      if (currentTask) break;
-    }
-
-    if (!currentTask) {
-      for (const phase of plan.phases) {
-        for (const task of phase.tasks) {
-          if (task.status === 'pending') {
-            currentTask = task;
-            currentPhase = phase;
-            break;
-          }
-        }
-        if (currentTask) break;
-      }
     }
 
     return {
       success: true,
       data: {
-        plan_name: plan.plan_name,
-        work_type: plan.work_type,
-        goal: plan.goal,
-        created_at: plan.created_at,
-        updated_at: plan.updated_at,
+        plan_name: planName,
+        work_type: progress.workType || plan.work_type,
+        goal: progress.goal || plan.goal,
+        created_at: plan.created_at || plan.metadata?.created,
+        updated_at: progress.lastUpdated || plan.updated_at || plan.metadata?.modified,
         progress: {
-          total_tasks: progress.total_tasks,
-          completed: progress.completed,
-          in_progress: progress.in_progress,
-          pending: progress.pending,
-          blocked: progress.blocked || 0,
-          percent_complete: percentComplete
+          total_tasks: progress.totalTasks,
+          completed: progress.completedTasks,
+          in_progress: progress.inProgressTasks,
+          pending: progress.pendingTasks,
+          blocked: progress.blockedTasks,
+          percent_complete: progress.percentComplete
         },
-        current_phase: currentPhase ? currentPhase.phase_name : null,
-        current_task: currentTask ? {
-          task_id: currentTask.task_id,
-          description: currentTask.description,
-          status: currentTask.status
+        current_phase: progress.currentPhase?.name || progress.currentTask?.phase_id || null,
+        current_task: progress.currentTask ? {
+          task_id: progress.currentTask.task_id,
+          description: progress.currentTask.description,
+          status: progress.currentTask.status
         } : null
       },
       message: 'Plan status retrieved successfully'
