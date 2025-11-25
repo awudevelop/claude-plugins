@@ -1,6 +1,6 @@
 {
   "name": "session",
-  "version": "3.15.5",
+  "version": "3.15.6",
   "description": "• v3.15.3: Global Plans Directory PathCorrected plans storage location from session-scoped to global\n• v3.15.2: Enhanced snapshot summary visibility - full context display on session resume\n• v3.15.1: Plugin description format migrated to bullet-point changelog, version manager enhancements\n• v3.15.0: Plan transformation path bug fix, enhanced plan status\n• v3.14.2: Global plan storage, removed session dependency\n• v3.14.1: Work type detection fix",
   "author": {
     "name": "AutomateWith.Us",
@@ -101,8 +101,8 @@
     ]
   },
   "versionMetadata": {
-    "lastUpdateCommit": "2f3834673e76f9a95890b04a07b6d06b077476b9",
-    "lastUpdateDate": "2025-11-25T06:11:44.399Z",
+    "lastUpdateCommit": "30041ba2596b8785692b7d411ae6e96f9ab700f6",
+    "lastUpdateDate": "2025-11-25T07:55:21.918Z",
     "lastBumpType": "patch"
   }
 }
