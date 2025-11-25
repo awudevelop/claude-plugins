@@ -720,6 +720,7 @@ async function finalizePlan(planName) {
 /**
  * Gets plan execution status
  * Uses progress-service (execution-state.json) as source of truth
+ * Properly handles skipped phases/tasks in progress reporting
  * @param {string} planName - Plan name
  * @returns {Promise<StatusResult>}
  */
@@ -738,6 +739,7 @@ async function getPlanStatus(planName) {
       success: true,
       data: {
         plan_name: planName,
+        status: progress.status,  // NEW: Include plan status (pending/in_progress/completed/failed)
         work_type: progress.workType || plan.work_type,
         goal: progress.goal || plan.goal,
         created_at: plan.created_at || plan.metadata?.created,
@@ -748,14 +750,26 @@ async function getPlanStatus(planName) {
           in_progress: progress.inProgressTasks,
           pending: progress.pendingTasks,
           blocked: progress.blockedTasks,
-          percent_complete: progress.percentComplete
+          skipped: progress.skippedTasks,  // NEW: Include skipped tasks
+          percent_complete: progress.percentComplete,  // Effective progress (completed + skipped)
+          actual_work_percent: progress.actualWorkPercent  // NEW: Actual work done
+        },
+        phases: {
+          total: progress.totalPhases,
+          completed: progress.completedPhases,
+          skipped: progress.skippedPhases,  // NEW: Include skipped phases
+          in_progress: progress.inProgressPhases
         },
         current_phase: progress.currentPhase?.name || progress.currentTask?.phase_id || null,
         current_task: progress.currentTask ? {
           task_id: progress.currentTask.task_id,
           description: progress.currentTask.description,
           status: progress.currentTask.status
-        } : null
+        } : null,
+        // NEW: Include completion metadata
+        completed_at: progress.completedAt || null,
+        skip_reason: progress.skipReason || null,
+        summary: progress.summary || null
       },
       message: 'Plan status retrieved successfully'
     };

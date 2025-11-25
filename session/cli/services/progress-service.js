@@ -339,10 +339,17 @@ function derivePhaseStatus(tasks, taskStatuses = {}) {
 
 /**
  * Derive overall plan status from phase statuses
+ * "skipped" is treated as a terminal state (equivalent to completed for progress purposes)
  * @param {Object} phaseStatuses - Map of phaseId -> status
+ * @param {Object} executionState - Optional execution state with completedAt field
  * @returns {string} - Derived plan status
  */
-function derivePlanStatus(phaseStatuses) {
+function derivePlanStatus(phaseStatuses, executionState = null) {
+  // Check for explicit completion signal first
+  if (executionState?.completedAt || executionState?.currentPhase === 'completed') {
+    return 'completed';
+  }
+
   const statuses = Object.values(phaseStatuses);
 
   if (statuses.length === 0) {
@@ -350,10 +357,15 @@ function derivePlanStatus(phaseStatuses) {
   }
 
   const completed = statuses.filter(s => s === 'completed').length;
+  const skipped = statuses.filter(s => s === 'skipped').length;
   const failed = statuses.filter(s => s === 'failed').length;
   const inProgress = statuses.filter(s => s === 'in_progress').length;
 
-  if (completed === statuses.length) {
+  // Terminal states: completed + skipped (both mean "done with this phase")
+  const terminalCount = completed + skipped;
+
+  // Plan is complete if all phases are in terminal state (and at least one was completed)
+  if (terminalCount === statuses.length && completed > 0) {
     return 'completed';
   } else if (failed > 0) {
     return 'failed';
@@ -366,6 +378,7 @@ function derivePlanStatus(phaseStatuses) {
 
 /**
  * Get complete progress for a plan (THE MAIN PROGRESS QUERY FUNCTION)
+ * Properly handles "skipped" phases - tasks in skipped phases are NOT counted as pending
  * @param {string} planName - Plan name
  * @returns {Promise<Object>} - Complete progress information
  */
@@ -388,10 +401,12 @@ async function getProgress(planName) {
   let pendingTasks = 0;
   let failedTasks = 0;
   let blockedTasks = 0;
+  let skippedTasks = 0;  // NEW: Track skipped tasks
 
   let totalPhases = orchestration.phases.length;
   let completedPhases = 0;
   let inProgressPhases = 0;
+  let skippedPhases = 0;  // NEW: Track skipped phases
 
   const phases = [];
   let currentPhase = null;
@@ -408,9 +423,11 @@ async function getProgress(planName) {
     const phaseStatus = state.phaseStatuses[phaseMeta.id] ||
                         derivePhaseStatus(phaseData.tasks, state.taskStatuses);
 
-    // Count phase status
+    // Count phase status - including skipped as terminal
     if (phaseStatus === 'completed') {
       completedPhases++;
+    } else if (phaseStatus === 'skipped') {
+      skippedPhases++;  // NEW: Count skipped phases
     } else if (phaseStatus === 'in_progress') {
       inProgressPhases++;
       if (!currentPhase) {
@@ -424,54 +441,74 @@ async function getProgress(planName) {
 
     // Process tasks
     const phaseTasks = [];
-    for (const task of (phaseData.tasks || [])) {
-      totalTasks++;
+    const phaseTaskCount = (phaseData.tasks || []).length;
 
-      // Get task status from execution state (SOURCE OF TRUTH)
-      const taskStatus = state.taskStatuses[task.task_id] || 'pending';
+    // NEW: If phase is skipped, all its tasks are skipped (not pending)
+    if (phaseStatus === 'skipped') {
+      totalTasks += phaseTaskCount;
+      skippedTasks += phaseTaskCount;
 
-      switch (taskStatus) {
-        case 'completed':
-          completedTasks++;
-          break;
-        case 'in_progress':
-          inProgressTasks++;
-          if (!currentTask) {
-            currentTask = {
-              task_id: task.task_id,
-              description: task.description,
-              status: taskStatus,
-              phase_id: phaseMeta.id
-            };
-          }
-          break;
-        case 'failed':
-          failedTasks++;
-          break;
-        case 'blocked':
-          blockedTasks++;
-          break;
-        default:
-          pendingTasks++;
-          // Track first pending task if no current task
-          if (!currentTask && !currentPhase) {
-            currentTask = {
-              task_id: task.task_id,
-              description: task.description,
-              status: taskStatus,
-              phase_id: phaseMeta.id
-            };
-          }
-          break;
+      // Mark all tasks in skipped phase as skipped
+      for (const task of (phaseData.tasks || [])) {
+        phaseTasks.push({
+          task_id: task.task_id,
+          description: task.description,
+          status: 'skipped',  // Override to skipped
+          details: task.details,
+          result: null
+        });
       }
+    } else {
+      // Normal processing for non-skipped phases
+      for (const task of (phaseData.tasks || [])) {
+        totalTasks++;
 
-      phaseTasks.push({
-        task_id: task.task_id,
-        description: task.description,
-        status: taskStatus,
-        details: task.details,
-        result: task.result
-      });
+        // Get task status from execution state (SOURCE OF TRUTH)
+        const taskStatus = state.taskStatuses[task.task_id] || 'pending';
+
+        switch (taskStatus) {
+          case 'completed':
+            completedTasks++;
+            break;
+          case 'in_progress':
+            inProgressTasks++;
+            if (!currentTask) {
+              currentTask = {
+                task_id: task.task_id,
+                description: task.description,
+                status: taskStatus,
+                phase_id: phaseMeta.id
+              };
+            }
+            break;
+          case 'failed':
+            failedTasks++;
+            break;
+          case 'blocked':
+            blockedTasks++;
+            break;
+          default:
+            pendingTasks++;
+            // Track first pending task if no current task
+            if (!currentTask && !currentPhase) {
+              currentTask = {
+                task_id: task.task_id,
+                description: task.description,
+                status: taskStatus,
+                phase_id: phaseMeta.id
+              };
+            }
+            break;
+        }
+
+        phaseTasks.push({
+          task_id: task.task_id,
+          description: task.description,
+          status: taskStatus,
+          details: task.details,
+          result: task.result
+        });
+      }
     }
 
     phases.push({
@@ -480,24 +517,36 @@ async function getProgress(planName) {
       status: phaseStatus,
       tasks: phaseTasks,
       taskCount: phaseTasks.length,
-      completedCount: phaseTasks.filter(t => t.status === 'completed').length
+      completedCount: phaseTasks.filter(t => t.status === 'completed').length,
+      skippedCount: phaseTasks.filter(t => t.status === 'skipped').length  // NEW
     });
   }
 
   // Calculate percentages
+  // Effective progress: (completed + skipped) / total - shows plan completion
+  // Actual work done: completed / (total - skipped) - shows real work executed
+  const effectiveComplete = completedTasks + skippedTasks;
   const percentComplete = totalTasks > 0
-    ? Math.round((completedTasks / totalTasks) * 100)
+    ? Math.round((effectiveComplete / totalTasks) * 100)
     : 0;
 
+  // Actual work percentage (excluding skipped from denominator)
+  const actualWorkTotal = totalTasks - skippedTasks;
+  const actualWorkPercent = actualWorkTotal > 0
+    ? Math.round((completedTasks / actualWorkTotal) * 100)
+    : (skippedTasks > 0 ? 100 : 0);  // If all skipped, consider 100%
+
+  // Phase percentages
+  const terminalPhases = completedPhases + skippedPhases;
   const phasePercentComplete = totalPhases > 0
-    ? Math.round((completedPhases / totalPhases) * 100)
+    ? Math.round((terminalPhases / totalPhases) * 100)
     : 0;
 
   return {
     planName,
     goal: orchestration.metadata?.name || '',
     workType: orchestration.metadata?.workType || 'feature',
-    status: derivePlanStatus(state.phaseStatuses),
+    status: derivePlanStatus(state.phaseStatuses, state),  // Pass state for completedAt check
 
     // Task progress
     totalTasks,
@@ -506,12 +555,15 @@ async function getProgress(planName) {
     pendingTasks,
     failedTasks,
     blockedTasks,
-    percentComplete,
+    skippedTasks,  // NEW
+    percentComplete,  // Effective (includes skipped as done)
+    actualWorkPercent,  // NEW: Actual work completed
 
     // Phase progress
     totalPhases,
     completedPhases,
     inProgressPhases,
+    skippedPhases,  // NEW
     phasePercentComplete,
 
     // Current work
@@ -523,7 +575,12 @@ async function getProgress(planName) {
 
     // Timestamps
     startedAt: state.startedAt,
-    lastUpdated: state.lastUpdated
+    completedAt: state.completedAt,  // NEW: Include completion timestamp
+    lastUpdated: state.lastUpdated,
+
+    // NEW: Skip reason if available
+    skipReason: state.skipReason || null,
+    summary: state.summary || null
   };
 }
 
@@ -533,6 +590,7 @@ async function getProgress(planName) {
 
 /**
  * Sync orchestration.json progress from execution state
+ * Properly handles skipped phases in progress calculation
  * @param {string} planName - Plan name
  * @param {Object} orchestration - Orchestration data (optional, will load if not provided)
  * @param {Object} state - Execution state (optional, will load if not provided)
@@ -558,20 +616,30 @@ async function syncOrchestrationProgress(planName, orchestration = null, state =
     }
   }
 
-  // Recalculate progress
+  // Recalculate progress (accounting for skipped phases)
   const taskStatuses = state.taskStatuses;
+  const phaseStatuses = state.phaseStatuses;
   let totalTasks = 0;
   let completedTasks = 0;
+  let skippedTasks = 0;
 
   for (const phaseMeta of orchestration.phases) {
     const phaseFilePath = path.join(planDir, phaseMeta.file);
     const phaseData = await readJsonFile(phaseFilePath);
+    const phaseStatus = phaseStatuses[phaseMeta.id];
 
     if (phaseData && phaseData.tasks) {
-      for (const task of phaseData.tasks) {
-        totalTasks++;
-        if (taskStatuses[task.task_id] === 'completed') {
-          completedTasks++;
+      const phaseTaskCount = phaseData.tasks.length;
+      totalTasks += phaseTaskCount;
+
+      // If phase is skipped, all its tasks count as skipped (terminal)
+      if (phaseStatus === 'skipped') {
+        skippedTasks += phaseTaskCount;
+      } else {
+        for (const task of phaseData.tasks) {
+          if (taskStatuses[task.task_id] === 'completed') {
+            completedTasks++;
+          }
         }
       }
     }
@@ -584,14 +652,16 @@ async function syncOrchestrationProgress(planName, orchestration = null, state =
 
   orchestration.progress.totalTasks = totalTasks;
   orchestration.progress.completedTasks = completedTasks;
+  orchestration.progress.skippedTasks = skippedTasks;  // NEW
   orchestration.progress.completedPhases = orchestration.phases.filter(p => p.status === 'completed').length;
+  orchestration.progress.skippedPhases = orchestration.phases.filter(p => p.status === 'skipped').length;  // NEW
   orchestration.progress.totalPhases = orchestration.phases.length;
   orchestration.progress.lastUpdated = new Date().toISOString();
 
   // Update metadata
   if (orchestration.metadata) {
     orchestration.metadata.modified = new Date().toISOString();
-    orchestration.metadata.status = derivePlanStatus(state.phaseStatuses);
+    orchestration.metadata.status = derivePlanStatus(state.phaseStatuses, state);  // Pass state for completedAt check
   }
 
   // Save updated orchestration
