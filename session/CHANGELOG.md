@@ -7,20 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [3.15.6] - 2025-11-25
-
-### Fixed
-
-- **Skipped Phase Progress Calculation** - Fixed progress showing incorrect values for plans with skipped phases
-  - Tasks in skipped phases were incorrectly counted as "pending" instead of being recognized as terminal
-  - Updated `derivePlanStatus()` to treat "skipped" as terminal state alongside "completed"
-  - Updated `getProgress()` to track `skippedTasks` and `skippedPhases` separately
-  - Added `completedAt` check for explicit plan completion signal
-  - New response fields: `status`, `skipped`, `actual_work_percent`, `completed_at`, `skip_reason`, `summary`
-  - Example: plan with 28 completed + 25 skipped tasks now shows 83% complete instead of incorrect 44%
-
----
-
 ## [3.15.5] - 2025-11-25
 
 ### Fixed

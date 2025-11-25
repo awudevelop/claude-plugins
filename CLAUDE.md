@@ -96,10 +96,33 @@ claude-plugins/
 5. Use version management for releases
 
 ### Version Updates
-- Use `/update-plugin-version` slash command
-- Follows semantic versioning
-- Updates CHANGELOG.md, README.md, package.json
-- Creates git tag automatically
+
+## 🚨 CRITICAL: NEVER UPDATE VERSIONS MANUALLY
+
+**ALWAYS use the `/update-plugin-version` slash command to update plugin versions.**
+
+```bash
+/update-plugin-version {plugin} {version} "{changelog message}"
+```
+
+Example:
+```bash
+/update-plugin-version session 3.15.6 "fix: Handle skipped phases correctly in progress calculation"
+```
+
+**Why this is critical:**
+- The command updates ALL version references in sync (plugin.json, README.md, CHANGELOG.md)
+- It updates the plugin description with recent changelog entries
+- It updates versionMetadata with commit hash and timestamp
+- Manual updates WILL cause version mismatches and break the plugin system
+
+**NEVER do this:**
+- ❌ Manually edit version numbers in plugin.json
+- ❌ Manually edit version numbers in README.md
+- ❌ Manually add CHANGELOG entries without using the command
+- ❌ Create "chore: Bump version" commits manually
+
+**The /update-plugin-version command handles everything. Use it. Always.**
 
 ### Never Do This
 - ❌ Edit files in `/Users/prajyot/.claude/plugins/marketplaces/`
