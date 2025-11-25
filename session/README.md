@@ -184,7 +184,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 - 🎯 **Integrated everywhere** - Delete from interactive menu or direct command
 
 ### Enhanced List Command (v3.1)
-- 🎨 **Visual badges** (ACTIVE, HOT, CLOSED, INACTIVE) for quick status scanning
+- 🎨 **Visual badges** (ACTIVE, HOT, CLOSED, COLD) for quick status scanning
 - ⏰ **Relative timestamps** ("2h ago", "3d ago") for better readability
 - 📸 **Snapshot & file counts** displayed prominently
 - 💬 **Latest snapshot summaries** shown inline
@@ -462,7 +462,7 @@ The `/session:list` command uses visual badges to help you quickly identify sess
 - **[ACTIVE] 🔥** - Currently active session
 - **🔥 HOT** - Updated within the last hour
 - **✅ CLOSED** - Session has been closed
-- **⚠️ INACTIVE** - No updates in over 7 days
+- **🧊 COLD** - No updates in over 7 days
 
 Relative timestamps make it easy to see activity at a glance:
 - "just now" - Less than 1 minute
@@ -489,7 +489,7 @@ Creates a new session with the specified name.
 Shows all sessions with enhanced metadata display (⚡ instant, < 200 tokens).
 
 **Enhanced features:**
-- 📊 Visual badges (ACTIVE, HOT, CLOSED, INACTIVE)
+- 📊 Visual badges (ACTIVE, HOT, CLOSED, COLD)
 - ⏰ Relative timestamps ("2h ago", "3d ago")
 - 📸 Snapshot counts and file involvement stats
 - 💬 Latest snapshot summaries

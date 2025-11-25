@@ -76,7 +76,7 @@ Available Sessions ({activeCount} active, {closedCount} closed):
 ### Badges Logic:
 - If `session.name === activeSession`: Show `[ACTIVE] 🔥`
 - If `status === "closed"`: Show `✅ CLOSED`
-- If last update > 7 days and not closed: Show `⚠️ INACTIVE`
+- If last update > 7 days and not closed: Show `🧊 COLD`
 - If last update < 1 hour: Show `🔥 HOT`
 
 ### Relative Time Helper:
@@ -106,7 +106,7 @@ Available Sessions (2 active, 1 closed):
    🎯 Fix session timeout bug in login flow
 
 
-3. refactor-api-layer ⚠️ INACTIVE
+3. refactor-api-layer 🧊 COLD
    📅 14d ago (started 15d ago)  📸 8 snapshots  📁 23 files
    🎯 Refactor REST API to GraphQL architecture
 
