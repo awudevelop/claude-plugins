@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.17.5] - 2025-12-03
+
+### Added
+
+- **Lean Output Format for Project Maps Search** - 90% token savings on search results
+  - File search now returns Glob-style paths (one per line)
+  - Signature search returns `file:line:name(params)` format
+  - Export search returns `file:symbol:type` format
+  - Unified search returns minimal JSON with short keys (f, s, e, i, c, t)
+  - Default format changed from verbose to lean
+  - Use `--verbose` flag for rich markdown output (previous behavior)
+
+### Changed
+
+- **Default Output Format** - Search results now default to lean format
+  - Old: Verbose JSON with markdown (~600 tokens per search)
+  - New: Minimal paths/lines (~50 tokens per search)
+  - `--verbose` flag provides full rich output when needed
+  - `--json` flag provides raw JSON structure
+
+### Files Modified
+
+- `output-formatter.js` - Added `formatLean()`, `formatLeanUnified()`, and 6 lean format helpers
+- `project-maps.js` - Changed default format, added lean handling, updated help text
+- `session-cli.js` - Added support for `output` and `formatted` result properties
+
+---
+
 ## [3.17.4] - 2025-11-25
 
 ### Fixed

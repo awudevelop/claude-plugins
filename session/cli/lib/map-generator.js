@@ -9,6 +9,7 @@ const ModuleDetector = require('./module-detector');
 const DatabaseDetector = require('./db-detector');
 const FrameworkDetector = require('./framework-detector');
 const ArchitectureDetector = require('./architecture-detector');
+const { SignatureExtractor } = require('./extractors/signature-extractor');
 
 /**
  * Map Generator for project context maps
@@ -96,6 +97,10 @@ class MapGenerator {
     // Phase 7: Database Schema Maps
     await this.generateDatabaseSchema();        // Database schema and relationships
     await this.generateTableModuleMapping();    // Table-to-module mapping
+
+    // Phase 8: Function/Method Signatures
+    await this.generateSignaturesMap();         // Function signatures with types
+    await this.generateTypesMap();              // TypeScript interfaces, types, enums
 
     console.log('All maps generated successfully!');
 
@@ -291,24 +296,49 @@ class MapGenerator {
 
   /**
    * Task 2-2: Generate Level 2 tree/modules map (~8KB)
+   * Uses flat array structure for efficient search and compression
    */
   async generateTreeMap() {
-    const tree = this.scanner.getDirectoryTree();
+    const files = this.scanResults.files;
     const stats = this.scanResults.stats;
 
-    // Build directory structure with counts
-    const directoryMap = this.buildDirectoryMap(tree);
+    // Collect unique directory paths
+    const pathSet = new Set();
+    files.forEach(f => {
+      const dir = path.dirname(f.relativePath);
+      if (dir && dir !== '.') {
+        pathSet.add(dir);
+      } else {
+        pathSet.add('.');  // Root directory
+      }
+    });
+    const paths = [...pathSet].sort();
+    const pathIndex = {};
+    paths.forEach((p, i) => pathIndex[p] = i);
+
+    // Build flat files array with path references
+    const flatFiles = files.map(f => {
+      const dir = path.dirname(f.relativePath);
+      const normalizedDir = (dir && dir !== '.') ? dir : '.';
+      return {
+        n: f.name,                        // name
+        p: pathIndex[normalizedDir],      // path index (reference to paths[])
+        t: f.type || f.name.split('.').pop(), // type/extension
+        s: f.size                         // size
+      };
+    });
 
     // Find modules/packages
     const modules = this.findModules();
 
     const treeData = {
-      version: '1.0.0',
+      version: '2.0.0',  // Bumped version for new structure
       projectHash: this.projectHash,
       generated: new Date().toISOString(),
       mapType: 'tree',
 
-      directoryTree: directoryMap,
+      paths,           // Unique directory paths for reference
+      files: flatFiles, // Flat array with path references
       modules,
 
       fileTypeDistribution: stats.filesByType,
@@ -318,36 +348,9 @@ class MapGenerator {
     const outputPath = path.join(this.outputDir, 'tree.json');
     const metadata = await compression.compressAndSave(treeData, outputPath);
 
-    console.log(`✓ Generated tree.json (${metadata.compressedSize} bytes, ${metadata.compressionRatio} reduction)`);
+    console.log(`✓ Generated tree.json (${metadata.compressedSize} bytes, ${metadata.compressionRatio} reduction, ${flatFiles.length} files)`);
 
     return { file: outputPath, metadata };
-  }
-
-  /**
-   * Build directory map with file counts
-   */
-  buildDirectoryMap(tree, currentPath = '') {
-    const result = {};
-
-    for (const [key, value] of Object.entries(tree)) {
-      if (key === '_files') {
-        continue;
-      }
-
-      const fullPath = currentPath ? `${currentPath}/${key}` : key;
-      const files = value._files || [];
-      const fileCount = files.length;
-
-      result[key] = {
-        path: fullPath,
-        fileCount,
-        files: files.map(f => f.name),
-        subdirectories: Object.keys(value).filter(k => k !== '_files'),
-        children: this.buildDirectoryMap(value, fullPath)
-      };
-    }
-
-    return result;
   }
 
   /**
@@ -1063,35 +1066,64 @@ class MapGenerator {
 
   /**
    * Task 3-2: Build forward dependency map
-   * Maps each file to its imports
+   * Uses flat array structure for efficient search and compression
    */
   async generateForwardDependencies() {
     const sourceFiles = this.scanResults.files.filter(f =>
       f.role === 'source' || f.role === 'test'
     );
 
-    const forwardMap = {};
+    const filePaths = [];      // Reference table for file paths
+    const allImports = [];     // Flat array of all imports
+    const allExports = [];     // Flat array of all exports
+    const fileIndex = {};      // Map filepath -> index
     let parsedCount = 0;
 
     for (const file of sourceFiles) {
       const parseResult = await this.parser.parseFile(file.path);
 
-      if (!parseResult.error && parseResult.imports.length > 0) {
-        forwardMap[file.relativePath] = {
-          imports: parseResult.imports.map(imp => ({
-            source: imp.source,
-            rawSource: imp.rawSource,
-            symbols: imp.symbols,
-            type: imp.type,
-            isDynamic: imp.isDynamic
-          }))
-        };
-        parsedCount++;
+      if (!parseResult.error) {
+        const hasImports = parseResult.imports && parseResult.imports.length > 0;
+        const hasExports = parseResult.exports && parseResult.exports.length > 0;
+
+        if (hasImports || hasExports) {
+          const fIdx = filePaths.length;
+          filePaths.push(file.relativePath);
+          fileIndex[file.relativePath] = fIdx;
+
+          // Flatten imports
+          if (hasImports) {
+            for (const imp of parseResult.imports) {
+              allImports.push({
+                f: fIdx,                    // file index
+                src: imp.source,            // source module
+                sym: imp.symbols || [],     // symbols imported
+                t: imp.type || 'named',     // import type
+                dyn: imp.isDynamic || false // is dynamic import
+              });
+            }
+          }
+
+          // Flatten exports
+          if (hasExports) {
+            for (const exp of parseResult.exports) {
+              const exportName = typeof exp === 'string' ? exp : (exp.name || exp.symbol || 'default');
+              const exportType = typeof exp === 'string' ? 'unknown' : (exp.type || 'unknown');
+              allExports.push({
+                f: fIdx,           // file index
+                n: exportName,     // export name
+                t: exportType      // export type (function, class, const, etc.)
+              });
+            }
+          }
+
+          parsedCount++;
+        }
       }
     }
 
     const forwardDeps = {
-      version: '1.0.0',
+      version: '2.0.0',  // Bumped version for new structure
       projectHash: this.projectHash,
       generated: new Date().toISOString(),
       mapType: 'dependencies-forward',
@@ -1102,16 +1134,27 @@ class MapGenerator {
         coveragePercent: Math.round((parsedCount / sourceFiles.length) * 100)
       },
 
-      dependencies: forwardMap
+      files: filePaths,      // Reference table
+      imports: allImports,   // Flat imports array
+      exports: allExports    // Flat exports array
     };
 
     const outputPath = path.join(this.outputDir, 'dependencies-forward.json');
     const metadata = await compression.compressAndSave(forwardDeps, outputPath);
 
-    console.log(`✓ Generated dependencies-forward.json (${metadata.compressedSize} bytes, ${metadata.compressionRatio} reduction, ${parsedCount}/${sourceFiles.length} files)`);
+    console.log(`✓ Generated dependencies-forward.json (${metadata.compressedSize} bytes, ${metadata.compressionRatio} reduction, ${parsedCount}/${sourceFiles.length} files, ${allImports.length} imports, ${allExports.length} exports)`);
 
-    // Store for use in reverse map
-    this.dependencyData = forwardMap;
+    // Store for use in reverse map (keep old format for compatibility with reverse map generation)
+    this.dependencyData = {};
+    for (let i = 0; i < filePaths.length; i++) {
+      this.dependencyData[filePaths[i]] = {
+        imports: allImports.filter(imp => imp.f === i).map(imp => ({
+          source: imp.src,
+          symbols: imp.sym,
+          type: imp.t
+        }))
+      };
+    }
 
     return { file: outputPath, metadata };
   }
@@ -2982,7 +3025,148 @@ class MapGenerator {
       .toLowerCase()
       .replace(/^_/, '');
   }
-  
+
+  // ============================================
+  // Phase 8: Function/Method Signature Maps
+  // ============================================
+
+  /**
+   * Generate signatures map with all function/method signatures
+   * Creates functions-signatures-map.json with detailed signature information
+   */
+  async generateSignaturesMap() {
+    const startTime = Date.now();
+    const extractor = new SignatureExtractor();
+    const files = this.scanResults.files;
+
+    // Filter to JS/TS files
+    const codeFiles = files.filter(f =>
+      ['js', 'jsx', 'ts', 'tsx', 'mjs'].includes(f.extension?.toLowerCase())
+    );
+
+    const allFunctions = [];
+    const allClasses = [];
+
+    for (const file of codeFiles) {
+      try {
+        const fullPath = path.join(this.projectRoot, file.relativePath);
+        const source = await fs.readFile(fullPath, 'utf8');
+
+        const isTypeScript = ['ts', 'tsx'].includes(file.extension?.toLowerCase());
+        const result = isTypeScript
+          ? extractor.parseTypeScriptFile(source, file.relativePath)
+          : extractor.parseJavaScriptFile(source, file.relativePath);
+
+        // Add functions
+        if (result.functions && result.functions.length > 0) {
+          allFunctions.push(...result.functions);
+        }
+
+        // Add classes
+        if (result.classes && result.classes.length > 0) {
+          allClasses.push(...result.classes);
+        }
+      } catch (err) {
+        // Skip files that can't be parsed
+        continue;
+      }
+    }
+
+    const stats = extractor.getStatistics();
+    const extractionTime = Date.now() - startTime;
+
+    const signaturesMap = {
+      version: '1.0.0',
+      projectHash: this.projectHash,
+      generated: new Date().toISOString(),
+      mapType: 'function-signatures',
+
+      functions: allFunctions,
+      classes: allClasses,
+
+      statistics: {
+        ...stats,
+        extractionTime
+      }
+    };
+
+    const outputPath = path.join(this.outputDir, 'function-signatures.json');
+    const metadata = await compression.compressAndSave(signaturesMap, outputPath, { forceAbbreviation: true });
+
+    console.log(`✓ Generated function-signatures.json (${metadata.compressedSize} bytes, ${allFunctions.length} functions, ${allClasses.length} classes)`);
+
+    return { file: outputPath, metadata };
+  }
+
+  /**
+   * Generate types map with TypeScript interfaces, type aliases, and enums
+   * Creates types-map.json with type definitions
+   */
+  async generateTypesMap() {
+    const startTime = Date.now();
+    const extractor = new SignatureExtractor();
+    const files = this.scanResults.files;
+
+    // Filter to TypeScript files only
+    const tsFiles = files.filter(f =>
+      ['ts', 'tsx'].includes(f.extension?.toLowerCase())
+    );
+
+    const allInterfaces = [];
+    const allTypeAliases = [];
+    const allEnums = [];
+
+    for (const file of tsFiles) {
+      try {
+        const fullPath = path.join(this.projectRoot, file.relativePath);
+        const source = await fs.readFile(fullPath, 'utf8');
+
+        const result = extractor.parseTypeScriptFile(source, file.relativePath);
+
+        if (result.interfaces) {
+          allInterfaces.push(...result.interfaces);
+        }
+        if (result.typeAliases) {
+          allTypeAliases.push(...result.typeAliases);
+        }
+        if (result.enums) {
+          allEnums.push(...result.enums);
+        }
+      } catch (err) {
+        // Skip files that can't be parsed
+        continue;
+      }
+    }
+
+    const extractionTime = Date.now() - startTime;
+
+    const typesMap = {
+      version: '1.0.0',
+      projectHash: this.projectHash,
+      generated: new Date().toISOString(),
+      mapType: 'types',
+
+      interfaces: allInterfaces,
+      typeAliases: allTypeAliases,
+      enums: allEnums,
+
+      statistics: {
+        totalInterfaces: allInterfaces.length,
+        totalTypeAliases: allTypeAliases.length,
+        totalEnums: allEnums.length,
+        filesProcessed: tsFiles.length,
+        extractionTime
+      }
+    };
+
+    const outputPath = path.join(this.outputDir, 'types-map.json');
+    const metadata = await compression.compressAndSave(typesMap, outputPath, { forceAbbreviation: true });
+
+    console.log(`✓ Generated types-map.json (${metadata.compressedSize} bytes, ${allInterfaces.length} interfaces, ${allTypeAliases.length} types, ${allEnums.length} enums)`);
+
+    return { file: outputPath, metadata };
+  }
+
 }
 
 module.exports = MapGenerator;

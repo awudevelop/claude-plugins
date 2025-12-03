@@ -1,6 +1,6 @@
 # Project Maps Stats Command
 
-Show compression metrics and system statistics for project maps.
+Show compression statistics for project maps.
 
 ## Usage
 
@@ -10,130 +10,81 @@ Show compression metrics and system statistics for project maps.
 
 ## Implementation
 
-### Step 1: Scan All Project Maps
+### Step 1: Run Stats Command
 
-Scan the maps directory and collect statistics:
+Execute the unified CLI:
 
 ```bash
-du -sh ~/.claude/project-maps/
-ls -lR ~/.claude/project-maps/ | wc -l
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js project-maps stats
 ```
 
-### Step 2: Calculate Compression Metrics
+### Step 2: Parse JSON Response
 
-For each project, read compression metadata:
+The response includes:
+- `success`: Boolean indicating success
+- `projectHash`: Hash of the project
+- `mapsDirectory`: Location of maps
+- `stats`: Compression statistics
+  - `totalOriginal`: Total original size
+  - `totalCompressed`: Total compressed size
+  - `totalRatio`: Overall compression ratio
+  - `maps`: Array of per-map statistics
 
-```javascript
-const allStats = {
-  totalProjects: 0,
-  totalFiles: 0,
-  totalMaps: 0,
-  originalSize: 0,
-  compressedSize: 0,
-  totalStorage: 0
-};
+### Step 3: Display Results
 
-// Aggregate from all summary.json files
-for (const projectHash of projectHashes) {
-  const summary = await loadSummary(projectHash);
-  allStats.totalFiles += summary.statistics.totalFiles;
-  // ... aggregate other stats
-}
-```
-
-### Step 3: Display Statistics
-
-Show comprehensive system stats:
+Format the output:
 
 ```
 Project Maps Statistics
 
-System Overview:
-  Projects mapped: {project_count}
-  Total files scanned: {total_files}
-  Total maps generated: {total_maps}
-  Storage location: ~/.claude/project-maps/
+Project: {projectHash}
+Location: {mapsDirectory}
 
-Storage Metrics:
-  Total storage used: {total_storage} MB
-  Original data size: {original_size} MB
-  Compressed size: {compressed_size} MB
-  Space saved: {space_saved} MB ({savings_percent}%)
+Map Compression:
+  Map Name                Original    Compressed  Ratio
+  ------------------------------------------------
+  summary.json            {size}      {size}      {ratio}
+  tree.json               {size}      {size}      {ratio}
+  metadata.json           {size}      {size}      {ratio}
+  content-summaries.json  {size}      {size}      {ratio}
+  indices.json            {size}      {size}      {ratio}
+  existence-proofs.json   {size}      {size}      {ratio}
+  quick-queries.json      {size}      {size}      {ratio}
+  dependencies-forward    {size}      {size}      {ratio}
+  dependencies-reverse    {size}      {size}      {ratio}
+  relationships.json      {size}      {size}      {ratio}
+  issues.json             {size}      {size}      {ratio}
+  ------------------------------------------------
+  Total                   {total}     {total}     {ratio}
 
-Compression Efficiency:
-  Average compression ratio: {avg_ratio}%
-  Best compression: {best_ratio}% ({project_name})
-  Worst compression: {worst_ratio}% ({project_name})
-
-  Compression breakdown:
-    • Level 1 (minification): {level1_ratio}%
-    • Level 2 (key abbreviation): {level2_ratio}%
-    • Level 3 (deduplication): {level3_ratio}%
-
-Map Distribution:
-  • Per project: 11 maps (fixed)
-  • Total maps: {total_maps}
-
-Performance:
-  • Average generation time: {avg_gen_time}ms
-  • Average map size: {avg_map_size} KB
-  • Staleness distribution:
-      Fresh (0-30): {fresh_count} projects
-      Moderate (30-60): {moderate_count} projects
-      Critical (60+): {critical_count} projects
-
-Recommendations:
-  ⚠️  {stale_count} projects need refresh
-  ✓  Storage efficiency: {efficiency}%
-  💡 Consider cleaning old maps: /project-maps-clean
+Compression achieved: {totalRatio}
 ```
 
-### Step 4: Per-Project Breakdown
+### Step 4: Show Recommendations
 
-Optionally show detailed per-project stats:
-
+If compression ratio is low:
 ```
-Per-Project Breakdown:
-
-1. {project_name}
-   Maps: 11
-   Original: {original_size} KB
-   Compressed: {compressed_size} KB
-   Ratio: {ratio}%
-   Staleness: {score}/100
-
-2. {project_name}
-   Maps: 11
-   Original: {original_size} KB
-   Compressed: {compressed_size} KB
-   Ratio: {ratio}%
-   Staleness: {score}/100
+Tip: Consider regenerating maps for better compression
+Run: /project-maps-refresh --full
 ```
 
 ## Error Handling
 
-**No maps found:**
+If maps don't exist:
 ```
-No project maps found
-
-Generate maps first:
-  /project-maps-generate
+No maps found for this project.
+Run: /project-maps-generate
 ```
 
-**Cannot calculate stats:**
+If stats cannot be calculated:
 ```
-⚠️  Unable to calculate complete statistics
-
-Some map files may be corrupt or inaccessible.
-Try regenerating maps for affected projects.
+Unable to calculate statistics.
+Some map files may be corrupt.
+Try regenerating: /project-maps-refresh --full
 ```
 
-## Examples
+## Notes
 
-```bash
-# Show system statistics
-/project-maps-stats
-
-# Show detailed per-project stats
-/project-maps-stats --detailed
-```
+- Stats are calculated on-demand
+- Compression levels: minification, key abbreviation, deduplication
+- Target compression ratio: 40-60%

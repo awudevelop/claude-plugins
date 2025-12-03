@@ -10,111 +10,63 @@ List all projects with generated context maps.
 
 ## Implementation
 
-### Step 1: Scan Maps Directory
+### Step 1: Run List Command
 
-List all subdirectories in the maps storage:
+Execute the unified CLI:
 
 ```bash
-ls -d ~/.claude/project-maps/*/ 2>/dev/null
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js project-maps list
 ```
 
-Each subdirectory represents a project hash.
+### Step 2: Parse and Display Results
 
-### Step 2: Load Summary for Each Project
+The response includes:
+- `count`: Total number of projects
+- `projects`: Array of project info
 
-For each project hash, load the summary.json to get project details:
+For each project show:
+- Project name
+- Project path
+- Hash
+- File count
+- Last generated timestamp
+- Staleness status
 
-```javascript
-const fs = require('fs').promises;
-const path = require('path');
-const MapLoader = require('./map-loader');
-
-const mapsBaseDir = path.join(process.env.HOME, '.claude/project-maps');
-const projectDirs = await fs.readdir(mapsBaseDir);
-
-for (const hash of projectDirs) {
-  if (hash === 'maps' || hash === 'schemas' || hash === 'temp') continue;
-
-  try {
-    const summaryPath = path.join(mapsBaseDir, hash, 'summary.json');
-    const summary = await loadSummary(summaryPath);
-    // Display project info
-  } catch (error) {
-    // Skip invalid projects
-  }
-}
-```
-
-### Step 3: Display Projects List
-
-Show all projects with their metadata:
+### Step 3: Format Output
 
 ```
 Project Maps
 
 Found {count} projects with generated maps:
 
-1. {project_name}
-   Path: {project_path}
-   Hash: {project_hash}
-   Files: {file_count}
+1. {name}
+   Path: {path}
+   Hash: {hash}
+   Files: {files}
    Generated: {timestamp}
-   Staleness: {score}/100 ({level})
-   Size: {total_size}
+   Staleness: {score}/100
 
-2. {project_name}
-   Path: {project_path}
-   Hash: {project_hash}
-   Files: {file_count}
-   Generated: {timestamp}
-   Staleness: {score}/100 ({level})
-   Size: {total_size}
+2. {name}
+   ...
 
-Total storage: {total_storage_size}
-
-Commands:
-  • Load project: /project-maps-load
-  • Refresh: /project-maps-refresh
-  • Generate new: /project-maps-generate
+Total storage: Calculate from all projects
 ```
 
 ### Step 4: Highlight Stale Projects
 
-Mark projects that need refresh:
-
+If any projects have high staleness scores (>60):
 ```
-⚠️  The following projects may need refresh:
-  • {project_name} - Staleness: {score}/100
-  • {project_name} - Staleness: {score}/100
-
-Run: /project-maps-refresh to update
+Projects needing refresh:
+  {name} - Staleness: {score}/100
 ```
 
 ## Error Handling
 
-**No maps found:**
+If no maps directory exists:
 ```
 No project maps found
-
 Storage location: ~/.claude/project-maps/
 
 Generate maps for current project:
   /project-maps-generate
-```
-
-**Corrupt project data:**
-```
-⚠️  Found {count} projects, but {error_count} have corrupt data:
-  • {hash} - Cannot read summary
-  • {hash} - Missing metadata
-
-Consider removing corrupt entries:
-  rm -rf ~/.claude/project-maps/{hash}
-```
-
-## Examples
-
-```bash
-# List all projects with maps
-/project-maps-list
 ```

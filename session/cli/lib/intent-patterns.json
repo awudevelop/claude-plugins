@@ -1,0 +1,109 @@
+{
+  "version": "1.0.0",
+  "description": "Maps natural language intents to project map queries",
+  "intents": {
+    "find-file": {
+      "description": "Find files by name or pattern",
+      "queries": ["summary", "structure"],
+      "keywords": ["find", "where is", "locate", "search for", "which file", "what file"],
+      "patterns": ["find.*file", "where.*is", "locate.*", "search.*for"]
+    },
+    "find-function": {
+      "description": "Find functions, methods, or exports",
+      "queries": ["dependencies", "component-meta", "modules"],
+      "keywords": ["function", "method", "export", "import", "defined", "declaration"],
+      "patterns": ["where.*function", "find.*method", "what.*export", "who.*define"]
+    },
+    "architecture-overview": {
+      "description": "Understand project structure and architecture",
+      "queries": ["backend-layers", "modules", "summary", "structure"],
+      "keywords": ["architecture", "structure", "organized", "layout", "overview", "how is", "what is the"],
+      "patterns": ["how.*organized", "what.*architecture", "project.*structure", "codebase.*layout"]
+    },
+    "dependency-analysis": {
+      "description": "Analyze dependencies between files/modules",
+      "queries": ["dependencies", "module-deps", "relationships"],
+      "keywords": ["depends", "dependency", "import", "require", "uses", "coupled"],
+      "patterns": ["what.*import", "who.*use", "depends.*on", "coupled.*to"]
+    },
+    "impact-analysis": {
+      "description": "What would break if I change X",
+      "queries": ["dependencies", "relationships", "module-deps"],
+      "keywords": ["break", "impact", "affect", "change", "modify", "refactor", "who uses"],
+      "patterns": ["what.*break", "who.*use", "impact.*of", "affect.*if", "what.*depend"]
+    },
+    "component-info": {
+      "description": "Get information about React/frontend components",
+      "queries": ["components", "component-meta", "frontend-components"],
+      "keywords": ["component", "react", "props", "state", "hooks", "render"],
+      "patterns": ["what.*component", "component.*use", "props.*of", "state.*in"]
+    },
+    "module-info": {
+      "description": "Get information about business modules",
+      "queries": ["modules", "module-deps"],
+      "keywords": ["module", "package", "domain", "feature", "boundary"],
+      "patterns": ["what.*module", "module.*contain", "feature.*files"]
+    },
+    "database-info": {
+      "description": "Database schema and table information",
+      "queries": ["database", "table-mapping"],
+      "keywords": ["table", "database", "schema", "column", "model", "orm", "migration"],
+      "patterns": ["what.*table", "database.*schema", "column.*in", "model.*for"]
+    },
+    "code-issues": {
+      "description": "Find code quality issues",
+      "queries": ["issues"],
+      "keywords": ["issue", "problem", "broken", "unused", "circular", "warning", "error"],
+      "patterns": ["what.*issue", "any.*problem", "broken.*import", "unused.*file"]
+    },
+    "entry-points": {
+      "description": "Find application entry points",
+      "queries": ["entry-points", "summary"],
+      "keywords": ["entry", "main", "start", "bootstrap", "initialize"],
+      "patterns": ["entry.*point", "where.*start", "main.*file", "bootstrap"]
+    },
+    "framework-info": {
+      "description": "Detect framework and technology stack",
+      "queries": ["framework", "summary", "languages"],
+      "keywords": ["framework", "stack", "technology", "built with", "using"],
+      "patterns": ["what.*framework", "built.*with", "technology.*stack", "using.*what"]
+    },
+    "test-info": {
+      "description": "Test configuration and locations",
+      "queries": ["tests", "summary"],
+      "keywords": ["test", "spec", "jest", "mocha", "testing", "coverage"],
+      "patterns": ["where.*test", "test.*file", "testing.*framework"]
+    },
+    "largest-files": {
+      "description": "Find largest or most complex files",
+      "queries": ["largest", "summary"],
+      "keywords": ["largest", "biggest", "complex", "long", "size"],
+      "patterns": ["largest.*file", "biggest.*file", "most.*complex"]
+    },
+    "recent-changes": {
+      "description": "Recently modified files",
+      "queries": ["recent", "summary"],
+      "keywords": ["recent", "modified", "changed", "updated", "latest"],
+      "patterns": ["recent.*change", "modified.*file", "latest.*update"]
+    },
+    "data-flow": {
+      "description": "How data flows through the application",
+      "queries": ["data-flow", "relationships", "dependencies"],
+      "keywords": ["flow", "data", "passes", "through", "pipeline"],
+      "patterns": ["data.*flow", "how.*data", "pass.*through"]
+    }
+  },
+  "fallback": {
+    "description": "Default when no intent matches",
+    "queries": ["summary"],
+    "message": "I'll show you a project summary. Try being more specific about what you're looking for."
+  },
+  "synonyms": {
+    "function": ["func", "fn", "method", "procedure"],
+    "component": ["comp", "widget", "element"],
+    "module": ["mod", "package", "feature"],
+    "file": ["source", "script", "code"],
+    "import": ["require", "include", "use"],
+    "dependency": ["dep", "deps", "depends"]
+  }
+}

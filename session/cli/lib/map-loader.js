@@ -125,7 +125,7 @@ class MapLoader {
 
   /**
    * Load maps by tier (for tiered loading architecture)
-   * @param {number} tier - Tier level (1, 2, or 3)
+   * @param {number} tier - Tier level (1, 2, 3, or 4)
    * @returns {Object} Maps for that tier
    */
   async loadTier(tier) {
@@ -134,12 +134,15 @@ class MapLoader {
       2: ['tree', 'existence-proofs'],
       3: ['metadata', 'content-summaries', 'indices',
           'dependencies-forward', 'dependencies-reverse',
-          'relationships', 'issues']
+          'relationships', 'issues'],
+      4: ['backend-layers', 'frontend-components', 'component-metadata',
+          'modules', 'module-dependencies', 'database-schema',
+          'data-flow', 'table-module-mapping']
     };
 
     const maps = tierMaps[tier];
     if (!maps) {
-      throw new Error(`Invalid tier: ${tier}. Must be 1, 2, or 3.`);
+      throw new Error(`Invalid tier: ${tier}. Must be 1, 2, 3, or 4.`);
     }
 
     return await this.loadMultiple(maps);
@@ -151,17 +154,29 @@ class MapLoader {
    */
   async loadAll() {
     const allMaps = [
+      // Tier 1: Essential summaries
       'summary',
+      'quick-queries',
+      // Tier 2: Structure & existence
       'tree',
+      'existence-proofs',
+      // Tier 3: Detailed metadata
       'metadata',
       'content-summaries',
       'indices',
-      'existence-proofs',
-      'quick-queries',
       'dependencies-forward',
       'dependencies-reverse',
       'relationships',
-      'issues'
+      'issues',
+      // Tier 4: Architecture & components (previously unexposed)
+      'backend-layers',
+      'frontend-components',
+      'component-metadata',
+      'modules',
+      'module-dependencies',
+      'database-schema',
+      'data-flow',
+      'table-module-mapping'
     ];
 
     return await this.loadMultiple(allMaps);
@@ -237,7 +252,7 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  const projectPath = args[0];
+  const projectPath = path.resolve(args[0]);
   const noCheck = args.includes('--no-check');
 
   const loader = new MapLoader(projectPath, {

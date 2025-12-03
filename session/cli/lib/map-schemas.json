@@ -1,0 +1,802 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Schema definitions for function/method signature extraction in project maps",
+  "created": "2025-12-03T06:30:00.000Z",
+  "schemas": {
+    "signatureMap": {
+      "description": "Top-level schema for functions-signatures-map.json",
+      "type": "object",
+      "required": ["version", "projectPath", "generated", "functions", "classes"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "example": "1.0.0"
+        },
+        "projectPath": {
+          "type": "string",
+          "description": "Absolute path to the project root"
+        },
+        "generated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "functions": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/functionSignature" }
+        },
+        "classes": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/classSignature" }
+        },
+        "statistics": {
+          "$ref": "#/schemas/signatureStatistics"
+        }
+      }
+    },
+
+    "functionSignature": {
+      "description": "Schema for a standalone function signature",
+      "type": "object",
+      "required": ["name", "location", "parameters"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Function name (or 'anonymous' for unnamed functions)"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["function", "arrow", "async", "generator", "async-generator"],
+          "description": "Type of function declaration"
+        },
+        "parameters": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/parameter" }
+        },
+        "returnType": {
+          "$ref": "#/schemas/typeAnnotation",
+          "description": "Return type (TypeScript) or inferred type"
+        },
+        "generics": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/genericParameter" },
+          "description": "Generic type parameters (TypeScript)"
+        },
+        "isExported": {
+          "type": "boolean",
+          "description": "Whether function is exported"
+        },
+        "isDefault": {
+          "type": "boolean",
+          "description": "Whether function is default export"
+        },
+        "jsdoc": {
+          "$ref": "#/schemas/jsdocInfo",
+          "description": "JSDoc documentation if present"
+        },
+        "location": {
+          "$ref": "#/schemas/sourceLocation"
+        },
+        "complexity": {
+          "type": "integer",
+          "description": "Cyclomatic complexity estimate"
+        }
+      }
+    },
+
+    "classSignature": {
+      "description": "Schema for a class with its methods",
+      "type": "object",
+      "required": ["name", "location", "methods"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Class name"
+        },
+        "extends": {
+          "type": "string",
+          "description": "Parent class name if extends another class"
+        },
+        "implements": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Interface names the class implements (TypeScript)"
+        },
+        "generics": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/genericParameter" }
+        },
+        "isAbstract": {
+          "type": "boolean",
+          "description": "Whether class is abstract (TypeScript)"
+        },
+        "isExported": {
+          "type": "boolean"
+        },
+        "isDefault": {
+          "type": "boolean"
+        },
+        "decorators": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/decorator" },
+          "description": "Class decorators"
+        },
+        "constructor": {
+          "$ref": "#/schemas/methodSignature",
+          "description": "Constructor signature if present"
+        },
+        "methods": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/methodSignature" }
+        },
+        "properties": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/propertySignature" },
+          "description": "Class properties/fields"
+        },
+        "jsdoc": {
+          "$ref": "#/schemas/jsdocInfo"
+        },
+        "location": {
+          "$ref": "#/schemas/sourceLocation"
+        }
+      }
+    },
+
+    "methodSignature": {
+      "description": "Schema for a class method",
+      "type": "object",
+      "required": ["name", "parameters", "location"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Method name"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["method", "getter", "setter", "constructor"],
+          "default": "method"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public", "private", "protected"],
+          "default": "public",
+          "description": "Access modifier"
+        },
+        "isStatic": {
+          "type": "boolean",
+          "default": false
+        },
+        "isAsync": {
+          "type": "boolean",
+          "default": false
+        },
+        "isAbstract": {
+          "type": "boolean",
+          "default": false,
+          "description": "Abstract method (TypeScript)"
+        },
+        "isOverride": {
+          "type": "boolean",
+          "default": false,
+          "description": "Uses override keyword (TypeScript)"
+        },
+        "parameters": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/parameter" }
+        },
+        "returnType": {
+          "$ref": "#/schemas/typeAnnotation"
+        },
+        "generics": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/genericParameter" }
+        },
+        "decorators": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/decorator" }
+        },
+        "jsdoc": {
+          "$ref": "#/schemas/jsdocInfo"
+        },
+        "location": {
+          "$ref": "#/schemas/sourceLocation"
+        }
+      }
+    },
+
+    "propertySignature": {
+      "description": "Schema for a class property/field",
+      "type": "object",
+      "required": ["name", "location"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public", "private", "protected"],
+          "default": "public"
+        },
+        "isStatic": {
+          "type": "boolean",
+          "default": false
+        },
+        "isReadonly": {
+          "type": "boolean",
+          "default": false
+        },
+        "isOptional": {
+          "type": "boolean",
+          "default": false
+        },
+        "type": {
+          "$ref": "#/schemas/typeAnnotation"
+        },
+        "hasDefault": {
+          "type": "boolean",
+          "description": "Whether property has a default value"
+        },
+        "decorators": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/decorator" }
+        },
+        "jsdoc": {
+          "$ref": "#/schemas/jsdocInfo"
+        },
+        "location": {
+          "$ref": "#/schemas/sourceLocation"
+        }
+      }
+    },
+
+    "parameter": {
+      "description": "Schema for a function/method parameter",
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Parameter name (may be pattern for destructuring)"
+        },
+        "type": {
+          "$ref": "#/schemas/typeAnnotation",
+          "description": "Type annotation (TypeScript) or inferred type"
+        },
+        "isOptional": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether parameter is optional"
+        },
+        "isRest": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether parameter is rest parameter (...args)"
+        },
+        "hasDefault": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether parameter has a default value"
+        },
+        "defaultValue": {
+          "type": "string",
+          "description": "Default value as string (if simple enough)"
+        },
+        "pattern": {
+          "type": "string",
+          "enum": ["identifier", "object", "array"],
+          "default": "identifier",
+          "description": "Destructuring pattern type"
+        },
+        "properties": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/parameter" },
+          "description": "Nested properties for object destructuring"
+        },
+        "decorators": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/decorator" },
+          "description": "Parameter decorators (TypeScript)"
+        }
+      }
+    },
+
+    "typeAnnotation": {
+      "description": "Schema for type information",
+      "type": "object",
+      "properties": {
+        "raw": {
+          "type": "string",
+          "description": "Raw type as written in source"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "primitive", "reference", "array", "tuple", "union",
+            "intersection", "function", "object", "literal",
+            "generic", "conditional", "mapped", "indexed", "unknown"
+          ],
+          "description": "Category of type"
+        },
+        "name": {
+          "type": "string",
+          "description": "Type name for reference types"
+        },
+        "typeArguments": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/typeAnnotation" },
+          "description": "Generic type arguments"
+        },
+        "members": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/typeAnnotation" },
+          "description": "Member types for union/intersection/tuple"
+        },
+        "elementType": {
+          "$ref": "#/schemas/typeAnnotation",
+          "description": "Element type for arrays"
+        },
+        "isNullable": {
+          "type": "boolean",
+          "description": "Whether type includes null"
+        },
+        "isUndefinable": {
+          "type": "boolean",
+          "description": "Whether type includes undefined"
+        }
+      }
+    },
+
+    "genericParameter": {
+      "description": "Schema for generic type parameter",
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Type parameter name (e.g., T, K, V)"
+        },
+        "constraint": {
+          "$ref": "#/schemas/typeAnnotation",
+          "description": "Constraint (extends clause)"
+        },
+        "default": {
+          "$ref": "#/schemas/typeAnnotation",
+          "description": "Default type"
+        }
+      }
+    },
+
+    "decorator": {
+      "description": "Schema for decorator usage",
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Decorator name"
+        },
+        "arguments": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Decorator arguments as strings"
+        }
+      }
+    },
+
+    "jsdocInfo": {
+      "description": "Schema for JSDoc documentation",
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Main description text"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string" },
+              "description": { "type": "string" },
+              "optional": { "type": "boolean" },
+              "defaultValue": { "type": "string" }
+            }
+          }
+        },
+        "returns": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "description": { "type": "string" }
+          }
+        },
+        "throws": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "examples": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "deprecated": {
+          "type": "string",
+          "description": "Deprecation notice if present"
+        },
+        "see": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "since": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Other JSDoc tags as key-value pairs"
+        }
+      }
+    },
+
+    "sourceLocation": {
+      "description": "Schema for source code location",
+      "type": "object",
+      "required": ["file", "line"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Relative file path from project root"
+        },
+        "line": {
+          "type": "integer",
+          "description": "Starting line number (1-indexed)"
+        },
+        "column": {
+          "type": "integer",
+          "description": "Starting column number"
+        },
+        "endLine": {
+          "type": "integer",
+          "description": "Ending line number"
+        },
+        "endColumn": {
+          "type": "integer",
+          "description": "Ending column number"
+        }
+      }
+    },
+
+    "signatureStatistics": {
+      "description": "Schema for signature extraction statistics",
+      "type": "object",
+      "properties": {
+        "totalFunctions": {
+          "type": "integer",
+          "description": "Total standalone functions extracted"
+        },
+        "totalClasses": {
+          "type": "integer",
+          "description": "Total classes extracted"
+        },
+        "totalMethods": {
+          "type": "integer",
+          "description": "Total class methods extracted"
+        },
+        "byKind": {
+          "type": "object",
+          "properties": {
+            "functions": { "type": "integer" },
+            "arrowFunctions": { "type": "integer" },
+            "asyncFunctions": { "type": "integer" },
+            "generators": { "type": "integer" },
+            "methods": { "type": "integer" },
+            "getters": { "type": "integer" },
+            "setters": { "type": "integer" },
+            "constructors": { "type": "integer" }
+          }
+        },
+        "byVisibility": {
+          "type": "object",
+          "properties": {
+            "public": { "type": "integer" },
+            "private": { "type": "integer" },
+            "protected": { "type": "integer" }
+          }
+        },
+        "withTypeAnnotations": {
+          "type": "integer",
+          "description": "Count of functions/methods with full type annotations"
+        },
+        "withJsdoc": {
+          "type": "integer",
+          "description": "Count of functions/methods with JSDoc"
+        },
+        "filesProcessed": {
+          "type": "integer"
+        },
+        "extractionTime": {
+          "type": "number",
+          "description": "Time taken in milliseconds"
+        }
+      }
+    },
+
+    "typesMap": {
+      "description": "Top-level schema for types-map.json (TypeScript interfaces/types)",
+      "type": "object",
+      "required": ["version", "projectPath", "generated", "interfaces", "typeAliases", "enums"],
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "projectPath": {
+          "type": "string"
+        },
+        "generated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "interfaces": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/interfaceDefinition" }
+        },
+        "typeAliases": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/typeAliasDefinition" }
+        },
+        "enums": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/enumDefinition" }
+        },
+        "statistics": {
+          "type": "object",
+          "properties": {
+            "totalInterfaces": { "type": "integer" },
+            "totalTypeAliases": { "type": "integer" },
+            "totalEnums": { "type": "integer" },
+            "filesProcessed": { "type": "integer" }
+          }
+        }
+      }
+    },
+
+    "interfaceDefinition": {
+      "description": "Schema for TypeScript interface",
+      "type": "object",
+      "required": ["name", "location", "properties"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "extends": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Extended interfaces"
+        },
+        "generics": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/genericParameter" }
+        },
+        "properties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "$ref": "#/schemas/typeAnnotation" },
+              "isOptional": { "type": "boolean" },
+              "isReadonly": { "type": "boolean" },
+              "jsdoc": { "$ref": "#/schemas/jsdocInfo" }
+            }
+          }
+        },
+        "methods": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/methodSignature" }
+        },
+        "callSignatures": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/functionSignature" }
+        },
+        "indexSignatures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "keyType": { "$ref": "#/schemas/typeAnnotation" },
+              "valueType": { "$ref": "#/schemas/typeAnnotation" }
+            }
+          }
+        },
+        "isExported": {
+          "type": "boolean"
+        },
+        "jsdoc": {
+          "$ref": "#/schemas/jsdocInfo"
+        },
+        "location": {
+          "$ref": "#/schemas/sourceLocation"
+        },
+        "usedIn": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Files that reference this interface"
+        }
+      }
+    },
+
+    "typeAliasDefinition": {
+      "description": "Schema for TypeScript type alias",
+      "type": "object",
+      "required": ["name", "type", "location"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "generics": {
+          "type": "array",
+          "items": { "$ref": "#/schemas/genericParameter" }
+        },
+        "type": {
+          "$ref": "#/schemas/typeAnnotation"
+        },
+        "isExported": {
+          "type": "boolean"
+        },
+        "jsdoc": {
+          "$ref": "#/schemas/jsdocInfo"
+        },
+        "location": {
+          "$ref": "#/schemas/sourceLocation"
+        },
+        "usedIn": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "enumDefinition": {
+      "description": "Schema for TypeScript enum",
+      "type": "object",
+      "required": ["name", "members", "location"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "isConst": {
+          "type": "boolean",
+          "description": "Whether enum is const enum"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "value": { "type": ["string", "number"] },
+              "jsdoc": { "$ref": "#/schemas/jsdocInfo" }
+            }
+          }
+        },
+        "isExported": {
+          "type": "boolean"
+        },
+        "jsdoc": {
+          "$ref": "#/schemas/jsdocInfo"
+        },
+        "location": {
+          "$ref": "#/schemas/sourceLocation"
+        }
+      }
+    }
+  },
+
+  "abbreviations": {
+    "description": "Compressed key mappings for production maps",
+    "mappings": {
+      "n": "name",
+      "k": "kind",
+      "p": "parameters",
+      "r": "returnType",
+      "g": "generics",
+      "e": "isExported",
+      "d": "isDefault",
+      "j": "jsdoc",
+      "l": "location",
+      "v": "visibility",
+      "s": "isStatic",
+      "a": "isAsync",
+      "m": "methods",
+      "c": "constructor",
+      "x": "extends",
+      "i": "implements",
+      "t": "type",
+      "o": "isOptional",
+      "f": "file",
+      "ln": "line"
+    }
+  },
+
+  "examples": {
+    "standaloneFunction": {
+      "name": "calculateTotal",
+      "kind": "async",
+      "parameters": [
+        {
+          "name": "items",
+          "type": { "raw": "CartItem[]", "kind": "array", "elementType": { "kind": "reference", "name": "CartItem" } },
+          "isOptional": false
+        },
+        {
+          "name": "discount",
+          "type": { "raw": "number", "kind": "primitive" },
+          "isOptional": true,
+          "hasDefault": true,
+          "defaultValue": "0"
+        }
+      ],
+      "returnType": { "raw": "Promise<number>", "kind": "generic", "name": "Promise", "typeArguments": [{ "kind": "primitive", "raw": "number" }] },
+      "isExported": true,
+      "jsdoc": {
+        "description": "Calculates the total price of items with optional discount",
+        "params": [
+          { "name": "items", "type": "CartItem[]", "description": "Array of cart items" },
+          { "name": "discount", "type": "number", "description": "Discount percentage", "optional": true }
+        ],
+        "returns": { "type": "Promise<number>", "description": "Total price after discount" }
+      },
+      "location": { "file": "src/utils/cart.ts", "line": 42, "endLine": 55 }
+    },
+
+    "classWithMethods": {
+      "name": "UserService",
+      "extends": "BaseService",
+      "implements": ["IUserService"],
+      "generics": [{ "name": "T", "constraint": { "raw": "User", "kind": "reference" } }],
+      "isExported": true,
+      "decorators": [{ "name": "Injectable", "arguments": [] }],
+      "constructor": {
+        "name": "constructor",
+        "kind": "constructor",
+        "parameters": [
+          { "name": "db", "type": { "raw": "Database", "kind": "reference" } },
+          { "name": "logger", "type": { "raw": "Logger", "kind": "reference" }, "decorators": [{ "name": "Inject", "arguments": ["'logger'"] }] }
+        ],
+        "location": { "file": "src/services/user.ts", "line": 15 }
+      },
+      "methods": [
+        {
+          "name": "findById",
+          "kind": "method",
+          "visibility": "public",
+          "isAsync": true,
+          "parameters": [{ "name": "id", "type": { "raw": "string", "kind": "primitive" } }],
+          "returnType": { "raw": "Promise<T | null>", "kind": "generic" },
+          "jsdoc": { "description": "Find user by ID" },
+          "location": { "file": "src/services/user.ts", "line": 25 }
+        },
+        {
+          "name": "validateEmail",
+          "kind": "method",
+          "visibility": "private",
+          "isStatic": true,
+          "parameters": [{ "name": "email", "type": { "raw": "string", "kind": "primitive" } }],
+          "returnType": { "raw": "boolean", "kind": "primitive" },
+          "location": { "file": "src/services/user.ts", "line": 45 }
+        }
+      ],
+      "properties": [
+        { "name": "cache", "visibility": "private", "type": { "raw": "Map<string, T>", "kind": "generic" }, "isReadonly": true }
+      ],
+      "location": { "file": "src/services/user.ts", "line": 10, "endLine": 60 }
+    }
+  }
+}

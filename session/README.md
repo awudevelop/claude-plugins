@@ -1,15 +1,15 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.17.4** - Plan Update Feature: Atomic operations for modifying plans with execution safety
+**Version 3.17.5** - Plan Update Feature: Atomic operations for modifying plans with execution safety
 
 Intelligent session management with **72% token reduction** through parallel subagent delegation. Zero-blocking conversation logging (<2ms), intelligent analysis via isolated subagents (2-4s), hybrid cleanup on all exit paths. Fast, efficient session resume with minimal main context usage.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-v3.17.4-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-v3.17.5-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.17.4 (Latest Update)
+## 🚀 What's New in v3.17.5 (Latest Update)
 
 ### 📝 Plan Update Feature
 - **Atomic Operations** - Add, update, delete, move, and reorder phases and tasks
@@ -95,7 +95,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 
 ### Previous Update: v3.6.2
 
-## 🚀 What's New in v3.17.4
+## 🚀 What's New in v3.17.5
 
 ### 📝 Self-Contained Conversation Logs
 - 🎯 **Complete Capture** - Both user prompts AND Claude's full responses
@@ -115,7 +115,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 
 ### Previous Update: v3.6.0
 
-## 🚀 What's New in v3.17.4
+## 🚀 What's New in v3.17.5
 
 ### 🔍 Automatic Git History Capture
 - 📊 **Repository Context** - Last 50 commits captured automatically at session boundaries
@@ -268,6 +268,36 @@ Never lose context again! This plugin provides intelligent session management fo
 - **Backward Compatible** - Automatically handles both v1.0 (paragraph) and v2.0 (numbered) formats
 - **Better Coverage** - 95%+ topic capture vs <70% with previous format
 - **More Scannable** - Numbered lists easier to read and machine-parseable
+
+### 🗺️ Project Maps (NEW in mapping-upgrade)
+
+Intelligent codebase navigation through pre-computed context maps:
+
+**Capabilities:**
+- **17 Map Types** - File structure, dependencies, architecture, modules, components, and more
+- **Natural Language Queries** - Ask questions like "what framework is this?" or "show me the modules"
+- **Pattern-Based Search** - Search by file name, export, import, function signature, class, or type
+- **Intent Routing** - Automatic classification of questions to the right data source
+- **Claude-Optimized Output** - Results formatted with absolute paths, line numbers, and contextual annotations
+
+**Performance Benchmarks:**
+| Operation | Response Time |
+|-----------|---------------|
+| Quick queries (framework, tests) | < 3ms |
+| Extended queries (modules, issues) | < 10ms |
+| Pattern search | < 15ms |
+| Intent routing | < 5ms |
+| List all projects | < 70ms |
+
+**Key Commands:**
+```bash
+/session:project-maps-generate      # Create maps for project
+/session:project-maps-ask "question"  # Natural language query
+/session:project-maps-query <type>  # Specific query
+/session:project-maps-search <type> <pattern>  # Pattern search
+```
+
+See [MAPS_USER_GUIDE.md](./docs/MAPS_USER_GUIDE.md) for complete documentation.
 
 ---
 

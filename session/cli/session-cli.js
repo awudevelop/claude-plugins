@@ -164,7 +164,9 @@ const commands = {
   'select-template': async (workType) => {
     const templateSelector = require('./lib/template-selector');
     return await templateSelector.selectTemplate(workType);
-  }
+  },
+  // Project Maps operations
+  'project-maps': require('./lib/commands/project-maps')
 };
 
 /**
@@ -223,6 +225,23 @@ Commands:
 
   capture-git <session-name>
       Capture git history in compressed JSON format (~2-3KB)
+
+  project-maps <subcommand> [options]
+      Manage project context maps
+
+      Subcommands:
+        generate [path]           Generate maps for project
+        load [--tier N|--map X]   Load and display maps
+        refresh [--full|--incr]   Refresh maps
+        list                      List all mapped projects
+        query <type>              Query project info
+        stats                     Show compression stats
+
+      Examples:
+        session-cli project-maps generate
+        session-cli project-maps load --tier 1
+        session-cli project-maps list
+        session-cli project-maps query framework
 
 Options:
   --help              Show this help message
@@ -295,7 +314,20 @@ async function main() {
 
     // Output result if present
     if (result !== undefined && result !== null) {
-      if (typeof result === 'object') {
+      // Handle lean output format (has 'output' property with raw string)
+      if (result.output !== undefined && !commandArgs.includes('--json')) {
+        console.log(result.output);
+        // Print metadata to stderr so it doesn't pollute output
+        if (result.count !== undefined) {
+          console.error(`# ${result.count} results in ${result.time}`);
+        }
+      } else if (result.formatted && !commandArgs.includes('--json')) {
+        // Handle verbose/claude format (has 'formatted' property with markdown)
+        console.log(result.formatted);
+        if (result.message) {
+          console.log(`\n---\n${result.message}`);
+        }
+      } else if (typeof result === 'object') {
         console.log(JSON.stringify(result, null, 2));
       } else {
         console.log(result);
