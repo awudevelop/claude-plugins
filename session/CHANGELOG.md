@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.18.1] - 2025-12-05
+
+### Added
+
+- **Custom Instructions for Plan Save** - Guide plan extraction with user prompts
+  - New `--prompt` option for `/session:plan-save` command
+  - Focus areas: "Focus on X" - prioritize specific topics
+  - Exclusions: "Exclude X", "Ignore X" - skip certain areas
+  - References: "--reference path" - load existing plan as context
+  - Scope limits: "Only last N messages" - limit conversation scope
+  - Negative prompts: "Do NOT..." - explicit constraints
+  - Instructions preserved in plan metadata for finalization phase
+
+- **Plan Commands in CLI Help** - Added missing documentation
+  - `validate-requirements`, `save-requirements`, `load-requirements`
+  - `get-plan-format`, `transform-plan`, `plan-exists`, `plan-update`
+  - `detect-work-type`, `select-template`
+
+### Changed
+
+- **plan-save.md** - Enhanced argument parsing for custom instructions
+  - Step 0 added for instruction parsing
+  - Subagent prompt now includes user directives
+  - Preview shows when custom instructions applied
+
+---
+
 ## [3.18.0] - 2025-12-05
 
 ### Added
