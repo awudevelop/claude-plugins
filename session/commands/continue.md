@@ -10,7 +10,7 @@ Use ONLY the exact command formats specified in this template.
 
 Parse the session name from the command arguments. The command format is: `/session:continue [name]`
 
-**OPTIMIZATION**: v3.7.0 uses parallel subagent delegation for 72% token reduction (77k → 22k tokens).
+**OPTIMIZATION**: v3.19.0 uses inline execution for git/goal + conditional subagent for consolidation (50% token reduction vs v3.7.0).
 
 ### Step 1: Validate Session Exists (CLI)
 
@@ -48,26 +48,50 @@ Before continuing the target session, close any currently active session if it's
 
 **Note**: This ensures clean session transitions with no abandoned active sessions.
 
-### Step 1.8: Calculate Absolute Paths for Subagents
+### Step 2: Refresh Git History (Inline)
 
-Before delegating to subagents, you need to determine absolute paths that subagents will use.
+Run the git capture CLI command directly (no subagent needed):
 
-**IMPORTANT**: Subagents don't inherit the working directory or environment variables from the main conversation. You MUST provide absolute paths explicitly.
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{session_name}"
+```
 
-Calculate these values (conceptually - don't run bash commands, just determine the values):
-- **Working directory**: Current working directory (you already know this from your environment)
-- **Plugin root**: `/Users/prajyot/.claude/plugins/marketplaces/automatewithus-plugins/session`
-- **Session path**: `{working_directory}/.claude/sessions/{session_name}`
+**Handle results:**
+- If `success: true` → Git history updated (continue)
+- If `success: false` → No git repo or error (OK, continue anyway)
 
-You will substitute these absolute paths into the subagent prompts in the next step.
+**Note**: The CLI handles all git operations internally. No AI analysis required.
 
-### Step 2: Delegate Heavy Work to Subagents (Parallel Execution)
+### Step 3: Extract Session Goal (Inline)
 
-**CRITICAL**: You MUST invoke ALL 3 Task tools in a SINGLE response message. This runs them in parallel and isolates heavy token usage from the main conversation.
+Use the Read tool to read the session.md file:
+- Path: `.claude/sessions/{session_name}/session.md`
 
-Use the Task tool to spawn 3 parallel subagents with these exact configurations:
+Extract the goal:
+1. Find the line starting with `## Goal`
+2. Extract all text after that line until the next `##` header or end of file
+3. Trim whitespace and store as `{extracted_goal}`
 
-**Subagent 1 - Consolidate Conversation Log:**
+**Fallback**: If file missing or no goal section, use `"Session {session_name}"` as fallback.
+
+**Note**: This is simple text extraction. No AI analysis required.
+
+### Step 4: Consolidate Conversation Log (Conditional Subagent)
+
+**First, check if consolidation is needed:**
+
+Use the Read tool to check if the conversation log exists:
+- Path: `.claude/sessions/{session_name}/conversation-log.jsonl`
+
+**If file does NOT exist or is empty:**
+- Skip subagent entirely
+- Set consolidation_result = `{ "skipped": true, "reason": "No conversation log" }`
+- Continue to Step 5
+
+**If file EXISTS:**
+
+Spawn a single subagent for consolidation:
+
 - subagent_type: "general-purpose"
 - description: "Consolidate conversation log"
 - model: "haiku"
@@ -77,71 +101,21 @@ Use the Task tool to spawn 3 parallel subagents with these exact configurations:
   **Absolute paths for this task:**
   - Working directory: {working_directory}
   - Plugin root: ${CLAUDE_PLUGIN_ROOT}
-  - Session path: {session_path}
+  - Session path: {working_directory}/.claude/sessions/{session_name}
 
   Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/consolidate-log.md
   That file contains template placeholders like "{session_name}", "{session_path}", "${CLAUDE_PLUGIN_ROOT}".
   Replace all such placeholders with the actual values provided above.
   Then execute the resulting instructions.
 
-**Subagent 2 - Refresh Git History:**
-- subagent_type: "general-purpose"
-- description: "Refresh git history"
-- model: "haiku"
-- prompt: |
-  You are working with session: {session_name}
-
-  **Absolute paths for this task:**
-  - Working directory: {working_directory}
-  - Plugin root: ${CLAUDE_PLUGIN_ROOT}
-  - Session path: {session_path}
-
-  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/refresh-git.md
-  That file contains template placeholders like "{session_name}", "{session_path}", "${CLAUDE_PLUGIN_ROOT}".
-  Replace all such placeholders with the actual values provided above.
-  Then execute the resulting instructions.
-
-**Subagent 3 - Extract Session Goal:**
-- subagent_type: "general-purpose"
-- description: "Extract session goal"
-- model: "haiku"
-- prompt: |
-  You are working with session: {session_name}
-
-  **Absolute paths for this task:**
-  - Working directory: {working_directory}
-  - Plugin root: ${CLAUDE_PLUGIN_ROOT}
-  - Session path: {session_path}
-
-  Read the prompt file: ${CLAUDE_PLUGIN_ROOT}/prompts/extract-goal.md
-  That file contains template placeholders like "{session_name}", "{session_path}", "${CLAUDE_PLUGIN_ROOT}".
-  Replace all such placeholders with the actual values provided above.
-  Then execute the resulting instructions.
-
-**REMINDER**: All 3 Task invocations MUST be in the SAME response to execute in parallel!
-
-### Step 3: Process Subagent Results
-
-After all 3 subagents complete, you'll receive their results. Handle errors gracefully:
-
-**Consolidation Result**:
+**Handle consolidation result:**
 - If `success: true` → Snapshot created successfully
 - If `skipped: true` → No conversation log found (OK, continue)
 - If `success: false` → Log error but continue
 
-**Git Refresh Result**:
-- If `success: true` → Git history updated
-- If `success: false` → No git repo or error (OK, continue)
+### Step 5: Extract Full Snapshot Summary (Complete Context)
 
-**Goal Extraction Result**:
-- If `success: true` → Use the extracted goal
-- If `success: false` → Use fallback goal from result
-
-### Step 3.5: Extract Full Snapshot Summary (Complete Context Approach)
-
-Provide Claude with complete snapshot summary including all topics, decisions, and tasks for full context visibility using Claude Code tools.
-
-**IMPORTANT**: This step uses Claude Code's Read and Glob tools instead of bash pipelines to avoid parse errors with command substitution.
+Provide Claude with complete snapshot summary including all topics, decisions, and tasks for full context visibility.
 
 **Implementation Steps:**
 
@@ -171,49 +145,14 @@ Provide Claude with complete snapshot summary including all topics, decisions, a
        - Look for "- **Blockers**:" line and extract text after it
        - Store as object with progress, nextSteps, blockers
 
-3. **Build full snapshot summary output:**
-
-   ```
-   📋 Latest: {snapshot_filename}
-
-   Topics Discussed ({count}):
-   - {topic_1}
-   - {topic_2}
-   ... (all topics)
-
-   Decisions Made ({count}):
-   - {decision_1}
-   - {decision_2}
-   ... (all decisions)
-
-   Tasks Completed ({count}):
-   - {task_1}
-   - {task_2}
-   ... (all tasks)
-
-   Current Status:
-   • Progress: {progress_text}
-   • Next Steps: {next_steps_text}
-   • Blockers: {blockers_text}
-
-   💡 Read {snapshot_path} for full details
-   ```
-
-4. **Display the summary in Step 6** (after showing the session goal)
+3. **Build full snapshot summary for display in Step 9**
 
 **Graceful Handling**:
 - If no snapshot exists → Skip summary display (OK, fresh session)
 - If extraction fails → Show generic message "See snapshot for details"
 - If Read fails → Silent failure, continue (don't break resume)
 
-**Why Full Snapshot Summary Works Better**:
-- Complete visibility: All topics, decisions, and tasks visible immediately (~300 tokens)
-- No information loss: User sees everything without needing to read snapshot file
-- Better context continuity: Claude knows full scope of work done
-- Improved decision-making: All context available for next steps
-- **No bash parse errors** - uses Claude Code tools (Glob, Read) natively
-
-### Step 4: Activate Session (CLI)
+### Step 6: Activate Session (CLI)
 
 Run the CLI command to activate the session:
 
@@ -223,7 +162,7 @@ node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js activate {session_name}
 
 This updates both the .active-session file and the index.
 
-### Step 4.5: Update Session Status to Active
+### Step 7: Update Session Status to Active
 
 Update the session status in `.auto-capture-state` and index:
 
@@ -233,7 +172,7 @@ node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-status "{session_name}" "ac
 
 This ensures the session status matches its active state and prevents sync bugs.
 
-### Step 5: Update Last Updated Timestamp
+### Step 8: Update Last Updated Timestamp
 
 Update the "Last Updated" line in session.md to current time using the Edit tool:
 
@@ -241,15 +180,13 @@ Update the "Last Updated" line in session.md to current time using the Edit tool
 **Last Updated**: {current ISO timestamp}
 ```
 
-### Step 6: Display Summary with Full Snapshot Details
+### Step 9: Display Summary with Full Snapshot Details
 
-Show session goal plus complete snapshot summary with all topics, decisions, and tasks for full context visibility.
-
-**Implementation**: Use Glob and Read tools (from Step 3.5) to extract and display the full summary.
+Show session goal plus complete snapshot summary with all topics, decisions, and tasks.
 
 **Display Format**:
 ```
-✓ Session ready: {goal}
+✓ Session ready: {extracted_goal}
 
 📋 Latest: {snapshot_filename}
 
@@ -325,32 +262,23 @@ What's next?
 
 **Notes**:
 - If no snapshot exists, only show "✓ Session ready: {goal}" and "What's next?"
-- Use Read tool to extract all items (avoids bash parse errors)
 - Fallback gracefully if extraction fails (show generic pointer text)
-
-**IMPORTANT**:
-- DO show full snapshot summary (all topics/decisions/tasks) ← FULL VISIBILITY
-- This provides complete context in ~300 tokens ← WORTH THE COST
-- User doesn't need to read snapshot file separately ← CONVENIENCE
-- All relevant context immediately available for decision-making ← BETTER UX
-- User can still read snapshot file for additional details if needed
-- The heavy analysis already happened in the subagents
-- User can run `/session:status` for detailed view
 
 ---
 
-**TOKEN OPTIMIZATION BENEFITS:**
-- Current: ~20.3k tokens with full snapshot summary (74% reduction from v3.6.4)
-  - Full snapshot summary with all topics/decisions/tasks (~300 tokens)
-  - Complete visibility: All snapshot items visible immediately
-  - Benefit: Complete context for better decision-making and continuity
-- Heavy work (consolidation, git analysis) happens in isolated subagent contexts
-- Parallel execution: 3 subagents run simultaneously (~2-4 seconds total)
-- Lazy-loaded prompts: Subagents read their own prompts (~1.7k token savings)
-- Result: Faster session resume, massive token savings, complete context restoration
+**TOKEN OPTIMIZATION BENEFITS (v3.19.0):**
+- Previous (v3.7.0): ~22k tokens with 3 parallel subagents
+- Current (v3.19.0): ~10-12k tokens with inline + conditional subagent
+- **Savings: 50% token reduction**
+
+Key optimizations:
+1. **Inline git refresh**: CLI call instead of subagent (~5k tokens saved)
+2. **Inline goal extraction**: Read tool instead of subagent (~5k tokens saved)
+3. **Conditional consolidation**: Skip subagent if no log exists (common case!)
+4. **Lazy-loaded prompts**: Subagent reads its own prompt (~1.7k token savings)
 
 **ERROR HANDLING:**
-- If all subagents fail: Still activate session, show generic message "✓ Session ready. What's next?"
+- If consolidation fails: Still activate session, show generic message
 - If session.md missing: Show corrupted session warning
 - If CLI fails: Suggest rebuilding index with `/session:rebuild-index`
 

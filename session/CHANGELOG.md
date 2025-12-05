@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.19.0] - 2025-12-05
+
+### Changed
+
+- **Continue Command Architecture** - Consolidated from 3 subagents to inline + conditional
+  - **Git refresh now inline**: Single CLI call instead of dedicated subagent (~5k tokens saved)
+  - **Goal extraction now inline**: Read tool instead of dedicated subagent (~5k tokens saved)
+  - **Conditional consolidation**: Subagent only spawned if conversation-log.jsonl exists
+  - **Result**: 50% token reduction (22k → 10-12k tokens per session continue)
+
+### Removed
+
+- `prompts/refresh-git.md` - No longer needed (git refresh is inline CLI call)
+- `prompts/extract-goal.md` - No longer needed (goal extraction is inline Read)
+
+### Technical Details
+
+- Identified that 2 of 3 subagents (git refresh, goal extraction) required zero AI reasoning
+- Git refresh: Just runs `session-cli.js capture-git` - pure CLI operation
+- Goal extraction: Just reads session.md and parses text - simple file operation
+- Only consolidate-log.md still needs AI for conversation analysis
+- Eliminated ~10k tokens of subagent startup overhead per session continue
+
+---
+
 ## [3.18.1] - 2025-12-05
 
 ### Added
