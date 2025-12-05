@@ -74,37 +74,50 @@ This is for metadata only - conceptual plans don't use templates.
 
 ### Step 4: Extract Requirements from Conversation
 
-Use a subagent to analyze the conversation and extract requirements (not tasks!).
+Use a subagent to analyze the conversation and extract requirements WITH implementation suggestions.
 
 Invoke the Task tool with:
 - subagent_type: "general-purpose"
-- model: "haiku"
+- (no model specified - uses current conversation model for rich extraction)
 - prompt: Read the file at `${CLAUDE_PLUGIN_ROOT}/prompts/analyze-conversation.md`, replace placeholders with actual values, then execute those instructions
 
-The subagent will return extracted requirements:
+The subagent will return extracted requirements with suggestions:
 ```json
 {
   "goal": "High-level objective",
   "requirements": [
     {
       "id": "req-1",
-      "description": "What the user wants (high-level)",
+      "description": "What the user wants",
       "notes": "Additional context",
       "open_questions": ["Question 1", "Question 2"],
       "priority": "high|medium|low",
-      "conversation_context": "Relevant conversation excerpts"
+      "conversation_context": "Relevant conversation excerpts",
+      "suggestions": {
+        "api_designs": [{"method": "...", "signature": "...", "example": "..."}],
+        "code_snippets": [{"language": "...", "code": "...", "purpose": "..."}],
+        "file_structures": [{"name": "...", "tree": "...", "notes": "..."}],
+        "ui_components": [{"name": "...", "props": "...", "example_usage": "..."}],
+        "implementation_patterns": [{"pattern": "...", "when_to_use": "...", "example": "..."}]
+      }
     }
   ],
+  "technical_decisions": [
+    {"decision": "...", "rationale": "...", "alternatives_rejected": ["..."]}
+  ],
+  "user_decisions": [
+    {"question": "...", "answer": "...", "implications": "..."}
+  ],
   "discussion_notes": "Free-form notes from planning discussion",
-  "conversation_summary": "Summary of conversation"
+  "conversation_summary": "Comprehensive summary (no length limit)"
 }
 ```
 
-**IMPORTANT:** Extract REQUIREMENTS (what user wants), NOT tasks (how to implement).
-- ✓ Good requirement: "Restrict products based on user permissions"
-- ✗ Bad (too detailed): "Add restriction_level column to public.new_product table"
-
-Requirements are exploratory and high-level during planning.
+**IMPORTANT:**
+- Extract REQUIREMENTS (what user wants) AND SUGGESTIONS (how it could be implemented)
+- Suggestions are implementation-ready artifacts from conversation analysis
+- During finalization, suggestions will be VERIFIED against codebase before use
+- No artificial limits on discussion points or summary length
 
 ### Step 4: Build Requirements Plan
 

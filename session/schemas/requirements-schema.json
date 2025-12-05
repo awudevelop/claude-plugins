@@ -2,10 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "requirements-schema.json",
   "title": "Requirements Schema",
-  "description": "Schema for conceptual planning phase - captures requirements before task breakdown",
+  "description": "Schema for conceptual planning phase - captures requirements with implementation suggestions",
   "type": "object",
   "required": ["plan_name", "plan_type", "goal", "requirements", "created_at"],
-  "additionalProperties": false,
   "properties": {
     "plan_name": {
       "type": "string",
@@ -25,12 +24,11 @@
     },
     "requirements": {
       "type": "array",
-      "description": "List of requirements captured during planning discussion",
+      "description": "List of requirements with implementation suggestions",
       "minItems": 1,
       "items": {
         "type": "object",
         "required": ["id", "description"],
-        "additionalProperties": false,
         "properties": {
           "id": {
             "type": "string",
@@ -39,7 +37,7 @@
           },
           "description": {
             "type": "string",
-            "description": "What the user wants (high-level requirement)",
+            "description": "What the user wants",
             "minLength": 1
           },
           "notes": {
@@ -61,7 +59,105 @@
           "conversation_context": {
             "type": "string",
             "description": "Relevant conversation excerpts that led to this requirement"
+          },
+          "suggestions": {
+            "type": "object",
+            "description": "Implementation-ready suggestions extracted from conversation. These are informed designs based on codebase analysis, NOT abstract ideas.",
+            "properties": {
+              "api_designs": {
+                "type": "array",
+                "description": "API method signatures and examples",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "method": { "type": "string", "description": "Method or function name" },
+                    "signature": { "type": "string", "description": "Full method signature with types" },
+                    "example": { "type": "string", "description": "Usage example" },
+                    "notes": { "type": "string", "description": "Additional notes" },
+                    "source_context": { "type": "string", "description": "What codebase analysis informed this" }
+                  }
+                }
+              },
+              "code_snippets": {
+                "type": "array",
+                "description": "Code examples and implementations from conversation",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "language": { "type": "string", "description": "Programming language" },
+                    "code": { "type": "string", "description": "The actual code" },
+                    "purpose": { "type": "string", "description": "What this code does" },
+                    "source_context": { "type": "string", "description": "Why this was suggested" }
+                  }
+                }
+              },
+              "file_structures": {
+                "type": "array",
+                "description": "Proposed file/folder structures",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string", "description": "Package or folder name" },
+                    "tree": { "type": "string", "description": "Directory tree structure" },
+                    "notes": { "type": "string", "description": "Additional notes" }
+                  }
+                }
+              },
+              "ui_components": {
+                "type": "array",
+                "description": "UI component suggestions",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string", "description": "Component name" },
+                    "description": { "type": "string", "description": "What the component does" },
+                    "props": { "type": "string", "description": "Component props/API" },
+                    "example_usage": { "type": "string", "description": "How to use the component" }
+                  }
+                }
+              },
+              "implementation_patterns": {
+                "type": "array",
+                "description": "Patterns and approaches to follow",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "pattern": { "type": "string", "description": "Pattern name or description" },
+                    "when_to_use": { "type": "string", "description": "When to apply this pattern" },
+                    "example": { "type": "string", "description": "Example of the pattern" }
+                  }
+                }
+              }
+            }
           }
+        }
+      }
+    },
+    "technical_decisions": {
+      "type": "array",
+      "description": "Technology, architecture, or approach decisions made during planning",
+      "items": {
+        "type": "object",
+        "properties": {
+          "decision": { "type": "string", "description": "What was decided" },
+          "rationale": { "type": "string", "description": "Why this decision was made" },
+          "alternatives_rejected": {
+            "type": "array",
+            "description": "Other options that were considered and rejected",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "user_decisions": {
+      "type": "array",
+      "description": "Explicit decisions/answers from user during Q&A in conversation",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string", "description": "What was asked" },
+          "answer": { "type": "string", "description": "User's explicit answer (verbatim)" },
+          "implications": { "type": "string", "description": "What this means for implementation" }
         }
       }
     },
@@ -71,7 +167,7 @@
     },
     "conversation_summary": {
       "type": "string",
-      "description": "Summary of the conversation that led to these requirements"
+      "description": "Comprehensive summary of the conversation (no length limit)"
     },
     "created_at": {
       "type": "string",
@@ -80,7 +176,7 @@
     },
     "session_name": {
       "type": "string",
-      "description": "Name of the session this plan belongs to"
+      "description": "Name of the session this plan belongs to (optional)"
     },
     "metadata": {
       "type": "object",
@@ -88,13 +184,17 @@
       "properties": {
         "work_type": {
           "type": "string",
-          "enum": ["feature", "bug", "spike", "refactor"],
+          "enum": ["feature", "bug", "spike", "refactor", "unknown"],
           "description": "Detected work type"
         },
         "estimated_complexity": {
           "type": "string",
           "enum": ["simple", "moderate", "complex"],
           "description": "Estimated complexity"
+        },
+        "source_session": {
+          "type": "string",
+          "description": "Session name if extracted from session context"
         }
       }
     }

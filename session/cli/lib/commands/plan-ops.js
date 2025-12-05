@@ -908,7 +908,39 @@ async function validateRequirements(requirementsData) {
       if (!req.description) {
         errors.push(`Requirement ${index + 1}: Missing description`);
       }
+
+      // Validate suggestions if present (optional but structured)
+      if (req.suggestions) {
+        const validSuggestionTypes = [
+          'api_designs', 'code_snippets', 'file_structures',
+          'ui_components', 'implementation_patterns'
+        ];
+
+        for (const key of Object.keys(req.suggestions)) {
+          if (!validSuggestionTypes.includes(key)) {
+            // Allow unknown types but log warning (don't fail validation)
+            console.warn(`Requirement ${index + 1}: Unknown suggestion type '${key}' (allowed but not standard)`);
+          }
+          if (req.suggestions[key] && !Array.isArray(req.suggestions[key])) {
+            errors.push(`Requirement ${index + 1}: suggestions.${key} must be an array`);
+          }
+        }
+      }
     });
+  }
+
+  // Validate technical_decisions if present (optional)
+  if (requirementsData.technical_decisions) {
+    if (!Array.isArray(requirementsData.technical_decisions)) {
+      errors.push('technical_decisions must be an array');
+    }
+  }
+
+  // Validate user_decisions if present (optional)
+  if (requirementsData.user_decisions) {
+    if (!Array.isArray(requirementsData.user_decisions)) {
+      errors.push('user_decisions must be an array');
+    }
   }
 
   if (errors.length > 0) {

@@ -254,13 +254,29 @@ class IntentRouter {
       },
       'backend-layers': async () => {
         const map = await this.loader.load('backend-layers');
+
+        // Prefer behavior-based analysis if available (more accurate for BaaS, serverless)
+        const behaviorAnalysis = map.behaviorAnalysis;
+
         return {
+          // Traditional folder-based detection
           architecture: map.architecture,
           layers: Object.keys(map.layers || {}).map(layer => ({
             name: layer,
             files: (map.layers[layer] || []).length
           })),
-          statistics: map.statistics
+          statistics: map.statistics,
+
+          // Behavior-based analysis (if available)
+          behaviorAnalysis: behaviorAnalysis ? {
+            type: behaviorAnalysis.architecture?.type,
+            confidence: behaviorAnalysis.architecture?.confidence,
+            description: behaviorAnalysis.architecture?.description,
+            evidence: behaviorAnalysis.architecture?.evidence,
+            gateways: behaviorAnalysis.gateways,
+            apiSpec: behaviorAnalysis.apiSpec,
+            formatted: behaviorAnalysis.formatted
+          } : null
         };
       },
       'modules': async () => {

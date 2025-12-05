@@ -9,6 +9,7 @@ const ModuleDetector = require('./module-detector');
 const DatabaseDetector = require('./db-detector');
 const FrameworkDetector = require('./framework-detector');
 const ArchitectureDetector = require('./architecture-detector');
+const ArchitectureSynthesizer = require('./architecture-synthesizer');
 const { SignatureExtractor } = require('./extractors/signature-extractor');
 
 /**
@@ -101,6 +102,9 @@ class MapGenerator {
     // Phase 8: Function/Method Signatures
     await this.generateSignaturesMap();         // Function signatures with types
     await this.generateTypesMap();              // TypeScript interfaces, types, enums
+
+    // Phase 9: NPM Dependencies
+    await this.generateNpmDependencies();       // Package.json dependencies with categories
 
     console.log('All maps generated successfully!');
 
@@ -2134,12 +2138,21 @@ class MapGenerator {
   /**
    * Phase 6 - Task 6-1 & 6-2: Generate Backend Layers Map
    * Detects architecture pattern and categorizes backend files into layers
+   * Now includes behavior-based detection for BaaS and modern architectures
    */
   async generateBackendLayersMap() {
     console.log('Detecting backend architecture...');
 
-    // Detect architecture pattern
+    // Detect architecture pattern (folder-based - traditional detection)
     this.architectureData = this.architectureDetector.detectArchitecture(this.scanResults.files);
+
+    // Behavior-based detection (code pattern analysis)
+    let behaviorAnalysis = null;
+    try {
+      behaviorAnalysis = await this.runBehaviorAnalysis();
+    } catch (err) {
+      console.warn('Behavior analysis failed:', err.message);
+    }
 
     // Build backend layers map
     const backendLayersMap = {
@@ -2148,12 +2161,30 @@ class MapGenerator {
       generated: new Date().toISOString(),
       mapType: 'backend-layers',
 
+      // Traditional folder-based detection
       architecture: {
         primaryPattern: this.architectureData.primaryPattern,
         detectedPatterns: this.architectureData.detectedPatterns,
         confidence: this.architectureData.confidence,
         layerCounts: this.architectureData.layerCounts
       },
+
+      // Behavior-based detection (more accurate for BaaS, serverless, etc.)
+      behaviorAnalysis: behaviorAnalysis ? {
+        architecture: behaviorAnalysis.architecture,
+        gateways: (behaviorAnalysis.gateways || []).slice(0, 5).map(g => ({
+          file: g.file,
+          type: g.type,
+          score: g.score
+        })),
+        signals: behaviorAnalysis.behaviors,
+        apiSpec: behaviorAnalysis.apiSpec ? {
+          file: behaviorAnalysis.apiSpec.file,
+          type: behaviorAnalysis.apiSpec.type,
+          totalEndpoints: behaviorAnalysis.apiSpec.totalEndpoints
+        } : null,
+        formatted: behaviorAnalysis.formatted
+      } : null,
 
       layers: this.architectureData.layers,
 
@@ -2169,9 +2200,68 @@ class MapGenerator {
     const outputPath = path.join(this.outputDir, 'backend-layers.json');
     const metadata = await compression.compressAndSave(backendLayersMap, outputPath);
 
-    console.log(`✓ Generated backend-layers.json (${metadata.compressedSize} bytes, ${this.architectureData.primaryPattern.name} architecture)`);
+    // Show the most accurate detection result
+    const archName = behaviorAnalysis?.architecture?.type !== 'unknown'
+      ? behaviorAnalysis.architecture.type
+      : this.architectureData.primaryPattern.name;
+
+    console.log(`✓ Generated backend-layers.json (${metadata.compressedSize} bytes, ${archName} architecture)`);
 
     return { file: outputPath, metadata };
+  }
+
+  /**
+   * Run behavior-based architecture analysis
+   * Loads content for potential gateway files and analyzes code patterns
+   */
+  async runBehaviorAnalysis() {
+    const synthesizer = new ArchitectureSynthesizer(this.projectRoot);
+
+    // Filter to source files that could be gateway files
+    const candidateFiles = this.scanResults.files.filter(f => {
+      const ext = path.extname(f.relativePath || f.path).toLowerCase();
+      if (!['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'].includes(ext)) return false;
+
+      // Include files that might be gateway files based on name
+      const name = path.basename(f.relativePath || f.path).toLowerCase();
+      const filePath = (f.relativePath || f.path).toLowerCase();
+
+      return (
+        /context|provider|service|client|api|gateway|store|data|hook|auth/i.test(name) ||
+        /context|provider|service|client|api|gateway|store|hook/i.test(filePath) ||
+        f.size > 2000 // Larger files might be interesting
+      );
+    }).slice(0, 50); // Limit to 50 files to avoid slowdown
+
+    // Load content for candidate files
+    const filesWithContent = await Promise.all(
+      candidateFiles.map(async (f) => {
+        try {
+          const fullPath = path.join(this.projectRoot, f.relativePath || f.path);
+          const content = await fs.readFile(fullPath, 'utf-8');
+          return {
+            ...f,
+            content,
+            path: fullPath
+          };
+        } catch (err) {
+          return null;
+        }
+      })
+    );
+
+    const validFiles = filesWithContent.filter(f => f !== null);
+
+    if (validFiles.length === 0) {
+      return null;
+    }
+
+    // Run behavior analysis
+    return synthesizer.analyze(validFiles, {
+      outputFormat: 'text',
+      includeEvidence: true,
+      maxGateways: 10
+    });
   }
 
   /**
@@ -3165,6 +3255,209 @@ class MapGenerator {
     console.log(`✓ Generated types-map.json (${metadata.compressedSize} bytes, ${allInterfaces.length} interfaces, ${allTypeAliases.length} types, ${allEnums.length} enums)`);
 
     return { file: outputPath, metadata };
+  }
+
+  /**
+   * Phase 9: NPM Dependencies Map
+   * Parses package.json files and tracks dependency usage
+   */
+  async generateNpmDependencies() {
+    console.log('Analyzing npm dependencies...');
+
+    const packageFiles = this.scanResults.files.filter(f => f.name === 'package.json');
+
+    if (packageFiles.length === 0) {
+      console.log('⚠ No package.json found, skipping npm-dependencies map');
+      return null;
+    }
+
+    const allPackages = {};
+    let stack = {};
+    const packageJsonPaths = [];
+
+    // Parse all package.json files
+    for (const pkgFile of packageFiles) {
+      const pkgPath = path.join(this.projectRoot, pkgFile.relativePath);
+      try {
+        const content = await fs.readFile(pkgPath, 'utf8');
+        const pkg = JSON.parse(content);
+        packageJsonPaths.push(pkgFile.relativePath);
+
+        // Merge dependencies
+        this.mergePackageDeps(allPackages, pkg.dependencies, 'prod');
+        this.mergePackageDeps(allPackages, pkg.devDependencies, 'dev');
+        this.mergePackageDeps(allPackages, pkg.peerDependencies, 'peer');
+
+        // Detect stack from root package.json
+        if (pkgFile.relativePath === 'package.json') {
+          stack = this.detectTechStack(pkg);
+        }
+      } catch (err) {
+        console.log(`  ⚠ Could not parse ${pkgFile.relativePath}: ${err.message}`);
+      }
+    }
+
+    // Cross-reference with file imports
+    if (this.dependencyData) {
+      for (const [name, info] of Object.entries(allPackages)) {
+        const importers = this.findPackageImporters(name);
+        info.u = importers.length;
+        info.f = importers.slice(0, 5);
+      }
+    }
+
+    const npmDeps = {
+      version: '1.0.0',
+      mapType: 'npm-dependencies',
+      projectHash: this.projectHash,
+      generated: new Date().toISOString(),
+
+      summary: {
+        totalPackages: Object.keys(allPackages).length,
+        production: Object.values(allPackages).filter(d => d.t === 'prod').length,
+        development: Object.values(allPackages).filter(d => d.t === 'dev').length,
+        peer: Object.values(allPackages).filter(d => d.t === 'peer').length,
+        packageJsonFiles: packageJsonPaths
+      },
+
+      stack,
+      packages: allPackages
+    };
+
+    const outputPath = path.join(this.outputDir, 'npm-dependencies.json');
+    const metadata = await compression.compressAndSave(npmDeps, outputPath);
+
+    console.log(`✓ Generated npm-dependencies.json (${metadata.compressedSize} bytes, ${Object.keys(allPackages).length} packages)`);
+
+    return { file: outputPath, metadata, data: npmDeps };
+  }
+
+  /**
+   * Merge package dependencies into allPackages object
+   */
+  mergePackageDeps(allPackages, deps, type) {
+    if (!deps) return;
+
+    for (const [name, version] of Object.entries(deps)) {
+      if (!allPackages[name]) {
+        allPackages[name] = {
+          v: version.replace(/[\^~>=<]/g, ''),
+          t: type
+        };
+      }
+    }
+  }
+
+  /**
+   * Detect tech stack from package.json
+   */
+  detectTechStack(pkg) {
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+    const stack = {};
+
+    // Runtime
+    if (pkg.engines?.node) {
+      stack.runtime = `node@${pkg.engines.node.replace(/[\^~>=<]/g, '')}`;
+    }
+
+    // Framework detection (order matters - more specific first)
+    const frameworks = [
+      ['next', 'next'],
+      ['nuxt', 'nuxt'],
+      ['@remix-run/node', 'remix'],
+      ['@nestjs/core', 'nestjs'],
+      ['@angular/core', 'angular'],
+      ['vue', 'vue'],
+      ['react', 'react'],
+      ['svelte', 'svelte'],
+      ['express', 'express'],
+      ['fastify', 'fastify'],
+      ['hono', 'hono'],
+      ['koa', 'koa']
+    ];
+
+    for (const [pkgName, frameworkName] of frameworks) {
+      if (deps[pkgName]) {
+        stack.framework = `${frameworkName}@${deps[pkgName].replace(/[\^~>=<]/g, '')}`;
+        break;
+      }
+    }
+
+    // Bundler detection
+    const bundlers = [
+      ['vite', 'vite'],
+      ['webpack', 'webpack'],
+      ['esbuild', 'esbuild'],
+      ['rollup', 'rollup'],
+      ['parcel', 'parcel'],
+      ['turbopack', 'turbopack']
+    ];
+
+    for (const [pkgName, bundlerName] of bundlers) {
+      if (deps[pkgName]) {
+        stack.bundler = `${bundlerName}@${deps[pkgName].replace(/[\^~>=<]/g, '')}`;
+        break;
+      }
+    }
+
+    // Test framework detection
+    const testFrameworks = [
+      ['vitest', 'vitest'],
+      ['jest', 'jest'],
+      ['mocha', 'mocha'],
+      ['jasmine', 'jasmine'],
+      ['ava', 'ava']
+    ];
+
+    for (const [pkgName, testName] of testFrameworks) {
+      if (deps[pkgName]) {
+        stack.testing = `${testName}@${deps[pkgName].replace(/[\^~>=<]/g, '')}`;
+        break;
+      }
+    }
+
+    // Package manager detection (from lockfiles)
+    if (this.scanResults.files.some(f => f.name === 'pnpm-lock.yaml')) {
+      stack.packageManager = 'pnpm';
+    } else if (this.scanResults.files.some(f => f.name === 'yarn.lock')) {
+      stack.packageManager = 'yarn';
+    } else if (this.scanResults.files.some(f => f.name === 'bun.lockb')) {
+      stack.packageManager = 'bun';
+    } else if (this.scanResults.files.some(f => f.name === 'package-lock.json')) {
+      stack.packageManager = 'npm';
+    }
+
+    return stack;
+  }
+
+  /**
+   * Find files that import a specific package
+   */
+  findPackageImporters(packageName) {
+    if (!this.dependencyData || typeof this.dependencyData !== 'object') return [];
+
+    const importers = [];
+
+    // this.dependencyData is an object where keys are file paths
+    for (const [filePath, data] of Object.entries(this.dependencyData)) {
+      if (!data?.imports) continue;
+
+      for (const imp of data.imports) {
+        // Check if this import references the package
+        if (imp.type === 'external' || imp.type === 'npm') {
+          const src = imp.source || imp.src || '';
+          if (src === packageName ||
+              src.startsWith(packageName + '/') ||
+              src === `@types/${packageName}`) {
+            if (!importers.includes(filePath)) {
+              importers.push(filePath);
+            }
+          }
+        }
+      }
+    }
+
+    return importers;
   }
 
 }

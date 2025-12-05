@@ -57,17 +57,36 @@ function parseArgs(args) {
     } else if (arg === '--path' && args[i + 1]) {
       result.projectPath = path.resolve(args[i + 1]);
       i++;
-    } else if (!arg.startsWith('--') && i === 1 && result.subcommand !== 'query' && result.subcommand !== 'ask' && result.subcommand !== 'search') {
-      // First non-option argument after subcommand could be path (except for query/ask/search)
+    } else if (!arg.startsWith('--') && i === 1 && !['query', 'ask', 'search', 'deps', 'stack'].includes(result.subcommand)) {
+      // First non-option argument after subcommand could be path (except for query/ask/search/deps/stack)
       result.projectPath = path.resolve(arg);
     } else if (!arg.startsWith('--') && result.subcommand === 'query') {
       // For query command, argument is the query type
       result.options.queryType = arg;
     } else if (result.subcommand === 'ask' && !arg.startsWith('--')) {
-      // For ask command, collect all remaining args as the question
+      // For ask command, collect remaining args as the question
+      // BUT check if the LAST arg looks like a path (starts with / or . or is an existing directory)
       if (!result.options.question) {
-        result.options.question = args.slice(i).join(' ');
-        break; // Stop processing, rest is the question
+        const remainingArgs = args.slice(i);
+        const lastArg = remainingArgs[remainingArgs.length - 1];
+
+        // Check if last arg looks like a path
+        const looksLikePath = lastArg && (
+          lastArg.startsWith('/') ||
+          lastArg.startsWith('./') ||
+          lastArg.startsWith('../') ||
+          lastArg.includes('/') && !lastArg.includes(' ')
+        );
+
+        if (looksLikePath && remainingArgs.length > 1) {
+          // Last arg is path, rest is question
+          result.projectPath = path.resolve(lastArg);
+          result.options.question = remainingArgs.slice(0, -1).join(' ');
+        } else {
+          // All remaining args are the question
+          result.options.question = remainingArgs.join(' ');
+        }
+        break; // Stop processing
       }
     }
   }
@@ -282,13 +301,27 @@ async function queryCommand(projectPath, options) {
     // Extended queries (from dedicated map files)
     'backend-layers': async () => {
       const map = await loader.load('backend-layers');
+      const behaviorAnalysis = map.behaviorAnalysis;
+
       return {
+        // Traditional folder-based detection
         architecture: map.architecture,
         layers: Object.keys(map.layers || {}).map(layer => ({
           name: layer,
           files: (map.layers[layer] || []).length
         })),
-        statistics: map.statistics
+        statistics: map.statistics,
+
+        // Behavior-based analysis (more accurate for BaaS, serverless, etc.)
+        behaviorAnalysis: behaviorAnalysis ? {
+          type: behaviorAnalysis.architecture?.type,
+          confidence: behaviorAnalysis.architecture?.confidence,
+          description: behaviorAnalysis.architecture?.description,
+          evidence: behaviorAnalysis.architecture?.evidence,
+          gateways: behaviorAnalysis.gateways,
+          apiSpec: behaviorAnalysis.apiSpec,
+          formatted: behaviorAnalysis.formatted
+        } : null
       };
     },
     'modules': async () => {
@@ -399,6 +432,32 @@ async function queryCommand(projectPath, options) {
       return {
         totalRelationships: Object.keys(map.relationships || {}).length,
         sample: Object.entries(map.relationships || {}).slice(0, 10)
+      };
+    },
+    // NPM dependencies queries
+    'npm-deps': async () => {
+      const map = await loader.load('npm-dependencies');
+      return {
+        stack: map.stack,
+        summary: map.summary,
+        packages: Object.entries(map.packages || {}).map(([name, info]) => ({
+          name,
+          version: info.v || info.version,
+          type: info.t || info.type,
+          usedIn: info.u || info.usedIn || 0
+        }))
+      };
+    },
+    'stack': async () => {
+      const map = await loader.load('npm-dependencies');
+      return {
+        stack: map.stack,
+        summary: {
+          totalPackages: map.summary?.totalPackages || 0,
+          production: map.summary?.production || 0,
+          development: map.summary?.development || 0,
+          peer: map.summary?.peer || 0
+        }
       };
     }
   };
@@ -516,14 +575,31 @@ async function askCommand(projectPath, options) {
  * Search across project maps
  */
 async function searchCommand(projectPath, options, args) {
-  // Parse search arguments: search <type> <pattern> [--flags]
+  // Parse search arguments: search <type> <pattern> [path] [--flags]
   const searchArgs = args.slice(1); // Remove 'search' subcommand
   let searchType = 'all';
   let pattern = '';
   const searchOptions = {};
+  let detectedPath = null;
+
+  // First, check if last non-flag arg looks like a path
+  const lastNonFlag = searchArgs.filter(a => !a.startsWith('--')).pop();
+  if (lastNonFlag && (
+    lastNonFlag.startsWith('/') ||
+    lastNonFlag.startsWith('./') ||
+    lastNonFlag.startsWith('../') ||
+    (lastNonFlag.includes('/') && !lastNonFlag.includes('*') && !lastNonFlag.includes(' '))
+  )) {
+    detectedPath = lastNonFlag;
+  }
 
   for (let i = 0; i < searchArgs.length; i++) {
     const arg = searchArgs[i];
+
+    // Skip if this is the detected path
+    if (arg === detectedPath) {
+      continue;
+    }
 
     if (arg === '--async') {
       searchOptions.isAsync = true;
@@ -548,6 +624,11 @@ async function searchCommand(projectPath, options, args) {
         pattern = arg;
       }
     }
+  }
+
+  // Use detected path if found, otherwise use passed projectPath
+  if (detectedPath) {
+    projectPath = path.resolve(detectedPath);
   }
 
   // If only one arg and it's not a valid type, treat it as pattern
@@ -720,6 +801,227 @@ async function searchCommand(projectPath, options, args) {
 }
 
 /**
+ * Search npm dependencies by package name pattern
+ */
+async function depsCommand(projectPath, options, args) {
+  const loader = new MapLoader(projectPath);
+
+  const exists = await loader.exists();
+  if (!exists) {
+    return {
+      success: false,
+      error: 'No maps found for this project',
+      suggestion: 'Run: session-cli project-maps generate'
+    };
+  }
+
+  // Parse deps args: deps [pattern]
+  const depsArgs = args.slice(1).filter(a => !a.startsWith('--'));
+  const pattern = depsArgs[0]; // Optional pattern to filter
+
+  // Load npm-dependencies map
+  let npmDeps;
+  try {
+    npmDeps = await loader.load('npm-dependencies');
+  } catch (error) {
+    return {
+      success: false,
+      error: 'npm-dependencies map not found',
+      suggestion: 'Regenerate maps with: session-cli project-maps generate'
+    };
+  }
+
+  const startTime = Date.now();
+  let results = [];
+
+  // List packages, optionally filtered by pattern
+  for (const [pkgName, pkgInfo] of Object.entries(npmDeps.packages || {})) {
+    // If pattern provided, filter by name
+    if (pattern && !pkgName.toLowerCase().includes(pattern.toLowerCase())) {
+      continue;
+    }
+    results.push({
+      name: pkgName,
+      version: pkgInfo.v || pkgInfo.version,
+      type: pkgInfo.t || pkgInfo.type,
+      usedIn: pkgInfo.u || pkgInfo.usedIn || 0,
+      files: pkgInfo.f || pkgInfo.files || []
+    });
+  }
+
+  // Sort by usage (most used first)
+  results.sort((a, b) => b.usedIn - a.usedIn);
+
+  const searchTime = Date.now() - startTime;
+
+  // Format output - lean by default
+  if (!options.verbose && !options.json) {
+    // Lean format: name@version (type) [N files]
+    const lines = results.map(r => {
+      const usage = r.usedIn > 0 ? ` [${r.usedIn} files]` : '';
+      return `${r.name}@${r.version} (${r.type})${usage}`;
+    });
+
+    return {
+      success: true,
+      output: lines.join('\n'),
+      count: results.length,
+      time: `${searchTime}ms`
+    };
+  }
+
+  // Verbose/JSON format
+  return {
+    success: true,
+    data: {
+      query: pattern || 'all',
+      results,
+      totalCount: results.length,
+      searchTime: `${searchTime}ms`
+    },
+    formatted: options.verbose ? formatDepsVerbose(results, pattern) : undefined,
+    message: `Found ${results.length} package(s) in ${searchTime}ms`
+  };
+}
+
+/**
+ * Format deps results in verbose markdown
+ */
+function formatDepsVerbose(results, pattern) {
+  const lines = ['## NPM Dependencies\n'];
+
+  if (pattern) {
+    lines.push(`Search: \`${pattern}\`\n`);
+  }
+
+  // Group by type (prod, dev, peer)
+  const byType = { prod: [], dev: [], peer: [] };
+  for (const pkg of results) {
+    const type = pkg.type || 'prod';
+    if (!byType[type]) byType[type] = [];
+    byType[type].push(pkg);
+  }
+
+  const typeLabels = { prod: 'Production', dev: 'Development', peer: 'Peer' };
+
+  for (const [type, pkgs] of Object.entries(byType)) {
+    if (pkgs.length === 0) continue;
+    lines.push(`\n### ${typeLabels[type] || type} (${pkgs.length})\n`);
+    for (const pkg of pkgs) {
+      const usage = pkg.usedIn > 0 ? ` - used in ${pkg.usedIn} files` : '';
+      lines.push(`- **${pkg.name}** v${pkg.version}${usage}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Show detected tech stack from npm-dependencies
+ */
+async function stackCommand(projectPath, options) {
+  const loader = new MapLoader(projectPath);
+
+  const exists = await loader.exists();
+  if (!exists) {
+    return {
+      success: false,
+      error: 'No maps found for this project',
+      suggestion: 'Run: session-cli project-maps generate'
+    };
+  }
+
+  // Load npm-dependencies map
+  let npmDeps;
+  try {
+    npmDeps = await loader.load('npm-dependencies');
+  } catch (error) {
+    return {
+      success: false,
+      error: 'npm-dependencies map not found',
+      suggestion: 'Regenerate maps with: session-cli project-maps generate'
+    };
+  }
+
+  const stack = npmDeps.stack || {};
+  const summary = npmDeps.summary || {};
+
+  // Helper to format stack item (handles both string "name@version" and object {name, version})
+  const formatStackItem = (item) => {
+    if (!item) return null;
+    if (typeof item === 'string') return item;
+    if (item.name) return `${item.name}${item.version ? '@' + item.version : ''}`;
+    return null;
+  };
+
+  // Lean format by default
+  if (!options.verbose && !options.json) {
+    const lines = [];
+
+    // Handle both string format ("node@20") and object format ({node: "20"})
+    if (stack.runtime) {
+      const runtime = typeof stack.runtime === 'string' ? stack.runtime : `node@${stack.runtime.node || stack.runtime}`;
+      lines.push(`runtime: ${runtime}`);
+    }
+    if (stack.packageManager) lines.push(`pkg-manager: ${stack.packageManager}`);
+    if (stack.framework) lines.push(`framework: ${formatStackItem(stack.framework)}`);
+    if (stack.bundler) lines.push(`bundler: ${formatStackItem(stack.bundler)}`);
+    if (stack.testing) lines.push(`testing: ${formatStackItem(stack.testing)}`);
+
+    lines.push('---');
+    const prodCount = summary.production || summary.prodDeps || 0;
+    const devCount = summary.development || summary.devDeps || 0;
+    const peerCount = summary.peer || 0;
+    lines.push(`packages: ${summary.totalPackages || 0} (${prodCount} prod, ${devCount} dev, ${peerCount} peer)`);
+
+    return {
+      success: true,
+      output: lines.join('\n'),
+      count: 1,
+      time: '0ms'
+    };
+  }
+
+  // Verbose markdown format
+  if (options.verbose) {
+    const lines = ['## Tech Stack\n'];
+
+    if (stack.runtime) {
+      const runtime = typeof stack.runtime === 'string' ? stack.runtime : `Node.js ${stack.runtime.node || stack.runtime}`;
+      lines.push(`- **Runtime:** ${runtime}`);
+    }
+    if (stack.packageManager) lines.push(`- **Package Manager:** ${stack.packageManager}`);
+    if (stack.framework) lines.push(`- **Framework:** ${formatStackItem(stack.framework)}`);
+    if (stack.bundler) lines.push(`- **Bundler:** ${formatStackItem(stack.bundler)}`);
+    if (stack.testing) lines.push(`- **Testing:** ${formatStackItem(stack.testing)}`);
+
+    lines.push('\n### Package Summary\n');
+    const prodCount = summary.production || summary.prodDeps || 0;
+    const devCount = summary.development || summary.devDeps || 0;
+    const peerCount = summary.peer || 0;
+    lines.push(`- Total: ${summary.totalPackages || 0} packages`);
+    lines.push(`- Production: ${prodCount}`);
+    lines.push(`- Development: ${devCount}`);
+    lines.push(`- Peer: ${peerCount}`);
+
+    return {
+      success: true,
+      formatted: lines.join('\n'),
+      message: 'Tech stack detected from package.json'
+    };
+  }
+
+  // JSON format
+  return {
+    success: true,
+    data: {
+      stack,
+      summary
+    }
+  };
+}
+
+/**
  * Show help
  */
 function helpCommand() {
@@ -739,6 +1041,8 @@ Subcommands:
   query <type>                   Query project info
   ask <question>                 Ask natural language question (uses intent routing)
   search <type> <pattern>        Search across maps (file, export, import, signature, class, type, all)
+  deps [pattern]                 List npm dependencies (optionally filter by name)
+  stack                          Show detected tech stack (framework, bundler, testing, etc.)
   stats                          Show compression stats
 
 Options:
@@ -779,6 +1083,8 @@ Query Types (Extended - from dedicated map files):
   dependencies       Show file dependencies (forward & reverse)
   issues             Show detected code issues
   relationships      Show file relationships
+  npm-deps           Show npm packages with usage stats
+  stack              Show detected tech stack (framework, bundler, testing)
 
 Examples:
   session-cli project-maps generate
@@ -791,6 +1097,10 @@ Examples:
   session-cli project-maps search file "*.controller.ts"
   session-cli project-maps search signature "fetch*" --async
   session-cli project-maps search all "User"
+  session-cli project-maps deps                    # List all packages (sorted by usage)
+  session-cli project-maps deps react              # Filter packages containing "react"
+  session-cli project-maps stack                   # Show tech stack
+  session-cli project-maps stack --verbose         # Show detailed tech stack
   session-cli project-maps stats
 `.trim()
   };
@@ -820,6 +1130,10 @@ async function projectMapsCommand(args) {
         return await statsCommand(projectPath, options);
       case 'search':
         return await searchCommand(projectPath, options, args);
+      case 'deps':
+        return await depsCommand(projectPath, options, args);
+      case 'stack':
+        return await stackCommand(projectPath, options);
       case 'help':
       default:
         return helpCommand();

@@ -1,0 +1,275 @@
+{
+  "version": "1.0",
+  "description": "Behavior patterns for architecture detection. Matches code patterns, not package names.",
+
+  "behaviors": {
+    "external-auth": {
+      "description": "Uses external authentication service",
+      "architectureSignal": "baas-or-external-auth",
+      "patterns": [
+        "\\.auth\\.(signIn|signUp|signOut|getSession|getUser)",
+        "signInWith(Password|OAuth|Popup|Redirect|Provider)",
+        "\\.onAuthStateChange",
+        "\\.currentUser",
+        "useAuth\\(\\)",
+        "AuthProvider",
+        "\\.login\\s*\\(.*password",
+        "\\.register\\s*\\(.*email"
+      ],
+      "weight": 40
+    },
+
+    "external-database": {
+      "description": "Queries external database service",
+      "architectureSignal": "baas-or-external-db",
+      "patterns": [
+        "\\.from\\s*\\(['\"]\\w+['\"]\\)\\s*\\.(select|insert|update|delete|upsert)",
+        "\\.rpc\\s*\\(['\"]\\w+['\"]",
+        "\\.storage\\.(from|upload|download)",
+        "createClient\\s*\\([^)]*supabase|firebase|nhost",
+        "\\.collection\\s*\\(['\"]\\w+['\"]\\)",
+        "\\.doc\\s*\\(['\"]",
+        "useQuery.*from\\s*['\"]"
+      ],
+      "weight": 40
+    },
+
+    "http-server": {
+      "description": "Runs an HTTP server",
+      "architectureSignal": "traditional-server",
+      "patterns": [
+        "\\.listen\\s*\\(\\s*\\d+|process\\.env\\.PORT",
+        "createServer\\s*\\(",
+        "app\\.(get|post|put|delete|use)\\s*\\(['\"/]",
+        "router\\.(get|post|put|delete|use)\\s*\\(['\"/]",
+        "@(Get|Post|Put|Delete|Controller)\\s*\\(",
+        "express\\s*\\(\\)",
+        "fastify\\s*\\(\\)",
+        "new Hono\\s*\\("
+      ],
+      "weight": 50
+    },
+
+    "http-client": {
+      "description": "Makes HTTP requests to external API",
+      "architectureSignal": "calls-external-api",
+      "patterns": [
+        "fetch\\s*\\(['\"]https?://",
+        "axios\\.(get|post|put|delete|patch)\\s*\\(",
+        "\\.request\\s*\\(\\s*\\{[^}]*url",
+        "got\\.(get|post|put|delete)",
+        "ky\\.(get|post|put|delete)",
+        "\\$fetch\\s*\\("
+      ],
+      "weight": 25
+    },
+
+    "graphql-client": {
+      "description": "Uses GraphQL for data fetching",
+      "architectureSignal": "graphql-api",
+      "patterns": [
+        "useQuery\\s*\\(.*gql",
+        "useMutation\\s*\\(",
+        "gql\\s*`",
+        "ApolloClient",
+        "ApolloProvider",
+        "urql",
+        "graphql\\s*\\("
+      ],
+      "weight": 35
+    },
+
+    "graphql-server": {
+      "description": "Serves GraphQL API",
+      "architectureSignal": "graphql-server",
+      "patterns": [
+        "new ApolloServer",
+        "buildSchema\\s*\\(",
+        "@Resolver\\s*\\(",
+        "@Query\\s*\\(",
+        "@Mutation\\s*\\(",
+        "typeDefs.*resolvers",
+        "makeExecutableSchema"
+      ],
+      "weight": 45
+    },
+
+    "realtime": {
+      "description": "Uses realtime/websocket connections",
+      "architectureSignal": "realtime-enabled",
+      "patterns": [
+        "\\.subscribe\\s*\\(",
+        "\\.on\\s*\\(['\"]message|connection|data['\"]",
+        "new WebSocket\\s*\\(",
+        "\\.channel\\s*\\(['\"]",
+        "io\\.on\\s*\\(",
+        "socket\\.emit\\s*\\(",
+        "\\.onSnapshot\\s*\\("
+      ],
+      "weight": 30
+    },
+
+    "orm-database": {
+      "description": "Uses ORM for database access",
+      "architectureSignal": "has-orm-layer",
+      "patterns": [
+        "\\.(findMany|findUnique|findFirst|create|update|delete)\\s*\\(",
+        "prisma\\.",
+        "\\$queryRaw",
+        "Model\\.(find|create|update|destroy|findOne)",
+        "sequelize\\.",
+        "getRepository\\s*\\(",
+        "EntityManager",
+        "knex\\s*\\("
+      ],
+      "weight": 35
+    },
+
+    "direct-database": {
+      "description": "Direct database connection",
+      "architectureSignal": "traditional-backend",
+      "patterns": [
+        "new Pool\\s*\\(",
+        "\\.query\\s*\\(['\"]\\s*(SELECT|INSERT|UPDATE|DELETE)",
+        "mongoose\\.connect",
+        "MongoClient",
+        "createConnection\\s*\\(",
+        "pg\\.connect",
+        "mysql\\.createConnection"
+      ],
+      "weight": 40
+    },
+
+    "state-management": {
+      "description": "Client-side state management",
+      "architectureSignal": "frontend-app",
+      "patterns": [
+        "createStore\\s*\\(",
+        "useReducer\\s*\\(",
+        "createSlice\\s*\\(",
+        "atom\\s*\\(",
+        "useRecoilState",
+        "create\\s*\\(.*set.*get",
+        "defineStore\\s*\\("
+      ],
+      "weight": 20
+    },
+
+    "context-provider": {
+      "description": "React context provider pattern",
+      "architectureSignal": "react-frontend",
+      "patterns": [
+        "createContext\\s*\\(",
+        "useContext\\s*\\(",
+        "\\.Provider\\s*value=",
+        "export.*Provider"
+      ],
+      "weight": 15
+    },
+
+    "client-creation": {
+      "description": "Creates external service client",
+      "architectureSignal": "external-service",
+      "patterns": [
+        "createClient\\s*\\([^)]+\\)",
+        "new\\s+\\w+Client\\s*\\(",
+        "initializeApp\\s*\\(",
+        "create\\w*Client\\s*\\("
+      ],
+      "weight": 30
+    },
+
+    "env-config": {
+      "description": "Uses environment configuration",
+      "architectureSignal": "configurable",
+      "patterns": [
+        "process\\.env\\.",
+        "import\\.meta\\.env\\.",
+        "Deno\\.env\\.",
+        "dotenv\\.config"
+      ],
+      "weight": 10
+    },
+
+    "file-upload": {
+      "description": "Handles file uploads",
+      "architectureSignal": "has-file-handling",
+      "patterns": [
+        "multer\\s*\\(",
+        "\\.upload\\s*\\(",
+        "FormData",
+        "multipart",
+        "busboy",
+        "\\.putObject\\s*\\("
+      ],
+      "weight": 20
+    },
+
+    "caching": {
+      "description": "Uses caching layer",
+      "architectureSignal": "has-caching",
+      "patterns": [
+        "redis\\.(get|set|del)",
+        "\\.cache\\.(get|set|has)",
+        "memcached",
+        "lru-cache",
+        "node-cache"
+      ],
+      "weight": 25
+    },
+
+    "queue-worker": {
+      "description": "Uses message queue/worker",
+      "architectureSignal": "async-processing",
+      "patterns": [
+        "bull\\.(process|add)",
+        "\\.addJob\\s*\\(",
+        "amqplib",
+        "kafka\\.",
+        "sqs\\.(send|receive)",
+        "Worker\\s*\\("
+      ],
+      "weight": 30
+    }
+  },
+
+  "architectureTypes": {
+    "baas-frontend": {
+      "description": "Frontend app using Backend-as-a-Service",
+      "requiredSignals": ["baas-or-external-auth", "baas-or-external-db"],
+      "excludedSignals": ["traditional-server", "traditional-backend"],
+      "confidence": "high"
+    },
+    "baas-partial": {
+      "description": "Uses some BaaS features",
+      "requiredSignals": [],
+      "anyOfSignals": ["baas-or-external-auth", "baas-or-external-db"],
+      "excludedSignals": ["traditional-server"],
+      "confidence": "medium"
+    },
+    "traditional-fullstack": {
+      "description": "Traditional server with frontend",
+      "requiredSignals": ["traditional-server"],
+      "anyOfSignals": ["has-orm-layer", "traditional-backend"],
+      "confidence": "high"
+    },
+    "api-backend": {
+      "description": "API-only backend service",
+      "requiredSignals": ["traditional-server"],
+      "excludedSignals": ["react-frontend", "context-provider"],
+      "confidence": "medium"
+    },
+    "frontend-only": {
+      "description": "Frontend app calling external APIs",
+      "requiredSignals": ["react-frontend"],
+      "anyOfSignals": ["calls-external-api", "graphql-api"],
+      "excludedSignals": ["traditional-server", "traditional-backend"],
+      "confidence": "medium"
+    },
+    "graphql-fullstack": {
+      "description": "GraphQL-based fullstack",
+      "requiredSignals": ["graphql-server"],
+      "confidence": "high"
+    }
+  }
+}

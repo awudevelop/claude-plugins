@@ -13,83 +13,158 @@ You receive a requirements JSON object containing:
   - `priority`: high/medium/low
   - `open_questions`: Array of unresolved questions
   - `conversation_context`: Why this requirement exists
+  - `suggestions`: **Implementation-ready artifacts (CRITICAL - see below)**
+- `technical_decisions`: Decisions made during planning
+- `user_decisions`: Explicit user choices from Q&A
 - `discussion_notes`: Overall analysis and key decisions
-- `conversation_summary`: Summary of the conversation that led to these requirements
+- `conversation_summary`: Summary of the conversation
 - `metadata`: Work type and complexity information
 
-## Task
+---
 
-Break down the requirements into concrete, executable implementation tasks organized by logical phases.
+## CRITICAL: Using Suggestions
 
-### Guidelines
+**Suggestions are NOT abstract ideas. They are implementation-ready designs informed by codebase analysis.**
 
-1. **Task Granularity**
-   - Each task should be completable in 1-4 hours
-   - Tasks must be specific and actionable (not vague)
-   - Include concrete details: file names, function names, specific operations
-   - Think: "What exact code changes need to happen?"
+During the planning conversation, Claude likely:
+- Read actual codebase files
+- Analyzed existing patterns and RPC functions
+- Designed implementations that FIT the codebase
+- Produced code snippets, API signatures, and structures
 
-2. **Phase Organization**
-   - Group related tasks into logical phases
-   - Phases should have clear dependencies (Phase 1 before Phase 2)
-   - Typical phases: Foundation → Core Logic → Integration → Testing → Documentation
-   - Each phase should have 3-8 tasks (not too many, not too few)
+**You MUST follow this verification-first process for each suggestion:**
 
-3. **Requirement Coverage**
-   - Every requirement must map to at least one task
-   - Complex requirements may need multiple tasks across phases
-   - Track which requirement each task fulfills
+### Step 1: SEARCH for Existing Implementation
 
-4. **Technical Specificity**
-   - Reference actual files, functions, and code structures
-   - Include implementation approach in task details
-   - Consider error handling, validation, and edge cases
-   - Think about the existing codebase architecture
+Before creating any task from a suggestion, check if similar functionality already exists:
 
-5. **Dependencies and Order**
-   - Tasks within a phase have a logical order
-   - Foundation tasks come before integration tasks
-   - Core functionality before advanced features
+```
+VERIFICATION REQUIRED:
+- Search for: [function/method names from suggestion]
+- Search patterns: [regex patterns to find similar code]
+- Search locations: [likely directories]
+- Use project-maps if available
+```
 
-### Analysis Process
+### Step 2: EVALUATE the Suggestion
 
-**Step 1: Understand the Goal**
-- What is the end state we're trying to achieve?
-- What are the core capabilities needed?
+Compare suggestion against codebase:
+- Does a similar function already exist?
+- Is the suggested signature compatible with existing patterns?
+- Does the code snippet follow codebase conventions?
 
-**Step 2: Identify Technical Components**
-- What files/modules need to be created or modified?
-- What are the key data structures?
-- What are the main operations/functions?
+### Step 3: DECIDE Implementation Approach
 
-**Step 3: Map Requirements to Implementation Areas**
-- Which requirements affect data models?
-- Which affect business logic?
-- Which affect user interfaces?
-- Which affect validation/safety?
+| Scenario | Decision | Action |
+|----------|----------|--------|
+| Exact match exists | `skip` | Note as already implemented |
+| Similar exists, compatible | `extend` | Extend/wrap existing implementation |
+| Similar exists, incompatible | `resolve_conflict` | Document conflict, propose resolution |
+| Not exists, suggestion valid | `use_suggestion` | **Use suggestion code/API as-is** |
+| Not exists, needs adaptation | `adapt` | Adapt suggestion to match patterns |
 
-**Step 4: Design Phase Structure**
-Example phase progression:
-1. **Foundation Phase**: Data structures, schemas, core utilities
-2. **Core Operations Phase**: Main functionality implementation
-3. **Integration Phase**: Connect components, add interfaces
-4. **Safety & Validation Phase**: Error handling, validation, testing
-5. **Documentation Phase**: User docs, code comments
+### Step 4: Create Task with Verification Step
 
-**Step 5: Break Down Each Requirement**
-For each requirement, ask:
-- What files need to change?
-- What functions need to be added/modified?
-- What validation is needed?
-- What testing is needed?
-- Are there dependencies on other requirements?
+Every task derived from a suggestion MUST include:
+1. A verification step (what to search before implementing)
+2. Reference to the source suggestion
+3. The implementation decision
+4. Rationale for the decision
 
-**Step 6: Create Concrete Tasks**
-Each task should answer:
-- **What** exact change is being made?
-- **Where** is it being made (file/function)?
-- **How** should it be implemented (approach)?
-- **Why** is it needed (requirement link)?
+---
+
+## Task Structure (Updated)
+
+```json
+{
+  "id": "task-1-1",
+  "description": "Implement can() permission checking method",
+  "details": "...",
+  "from_requirement": "req-1",
+  "from_suggestion": {
+    "type": "api_designs",
+    "index": 0,
+    "summary": "authHub.can(permission, context?) -> Promise<boolean>"
+  },
+  "verification": {
+    "search_patterns": ["check.*permission", "hasPermission", "canAccess"],
+    "search_locations": ["src/", "lib/", "hooks/"],
+    "existing_found": null
+  },
+  "implementation_decision": {
+    "decision": "use_suggestion",
+    "rationale": "No existing implementation found. Suggestion is based on analysis of check_user_permissions RPC."
+  },
+  "estimated_time": "2h",
+  "dependencies": []
+}
+```
+
+---
+
+## Guidelines
+
+### 1. Task Granularity
+- Each task should be completable in 1-4 hours
+- Tasks must be specific and actionable (not vague)
+- Include concrete details: file names, function names, specific operations
+
+### 2. Phase Organization
+- Group related tasks into logical phases
+- Phases should have clear dependencies
+- No limit on number of phases or tasks - be as detailed as needed
+
+### 3. Suggestion Handling (CRITICAL)
+- **DO NOT ignore suggestions** - they represent significant analysis work
+- **DO NOT reinvent** what suggestions already provide
+- **DO verify** suggestions against codebase before blindly using
+- **DO use suggestion code** when verification confirms it's valid
+- **DO adapt** suggestions only when codebase patterns differ
+
+### 4. Technical Specificity
+- Reference actual files, functions, and code structures
+- When suggestion provides code, include it in task details
+- When suggestion provides API signature, use it as the target
+
+### 5. Dependencies and Order
+- Tasks within a phase have a logical order
+- Foundation tasks come before integration tasks
+- Verification tasks can run in parallel
+
+---
+
+## Analysis Process
+
+**Step 1: Catalog All Suggestions**
+Before breaking down requirements, inventory all suggestions:
+- List all api_designs across requirements
+- List all code_snippets across requirements
+- List all file_structures across requirements
+- Note which suggestions relate to each other
+
+**Step 2: Group by Implementation Area**
+- Which suggestions affect the same files/modules?
+- Which can be implemented together?
+- Which have dependencies on each other?
+
+**Step 3: Create Verification Tasks**
+For each unique suggestion, create a verification step:
+- What to search for in codebase
+- What patterns indicate existing implementation
+- How to determine if suggestion is valid
+
+**Step 4: Create Implementation Tasks**
+For each requirement + suggestion combination:
+- Reference the specific suggestion being implemented
+- Include the verification outcome expectation
+- Provide implementation details (using suggestion code when valid)
+
+**Step 5: Handle User Decisions**
+Check `user_decisions` array for explicit choices:
+- These override any conflicting suggestions
+- Include user decision rationale in task details
+
+---
 
 ## Output Format
 
@@ -102,13 +177,27 @@ Return ONLY valid JSON (no markdown, no explanations):
     {
       "id": "phase-1",
       "name": "Foundation Setup",
-      "description": "1-2 sentence description of this phase's purpose",
+      "description": "Phase purpose and why it comes first",
       "tasks": [
         {
           "id": "task-1-1",
           "description": "Concise task description (40-60 chars)",
-          "details": "Specific implementation details: files to modify, functions to add, approach to take. Include concrete file paths and code structure guidance.",
+          "details": "Comprehensive implementation details including:\n- Files to create/modify\n- Functions/classes to add\n- Code from suggestion (if applicable)\n- Verification steps",
           "from_requirement": "req-1",
+          "from_suggestion": {
+            "type": "api_designs|code_snippets|file_structures|ui_components|implementation_patterns",
+            "index": 0,
+            "summary": "Brief description of the suggestion"
+          },
+          "verification": {
+            "search_patterns": ["pattern1", "pattern2"],
+            "search_locations": ["src/", "lib/"],
+            "existing_found": null
+          },
+          "implementation_decision": {
+            "decision": "use_suggestion|adapt|extend|skip|resolve_conflict",
+            "rationale": "Why this decision was made"
+          },
           "estimated_time": "2h",
           "dependencies": []
         }
@@ -116,205 +205,137 @@ Return ONLY valid JSON (no markdown, no explanations):
     }
   ],
   "traceability": {
-    "req-1": ["task-1-1", "task-2-3", "task-3-1"],
-    "req-2": ["task-1-2", "task-2-1"]
+    "req-1": ["task-1-1", "task-2-1"],
+    "req-2": ["task-1-2", "task-2-2"]
+  },
+  "suggestion_usage": {
+    "used_as_is": ["req-1.suggestions.api_designs[0]", "req-2.suggestions.code_snippets[0]"],
+    "adapted": ["req-1.suggestions.file_structures[0]"],
+    "skipped_existing": [],
+    "conflicts_resolved": []
   },
   "assumptions": [
-    "Assumption about codebase, tech stack, or approach",
-    "Another assumption that affects implementation"
+    "Assumption about codebase or approach"
   ],
   "risks": [
-    "Potential risk or challenge in implementation",
-    "Another risk to be aware of"
+    "Potential challenge in implementation"
   ]
 }
 ```
 
-### Field Specifications
+---
 
-**implementation_goal**:
-- Concise summary of the complete implementation
-- Should match the original goal but be more specific
-- Example: "Implement comprehensive plan update functionality with atomic multi-file operations, UUID-based IDs, execution safety, and hybrid natural language interface"
-
-**phases**:
-- **id**: "phase-{number}" format
-- **name**: Short, descriptive phase name (2-5 words)
-- **description**: What this phase accomplishes and why it comes in this order
-- **tasks**: Array of task objects
-
-**tasks**:
-- **id**: "task-{phase_number}-{task_number}" format (e.g., "task-1-1", "task-2-3")
-- **description**: Brief, action-oriented summary (under 60 chars)
-- **details**: Comprehensive implementation guidance including:
-  - Specific files to create/modify (absolute paths if known)
-  - Functions/classes to add
-  - Key data structures
-  - Implementation approach
-  - Important considerations (validation, error handling, etc.)
-- **from_requirement**: Reference to requirement ID this task fulfills
-- **estimated_time**: Realistic time estimate (e.g., "1h", "3h", "2-4h")
-- **dependencies**: Array of task IDs that must complete first (empty array if none)
-
-**traceability**:
-- Maps each requirement ID to array of task IDs that implement it
-- Ensures complete requirement coverage
-- Example: `"req-1": ["task-1-1", "task-2-1", "task-3-2"]`
-
-**assumptions**:
-- Technical assumptions about the codebase
-- Technology choices or constraints
-- Existing infrastructure/patterns to follow
-- Keep to 3-6 key assumptions
-
-**risks**:
-- Technical challenges or unknowns
-- Potential blockers or complications
-- Areas requiring extra attention
-- Keep to 3-6 key risks
-
-## Quality Checklist
-
-Before returning, verify:
-
-- [ ] Every requirement has at least one task
-- [ ] All tasks have concrete, specific details
-- [ ] Phase progression makes logical sense
-- [ ] Task dependencies are correctly identified
-- [ ] Estimated times are realistic
-- [ ] No vague or unclear task descriptions
-- [ ] Assumptions and risks are identified
-- [ ] Traceability map is complete and accurate
-- [ ] Implementation goal clearly summarizes the work
-
-## Example
+## Example with Suggestions
 
 **Input:**
 ```json
 {
-  "plan_name": "add-user-roles",
-  "plan_type": "conceptual",
-  "goal": "Add role-based access control to user management system",
+  "plan_name": "auth-sdk",
+  "goal": "Create authentication SDK with permission checking",
   "requirements": [
     {
       "id": "req-1",
-      "description": "Database schema for user roles",
-      "notes": "Need roles table and user_roles junction table",
-      "priority": "high",
-      "open_questions": ["Should roles be hierarchical?"],
-      "conversation_context": "User wants admin, editor, viewer roles"
-    },
-    {
-      "id": "req-2",
-      "description": "Role checking middleware",
-      "notes": "Protect routes based on user roles",
-      "priority": "high",
-      "open_questions": [],
-      "conversation_context": "Need to prevent unauthorized access"
+      "description": "Permission checking method",
+      "suggestions": {
+        "api_designs": [
+          {
+            "method": "authHub.can",
+            "signature": "can(permission: string, context?: { tenantId?, productId? }): Promise<boolean>",
+            "example": "const canEdit = await authHub.can('sys:manage-user-role')",
+            "source_context": "Based on existing check_user_permissions RPC"
+          }
+        ],
+        "code_snippets": [
+          {
+            "language": "typescript",
+            "code": "async can(permission: string, context?: Context): Promise<boolean> {\n  const ctx = context || this.contextStore.getContext();\n  const result = await this.supabase.rpc('check_user_permissions', {\n    p_permission: permission,\n    p_tenant_id: ctx.tenantId,\n    p_product_id: ctx.productId\n  });\n  return result.data ?? false;\n}",
+            "purpose": "Permission check implementation using Supabase RPC",
+            "source_context": "Designed based on existing RPC function signature"
+          }
+        ]
+      }
     }
   ],
-  "discussion_notes": "Simple RBAC with three roles. No hierarchy needed for v1.",
-  "conversation_summary": "User needs basic role-based access control with admin, editor, and viewer roles to restrict feature access.",
-  "metadata": {
-    "work_type": "feature",
-    "estimated_complexity": "medium"
-  }
+  "user_decisions": [
+    {
+      "question": "Should context persist to localStorage?",
+      "answer": "yes",
+      "implications": "ContextStore needs localStorage read/write"
+    }
+  ]
 }
 ```
 
 **Output:**
 ```json
 {
-  "implementation_goal": "Implement role-based access control system with three roles (admin, editor, viewer), database schema, middleware, and route protection",
+  "implementation_goal": "Create authentication SDK with can() permission checking using existing Supabase RPC",
   "phases": [
     {
       "id": "phase-1",
-      "name": "Database Schema",
-      "description": "Create database tables and relationships for role management",
+      "name": "Permission Checking",
+      "description": "Implement core permission checking functionality",
       "tasks": [
         {
           "id": "task-1-1",
-          "description": "Create roles table migration",
-          "details": "Add migration file: migrations/YYYYMMDD_create_roles_table.js. Create 'roles' table with columns: id (PK), name (varchar 50, unique), description (text), created_at. Seed with three roles: admin, editor, viewer. Use existing migration pattern from users table.",
+          "description": "Implement can() permission checking method",
+          "details": "VERIFICATION STEP:\n1. Search for existing permission checking in codebase\n   - Patterns: 'check.*permission', 'hasPermission', 'canAccess'\n   - Locations: src/, lib/, hooks/\n   - Check if check_user_permissions RPC exists in Supabase\n\nIMPLEMENTATION (if no existing found):\nUse suggestion code as-is - it was designed based on existing RPC:\n\n```typescript\nasync can(permission: string, context?: Context): Promise<boolean> {\n  const ctx = context || this.contextStore.getContext();\n  const result = await this.supabase.rpc('check_user_permissions', {\n    p_permission: permission,\n    p_tenant_id: ctx.tenantId,\n    p_product_id: ctx.productId\n  });\n  return result.data ?? false;\n}\n```\n\nFile: src/permissions/check.ts\nExport from main index.ts\n\nNote: User confirmed context should use localStorage (see user_decisions)",
           "from_requirement": "req-1",
+          "from_suggestion": {
+            "type": "code_snippets",
+            "index": 0,
+            "summary": "can() method using check_user_permissions RPC"
+          },
+          "verification": {
+            "search_patterns": ["check.*permission", "hasPermission", "canAccess", "check_user_permissions"],
+            "search_locations": ["src/", "lib/", "hooks/", "supabase/functions/"],
+            "existing_found": null
+          },
+          "implementation_decision": {
+            "decision": "use_suggestion",
+            "rationale": "Suggestion is based on analysis of existing check_user_permissions RPC. Code is implementation-ready and follows codebase patterns."
+          },
           "estimated_time": "1h",
           "dependencies": []
-        },
-        {
-          "id": "task-1-2",
-          "description": "Create user_roles junction table migration",
-          "details": "Add migration file: migrations/YYYYMMDD_create_user_roles_table.js. Create 'user_roles' table with: user_id (FK to users.id), role_id (FK to roles.id), assigned_at. Add composite unique index on (user_id, role_id). Include CASCADE delete constraints.",
-          "from_requirement": "req-1",
-          "estimated_time": "1h",
-          "dependencies": ["task-1-1"]
-        }
-      ]
-    },
-    {
-      "id": "phase-2",
-      "name": "Role Management Logic",
-      "description": "Implement role checking and assignment functionality",
-      "tasks": [
-        {
-          "id": "task-2-1",
-          "description": "Add role checking functions",
-          "details": "Create lib/roles.js with functions: hasRole(userId, roleName), getRoles(userId), assignRole(userId, roleName), removeRole(userId, roleName). Use existing DB connection pattern. Add error handling for invalid users/roles.",
-          "from_requirement": "req-2",
-          "estimated_time": "2h",
-          "dependencies": ["task-1-2"]
-        },
-        {
-          "id": "task-2-2",
-          "description": "Create role middleware",
-          "details": "Create middleware/requireRole.js that exports requireRole(roleName) function. Middleware should: 1) Get user from req.user (assumes auth middleware ran), 2) Call hasRole() to check, 3) Return 403 if unauthorized, 4) Call next() if authorized. Add detailed error messages.",
-          "from_requirement": "req-2",
-          "estimated_time": "1.5h",
-          "dependencies": ["task-2-1"]
-        }
-      ]
-    },
-    {
-      "id": "phase-3",
-      "name": "Integration & Testing",
-      "description": "Apply role protection to routes and verify functionality",
-      "tasks": [
-        {
-          "id": "task-3-1",
-          "description": "Protect admin routes with role middleware",
-          "details": "Update routes/admin.js to use requireRole('admin') middleware on all admin routes. Apply to: DELETE /users/:id, POST /users/:id/ban, GET /admin/dashboard. Follow existing middleware pattern in codebase.",
-          "from_requirement": "req-2",
-          "estimated_time": "1h",
-          "dependencies": ["task-2-2"]
-        },
-        {
-          "id": "task-3-2",
-          "description": "Add role management unit tests",
-          "details": "Create tests/lib/roles.test.js. Test: hasRole() returns correct boolean, getRoles() returns user's roles, assignRole() creates junction record, removeRole() deletes junction record, error cases (invalid user/role). Use existing test patterns with Jest.",
-          "from_requirement": "req-1",
-          "estimated_time": "2h",
-          "dependencies": ["task-2-1"]
         }
       ]
     }
   ],
   "traceability": {
-    "req-1": ["task-1-1", "task-1-2", "task-3-2"],
-    "req-2": ["task-2-1", "task-2-2", "task-3-1"]
+    "req-1": ["task-1-1"]
+  },
+  "suggestion_usage": {
+    "used_as_is": ["req-1.suggestions.code_snippets[0]"],
+    "adapted": [],
+    "skipped_existing": [],
+    "conflicts_resolved": []
   },
   "assumptions": [
-    "Database is PostgreSQL (based on existing migration patterns)",
-    "Authentication middleware already exists and sets req.user",
-    "Using existing migration runner (no new migration tooling needed)",
-    "Jest is already set up for testing",
-    "Users can have multiple roles (junction table approach)"
+    "check_user_permissions RPC exists in Supabase with expected signature",
+    "ContextStore class will be implemented separately for context management"
   ],
   "risks": [
-    "Migration conflicts if other migrations are pending",
-    "Performance impact if hasRole() is called frequently (may need caching)",
-    "No role hierarchy means admins must also be assigned editor/viewer roles for those permissions"
+    "RPC function signature may have changed since conversation analysis",
+    "Need to verify Supabase client initialization pattern"
   ]
 }
 ```
+
+---
+
+## Quality Checklist
+
+Before returning, verify:
+
+- [ ] Every requirement has at least one task
+- [ ] All suggestions have been evaluated (not ignored)
+- [ ] Tasks with suggestions include verification steps
+- [ ] `from_suggestion` references are accurate
+- [ ] `implementation_decision` is specified for each suggestion-based task
+- [ ] `suggestion_usage` summary is complete
+- [ ] User decisions from `user_decisions` are reflected in tasks
+- [ ] Phase progression makes logical sense
+- [ ] No vague or unclear task descriptions
 
 ---
 

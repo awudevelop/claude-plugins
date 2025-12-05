@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs').promises;
+const ArchitectureSynthesizer = require('./architecture-synthesizer');
 
 /**
  * Architecture Pattern Detector for Backend Systems
@@ -63,7 +64,7 @@ class ArchitectureDetector {
   }
 
   /**
-   * Detect architecture pattern from scanned files
+   * Detect architecture pattern from scanned files (folder-based)
    * @param {Array} scannedFiles - Array of file metadata
    * @returns {Object} Architecture detection results
    */
@@ -79,6 +80,102 @@ class ArchitectureDetector {
       confidence: this.calculateConfidence(patterns, layerCounts),
       layers: this.extractLayers(scannedFiles)
     };
+  }
+
+  /**
+   * Detect architecture using behavior analysis (code pattern based)
+   * This is more accurate than folder-based detection for BaaS, serverless, etc.
+   *
+   * @param {Array} filesWithContent - Array of file metadata WITH content loaded
+   * @param {Object} options - Analysis options
+   * @returns {Object} Architecture assessment with plain text output
+   */
+  async detectArchitectureWithBehaviors(filesWithContent, options = {}) {
+    const synthesizer = new ArchitectureSynthesizer(this.projectRoot);
+
+    try {
+      const assessment = await synthesizer.analyze(filesWithContent, {
+        outputFormat: 'text',
+        includeEvidence: true,
+        ...options
+      });
+
+      // Convert to standard format compatible with existing code
+      return {
+        primaryPattern: {
+          name: this.formatArchitectureType(assessment.architecture.type),
+          type: assessment.architecture.type,
+          confidence: assessment.architecture.confidence
+        },
+        detectedPatterns: [{
+          name: this.formatArchitectureType(assessment.architecture.type),
+          type: assessment.architecture.type,
+          confidence: assessment.architecture.confidence,
+          evidence: assessment.architecture.evidence
+        }],
+        confidence: assessment.architecture.confidence,
+        behaviorBased: true,
+        gateways: assessment.gateways,
+        signals: assessment.behaviors,
+        apiSpec: assessment.apiSpec,
+        formatted: assessment.formatted,
+        // Keep layer info for compatibility
+        layerCounts: {},
+        layers: {}
+      };
+    } catch (err) {
+      console.error('Behavior analysis failed, falling back to folder-based:', err.message);
+      // Fall back to folder-based detection
+      return this.detectArchitecture(filesWithContent);
+    }
+  }
+
+  /**
+   * Quick behavior-based detection (minimal file reading)
+   * Use when you just need architecture type, not full analysis
+   */
+  async quickBehaviorDetection(filesWithContent) {
+    const synthesizer = new ArchitectureSynthesizer(this.projectRoot);
+
+    try {
+      const result = await synthesizer.quickAnalysis(filesWithContent);
+      return {
+        primaryPattern: {
+          name: this.formatArchitectureType(result.type),
+          type: result.type,
+          confidence: result.confidence
+        },
+        confidence: result.confidence,
+        formatted: result.formatted,
+        behaviorBased: true
+      };
+    } catch (err) {
+      return {
+        primaryPattern: { name: 'Unknown', type: 'unknown', confidence: 'low' },
+        confidence: 'low',
+        formatted: 'Architecture: unknown (analysis failed)',
+        behaviorBased: false
+      };
+    }
+  }
+
+  /**
+   * Format architecture type to human-readable name
+   */
+  formatArchitectureType(type) {
+    const names = {
+      'baas-frontend': 'BaaS Frontend',
+      'baas-partial': 'Partial BaaS',
+      'traditional-fullstack': 'Traditional Fullstack',
+      'api-backend': 'API Backend',
+      'frontend-only': 'Frontend Only',
+      'frontend-external-api': 'Frontend + External API',
+      'graphql-fullstack': 'GraphQL Fullstack',
+      'graphql-client': 'GraphQL Client',
+      'external-service-client': 'External Service Client',
+      'unknown': 'Unknown'
+    };
+    return names[type] || type;
   }
 
   /**

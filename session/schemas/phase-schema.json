@@ -146,6 +146,70 @@
               "type": "string"
             }
           },
+          "from_requirement": {
+            "type": "string",
+            "description": "Requirement ID this task fulfills",
+            "pattern": "^req-[0-9]+$"
+          },
+          "from_suggestion": {
+            "type": "object",
+            "description": "Reference to the suggestion that informed this task",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["api_designs", "code_snippets", "file_structures", "ui_components", "implementation_patterns"],
+                "description": "Type of suggestion"
+              },
+              "index": {
+                "type": "integer",
+                "description": "Index in the suggestion array",
+                "minimum": 0
+              },
+              "summary": {
+                "type": "string",
+                "description": "Brief description of the suggestion"
+              }
+            }
+          },
+          "verification": {
+            "type": "object",
+            "description": "Verification steps to check for existing implementation",
+            "properties": {
+              "search_patterns": {
+                "type": "array",
+                "description": "Regex patterns to search for existing code",
+                "items": { "type": "string" }
+              },
+              "search_locations": {
+                "type": "array",
+                "description": "Directories to search in",
+                "items": { "type": "string" }
+              },
+              "existing_found": {
+                "type": ["string", "null"],
+                "description": "Path to existing implementation if found"
+              },
+              "verified": {
+                "type": "boolean",
+                "description": "Whether verification has been performed"
+              }
+            }
+          },
+          "implementation_decision": {
+            "type": "object",
+            "description": "Decision on how to implement based on verification",
+            "properties": {
+              "decision": {
+                "type": "string",
+                "enum": ["use_suggestion", "adapt", "extend", "skip", "resolve_conflict"],
+                "description": "The implementation approach"
+              },
+              "rationale": {
+                "type": "string",
+                "description": "Why this decision was made"
+              }
+            }
+          },
           "output": {
             "type": "object",
             "properties": {
