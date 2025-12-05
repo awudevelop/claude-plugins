@@ -243,6 +243,34 @@ Commands:
         session-cli project-maps list
         session-cli project-maps query framework
 
+Plan Commands:
+  validate-requirements '<json>'
+      Validate requirements JSON against schema
+
+  save-requirements <plan-name> '<json>'
+      Save requirements to .claude/plans/{plan-name}/requirements.json
+
+  load-requirements <plan-name>
+      Load requirements for a plan
+
+  get-plan-format <plan-name>
+      Get the format of a plan (conceptual or execution)
+
+  transform-plan <plan-name> '<breakdown-json>'
+      Transform conceptual plan to execution format
+
+  plan-exists <plan-name>
+      Check if a plan exists
+
+  plan-update <plan-name> [options]
+      Update plan tasks and phases
+
+  detect-work-type <session-name>
+      Detect work type from conversation log
+
+  select-template <work-type>
+      Get template path for work type
+
 Options:
   --help              Show this help message
   --version           Show version information
