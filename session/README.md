@@ -1,15 +1,15 @@
 # Session Management Plugin for Claude Code
 
-**Version 3.17.5** - Plan Update Feature: Atomic operations for modifying plans with execution safety
+**Version 3.18.0** - Plan Update Feature: Atomic operations for modifying plans with execution safety
 
 Intelligent session management with **72% token reduction** through parallel subagent delegation. Zero-blocking conversation logging (<2ms), intelligent analysis via isolated subagents (2-4s), hybrid cleanup on all exit paths. Fast, efficient session resume with minimal main context usage.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-v3.17.5-blue.svg)](https://github.com/awudevelop/claude-plugins)
+[![Version](https://img.shields.io/badge/version-v3.18.0-blue.svg)](https://github.com/awudevelop/claude-plugins)
 
 ---
 
-## 🚀 What's New in v3.17.5 (Latest Update)
+## 🚀 What's New in v3.18.0 (Latest Update)
 
 ### 📝 Plan Update Feature
 - **Atomic Operations** - Add, update, delete, move, and reorder phases and tasks
@@ -95,7 +95,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 
 ### Previous Update: v3.6.2
 
-## 🚀 What's New in v3.17.5
+## 🚀 What's New in v3.18.0
 
 ### 📝 Self-Contained Conversation Logs
 - 🎯 **Complete Capture** - Both user prompts AND Claude's full responses
@@ -115,7 +115,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 
 ### Previous Update: v3.6.0
 
-## 🚀 What's New in v3.17.5
+## 🚀 What's New in v3.18.0
 
 ### 🔍 Automatic Git History Capture
 - 📊 **Repository Context** - Last 50 commits captured automatically at session boundaries

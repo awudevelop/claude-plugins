@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.18.0] - 2025-12-05
+
+### Added
+
+- **Behavior-Based Architecture Detection** - Intelligent code analysis for modern architectures
+  - New `ArchitectureSynthesizer` combines gateway detection and behavior extraction
+  - `GatewayDetector` identifies architectural entry points via heuristic scoring
+  - `BehaviorExtractor` matches code patterns (not hardcoded library names)
+  - Supports BaaS, serverless, GraphQL, and traditional patterns
+  - Falls back to folder-based detection if behavior analysis fails
+
+- **NPM Dependencies Map** - New Phase 9 in map generation
+  - Generates `npm-dependencies.json` with package usage tracking
+  - Tech stack detection: framework, bundler, testing, runtime, package manager
+  - Cross-references imports with installed packages
+
+- **New CLI Commands** - Extended project-maps functionality
+  - `deps [pattern]` - Search npm dependencies with optional filtering
+  - `stack` - Show detected tech stack (lean format by default)
+  - New query types: `npm-deps`, `stack`
+
+- **Enhanced Planning Schemas** - Richer requirement capture
+  - Requirements now support `suggestions` with implementation artifacts
+  - Suggestion types: `api_designs`, `code_snippets`, `file_structures`, `ui_components`, `implementation_patterns`
+  - Phase schema adds `from_requirement`, `from_suggestion` for task traceability
+  - Added `verification` object for codebase checks before task execution
+  - Added `technical_decisions` and `user_decisions` arrays
+
+### Changed
+
+- **Prompts Updated** - Richer planning context extraction
+  - `analyze-conversation.md` - No artificial limits on topics/decisions
+  - `breakdown-requirement.md` - Enhanced suggestion extraction
+  - Conversation summaries now have no length limits
+
+### Files Added
+
+- `architecture-synthesizer.js` - Main behavior analysis entry point
+- `behavior-extractor.js` - Pattern matching against code behaviors
+- `gateway-detector.js` - Architectural entry point identification
+- `behavior-patterns.json` - Configurable regex patterns for detection
+
+### Files Modified
+
+- `architecture-detector.js` - Added behavior-based detection methods
+- `map-generator.js` - Added Phase 9 (npm-deps), behavior analysis integration
+- `project-maps.js` - New `deps`, `stack` commands and query types
+- `intent-router.js` - Added behaviorAnalysis to backend-layers query
+- `plan-ops.js` - Extended validation for new schema fields
+- `phase-schema.json` - Added verification and traceability fields
+- `requirements-schema.json` - Added suggestions and decision arrays
+
+---
+
 ## [3.17.5] - 2025-12-03
 
 ### Added
