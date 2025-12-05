@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.20.0] - 2025-12-05
+
+### Added
+
+- **Intelligent Reference File Analysis** - `--reference` now understands file types
+  - **OpenAPI/Swagger**: Extracts endpoints → API requirements, models → DB phase
+  - **Existing Plans**: Evaluates relevance, inherits applicable requirements/decisions
+  - **SQL Schemas**: Parses tables/relations → informs database phase
+  - **Prisma Schemas**: Extracts models/enums → type-safe implementation
+  - **GraphQL Schemas**: Extracts types/queries → resolver tasks
+  - **Design Mockups**: Analyzes UI elements → frontend requirements
+  - **Documentation**: Extracts requirements and technical decisions
+  - **Source Code**: Identifies patterns to follow, code to extend
+
+- **New prompt file**: `prompts/parse-reference.md`
+  - Comprehensive instructions for intelligent file type detection
+  - Structured extraction for each file type
+  - Plan integration suggestions per reference type
+
+### Changed
+
+- **plan-save.md** - Complete rewrite of reference handling
+  - Step 0.5 added for intelligent reference analysis
+  - Reference files spawn analysis subagent (haiku) for structured extraction
+  - Subagent prompt includes type-specific integration instructions
+  - Metadata now stores reference type and integration counts
+  - Preview shows reference integration summary
+
+### Why This Matters
+
+**Before (dumb):**
+```
+--reference file.json → dump content as "context" → "use as baseline"
+```
+
+**After (intelligent):**
+```
+--reference swagger.yaml →
+  ├── Detect: OpenAPI 3.0
+  ├── Extract: GET /products, POST /products, Product model
+  └── Integrate:
+      ├── req-1: "Implement GET /products endpoint"
+      ├── req-2: "Implement POST /products endpoint"
+      └── suggestion: Product model with id, name, price fields
+```
+
+Reference files are now SOURCE MATERIAL that directly inform plan structure,
+not context blobs that get ignored.
+
+---
+
 ## [3.19.0] - 2025-12-05
 
 ### Changed
