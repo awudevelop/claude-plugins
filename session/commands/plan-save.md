@@ -9,11 +9,73 @@ Use ONLY the exact command formats specified in this template.
 ## Arguments
 
 Parsed from user input:
-- `plan_name`: {name} (required)
+- `plan_name`: First argument (required) - the name of the plan
+- `custom_instructions`: Everything after the plan name (optional) - custom guidance for plan extraction
 
-ARGUMENTS: {name}
+**Syntax Options:**
+```bash
+# Basic - just plan name
+/session:plan-save my-plan
+
+# With custom instructions (freeform text after name)
+/session:plan-save my-plan Focus on API design, ignore UI components
+
+# With --prompt flag
+/session:plan-save my-plan --prompt "Focus on backend, exclude frontend"
+
+# Reference existing plan
+/session:plan-save my-plan --reference .claude/plans/old-plan
+
+# Multiple instructions
+/session:plan-save my-plan --prompt "Backend only" --exclude "migrations, tests"
+```
+
+**Custom Instruction Types:**
+- **Focus areas**: "Focus on X" - prioritize specific topics
+- **Exclusions**: "Exclude X" or "Ignore X" or "Do NOT include X" - skip certain areas
+- **References**: "--reference path" or "Continue from X" - load existing plan/file as context
+- **Scope**: "Only last N messages" or "From timestamp X" - limit conversation scope
+- **Format**: "Minimal format" or "Detailed" - control output verbosity
+- **Negative prompts**: "Do NOT..." - explicit things to avoid
+
+ARGUMENTS: {name} {instructions}
 
 ## Workflow
+
+### Step 0: Parse Custom Instructions
+
+If `{instructions}` is not empty, parse it for:
+
+1. **Reference files** - Look for `--reference <path>` or paths ending in `.json`/`.md`:
+   - If found, read the referenced file using Read tool
+   - Store content as `{reference_context}` for subagent
+
+2. **Focus areas** - Extract phrases like "Focus on X", "Prioritize X", "Only X":
+   - Store as `{focus_areas}` list
+
+3. **Exclusions** - Extract phrases like "Exclude X", "Ignore X", "Do NOT include X", "--exclude X":
+   - Store as `{exclusions}` list
+
+4. **Scope limits** - Look for "last N messages", "since <date>", "only recent":
+   - Store as `{scope_limit}` for conversation filtering
+
+5. **Format preferences** - Look for "minimal", "detailed", "brief", "comprehensive":
+   - Store as `{format_preference}`
+
+6. **Raw instructions** - Keep the full `{instructions}` text for subagent interpretation
+
+**Example parsing:**
+```
+Input: "Focus on API design, exclude UI, --reference .claude/plans/v1/requirements.json"
+
+Parsed:
+  focus_areas: ["API design"]
+  exclusions: ["UI"]
+  reference_path: ".claude/plans/v1/requirements.json"
+  raw_instructions: "Focus on API design, exclude UI, --reference .claude/plans/v1/requirements.json"
+```
+
+If `{instructions}` is empty, all parsed values are null/empty (default behavior).
 
 ### Step 1: Check for Active Session (Optional)
 
@@ -79,7 +141,38 @@ Use a subagent to analyze the conversation and extract requirements WITH impleme
 Invoke the Task tool with:
 - subagent_type: "general-purpose"
 - (no model specified - uses current conversation model for rich extraction)
-- prompt: Read the file at `${CLAUDE_PLUGIN_ROOT}/prompts/analyze-conversation.md`, replace placeholders with actual values, then execute those instructions
+- prompt: Build the prompt as follows:
+
+```
+Read the file at `${CLAUDE_PLUGIN_ROOT}/prompts/analyze-conversation.md`, replace placeholders with actual values, then execute those instructions.
+
+[IF {instructions} is not empty, append:]
+
+## Custom Instructions from User
+
+The user provided specific guidance for this plan extraction:
+
+**Raw Instructions:** {instructions}
+
+**Parsed Directives:**
+- Focus Areas: {focus_areas or "None specified"}
+- Exclusions: {exclusions or "None specified"}
+- Scope: {scope_limit or "Full conversation"}
+- Format: {format_preference or "Standard"}
+
+**Reference Context (if any):**
+{reference_context or "No reference provided"}
+
+**How to Apply:**
+1. PRIORITIZE topics in focus areas when extracting requirements
+2. EXCLUDE or minimize topics in exclusions list
+3. If scope limit specified, focus on that portion of conversation
+4. If reference context provided, use it as baseline/continuation
+5. Treat "Do NOT..." phrases as hard constraints - never include those items
+6. All other instructions should guide your analysis naturally
+
+These user instructions take precedence over default extraction behavior.
+```
 
 The subagent will return extracted requirements with suggestions:
 ```json
@@ -135,7 +228,11 @@ Create the requirements.json structure:
   "metadata": {
     "work_type": "{detected_work_type_or_unknown}",
     "estimated_complexity": "simple|moderate|complex",
-    "source_session": "{session_name_if_available_else_null}"
+    "source_session": "{session_name_if_available_else_null}",
+    "custom_instructions": "{instructions_or_null}",
+    "focus_areas": "{focus_areas_or_null}",
+    "exclusions": "{exclusions_or_null}",
+    "reference_path": "{reference_path_or_null}"
   }
 }
 ```
@@ -151,6 +248,8 @@ Display a preview of the requirements to the user:
 
 Goal: {goal}
 Work Type: {type} ({confidence}% confidence)
+[IF custom instructions provided:]
+📝 Custom Instructions Applied: {brief summary of focus/exclusions}
 
 Requirements Captured:
   1. {req-1-description}
@@ -296,3 +395,5 @@ The transformation from requirements → tasks happens in /session:plan-finalize
 - The workflow is designed to be interruptible - user can cancel at any point
 - Conceptual plans use requirements.json format (not orchestration.json)
 - Plans can be created with or without session context (conversation analysis is optional)
+- Custom instructions (`{instructions}`) allow users to guide plan extraction with focus areas, exclusions, references, and negative prompts
+- Custom instructions are preserved in plan metadata for reference during finalization
