@@ -23,17 +23,29 @@ Parsed from user input:
 # With --prompt flag
 /session:plan-save my-plan --prompt "Focus on backend, exclude frontend"
 
-# Reference existing plan
-/session:plan-save my-plan --reference .claude/plans/old-plan
+# Single reference file (backward compat)
+/session:plan-save my-plan --reference schema.prisma
 
-# Multiple instructions
-/session:plan-save my-plan --prompt "Backend only" --exclude "migrations, tests"
+# Multiple references (array syntax)
+/session:plan-save my-plan --reference [api.yaml, schema.sql, types.ts]
+
+# Paths with spaces (use quotes)
+/session:plan-save my-plan --reference ["docs/api spec.yaml", src/schema.prisma]
+
+# Reference entire folder (ends with /)
+/session:plan-save my-plan --reference [src/models/]
+
+# Mixed: files + folders
+/session:plan-save my-plan --reference [api.yaml, "my docs/", src/types/]
+
+# Combined with other instructions
+/session:plan-save my-plan --prompt "Backend only" --reference [schema.prisma, api.yaml]
 ```
 
 **Custom Instruction Types:**
 - **Focus areas**: "Focus on X" - prioritize specific topics
 - **Exclusions**: "Exclude X" or "Ignore X" or "Do NOT include X" - skip certain areas
-- **References**: "--reference path" or "Continue from X" - load existing plan/file as context
+- **References**: `--reference [file1, file2, folder/]` - array of files/folders (max 10)
 - **Scope**: "Only last N messages" or "From timestamp X" - limit conversation scope
 - **Format**: "Minimal format" or "Detailed" - control output verbosity
 - **Negative prompts**: "Do NOT..." - explicit things to avoid
@@ -46,9 +58,40 @@ ARGUMENTS: {name} {instructions}
 
 If `{instructions}` is not empty, parse it for:
 
-1. **Reference files** - Look for `--reference <path>` or `--ref <path>`:
-   - Can specify multiple: `--reference file1.json --reference file2.sql`
-   - Extract all reference paths into `{reference_paths}` array
+1. **Reference files** - Parse `--reference` or `--ref` with array or single value:
+
+   **Array syntax** (preferred for multiple):
+   ```
+   --reference [file1.json, file2.sql, folder/]
+   --ref ["path with spaces/file.json", another.yaml]
+   ```
+
+   **Single file** (backward compatible):
+   ```
+   --reference schema.prisma
+   --ref api.yaml
+   ```
+
+   **Parsing rules:**
+   - If `[...]` found after `--reference`: extract contents, split by `,`
+   - For each item: trim whitespace, remove surrounding quotes if present
+   - If no brackets: treat as single file path
+   - Store all paths in `{reference_paths}` array
+   - **Max 10 references** (error if exceeded after folder expansion)
+
+   **Quoted paths** (for spaces):
+   ```
+   --reference ["docs/api spec.yaml", "my folder/schema.sql"]
+   ```
+   - Quotes (single or double) preserve spaces in path
+   - Remove quotes after parsing
+
+   **Folder paths** (end with `/`):
+   ```
+   --reference [src/models/, docs/specs/]
+   ```
+   - Paths ending with `/` are marked as folders
+   - Will be expanded in Step 0.5
 
 2. **Focus areas** - Extract phrases like "Focus on X", "Prioritize X", "Only X":
    - Store as `{focus_areas}` list
@@ -66,13 +109,25 @@ If `{instructions}` is not empty, parse it for:
 
 **Example parsing:**
 ```
-Input: "Focus on API design, exclude UI, --reference .claude/plans/v1/requirements.json"
+Input: "Focus on API, --reference [schema.prisma, "docs/api spec.yaml", src/models/]"
 
 Parsed:
-  focus_areas: ["API design"]
-  exclusions: ["UI"]
-  reference_paths: [".claude/plans/v1/requirements.json"]
-  raw_instructions: "Focus on API design, exclude UI, --reference .claude/plans/v1/requirements.json"
+  focus_areas: ["API"]
+  exclusions: []
+  reference_paths: [
+    {"path": "schema.prisma", "is_folder": false},
+    {"path": "docs/api spec.yaml", "is_folder": false},
+    {"path": "src/models/", "is_folder": true}
+  ]
+  raw_instructions: "Focus on API, --reference [schema.prisma, ...]"
+```
+
+**Single file example (backward compat):**
+```
+Input: "--reference schema.prisma"
+
+Parsed:
+  reference_paths: [{"path": "schema.prisma", "is_folder": false}]
 ```
 
 If `{instructions}` is empty, all parsed values are null/empty (default behavior).
@@ -81,9 +136,63 @@ If `{instructions}` is empty, all parsed values are null/empty (default behavior
 
 **CRITICAL: Reference files are SOURCE MATERIAL, not context dumps.**
 
-If `{reference_paths}` is not empty, analyze EACH reference file intelligently:
+If `{reference_paths}` is not empty:
 
-For EACH reference path:
+#### Step 0.5a: Expand Folder References
+
+First, expand any folder paths to individual files:
+
+```
+For EACH item in {reference_paths}:
+  IF item.is_folder == true:
+    1. Use Glob tool to find files:
+       Pattern: {item.path}**/*.{json,yaml,yml,sql,prisma,graphql,gql,md,ts,js,tsx,jsx}
+
+    2. For each file found:
+       - Add to expanded_paths: {"path": file_path, "is_folder": false, "from_folder": item.path}
+
+    3. Show expansion:
+       📂 Expanding {item.path} → found {N} files
+  ELSE:
+    Add item directly to expanded_paths
+```
+
+**After expansion, validate count:**
+```
+IF expanded_paths.length > 10:
+  ❌ Error: Too many references ({count} files). Maximum is 10.
+
+  Files found:
+  {list first 15 files}
+
+  💡 Tip: Be more specific with folder path or use individual files.
+
+  STOP (do not proceed)
+```
+
+**Example folder expansion:**
+```
+Input: --reference [api.yaml, src/models/]
+
+Folder expansion:
+  📂 Expanding src/models/ → found 3 files
+     - src/models/user.prisma
+     - src/models/product.prisma
+     - src/models/types.ts
+
+expanded_paths: [
+  {"path": "api.yaml", "is_folder": false},
+  {"path": "src/models/user.prisma", "is_folder": false, "from_folder": "src/models/"},
+  {"path": "src/models/product.prisma", "is_folder": false, "from_folder": "src/models/"},
+  {"path": "src/models/types.ts", "is_folder": false, "from_folder": "src/models/"}
+]
+
+Total: 4 files (within limit of 10) ✓
+```
+
+#### Step 0.5b: Analyze Each Reference File
+
+For EACH path in expanded_paths:
 
 1. **Read the file** using Read tool
 
@@ -577,34 +686,71 @@ The transformation from requirements → tasks happens in /session:plan-finalize
 - Custom instructions (`{instructions}`) allow users to guide plan extraction with focus areas, exclusions, references, and negative prompts
 - Custom instructions are preserved in plan metadata for reference during finalization
 
-## Intelligent Reference Handling (v3.20.0)
+## Intelligent Reference Handling (v3.20.0 / v3.21.0)
 
 **References are SOURCE MATERIAL, not context dumps.**
 
-When `--reference` is provided:
-1. File is read and TYPE is detected (OpenAPI, SQL, Prisma, existing plan, etc.)
-2. Subagent ANALYZES the file structure and extracts meaningful data
-3. Extracted data is INTEGRATED into the plan as requirements/suggestions
-4. Reference metadata is stored for traceability
+### Syntax (v3.21.0)
 
-**Supported reference types:**
-- **OpenAPI/Swagger** → API endpoints become requirements, models inform DB phase
-- **Existing plans** → Relevant requirements inherited, completed items skipped
-- **SQL schemas** → Existing tables known, only new migrations needed
-- **Prisma schemas** → Models and relations inform implementation
-- **GraphQL schemas** → Types and resolvers become tasks
-- **Design mockups** → UI components extracted as frontend requirements
-- **Documentation** → Requirements and decisions extracted
-- **Source code** → Patterns to follow, code to extend
-
-**Example:**
 ```bash
-# Reference a swagger spec - API endpoints become requirements
-/session:plan-save api-impl --reference ./docs/openapi.yaml
+# Single file (backward compatible)
+--reference schema.prisma
 
-# Reference previous plan - inherit relevant items
-/session:plan-save v2 --reference .claude/plans/v1/requirements.json
+# Multiple files (array syntax)
+--reference [api.yaml, schema.sql, types.ts]
 
-# Multiple references
-/session:plan-save full-stack --reference schema.prisma --reference design.png --reference api.yaml
+# Paths with spaces (quoted)
+--reference ["docs/api spec.yaml", src/schema.prisma]
+
+# Folder reference (expands to all relevant files)
+--reference [src/models/]
+
+# Mixed files and folders
+--reference [api.yaml, "my docs/", src/types/]
+```
+
+**Rules:**
+- Max 10 references (after folder expansion)
+- Folders (paths ending with `/`) auto-expand to `*.{json,yaml,sql,prisma,graphql,md,ts,js}`
+- Quoted paths preserve spaces
+
+### How It Works
+
+1. **Parse** `--reference [...]` array syntax
+2. **Expand** folder paths → individual files
+3. **Validate** total count ≤ 10
+4. **Detect** file type (OpenAPI, SQL, Prisma, existing plan, etc.)
+5. **Analyze** via subagent → structured extraction
+6. **Integrate** into plan as requirements/suggestions
+
+### Supported Reference Types
+
+| Type | Extracts | Plan Integration |
+|------|----------|------------------|
+| **OpenAPI/Swagger** | Endpoints, models | API requirements, DB suggestions |
+| **Existing Plan** | Requirements, phases | Inherit relevant, skip completed |
+| **SQL Schema** | Tables, columns, FKs | DB phase knows existing tables |
+| **Prisma Schema** | Models, relations | Type-safe implementation |
+| **GraphQL Schema** | Types, queries | Resolver tasks |
+| **Design Mockup** | UI components | Frontend requirements |
+| **Documentation** | Requirements, decisions | Context preservation |
+| **Source Code** | Patterns, interfaces | Code to follow/extend |
+
+### Examples
+
+```bash
+# API spec → endpoints become requirements
+/session:plan-save api-impl --reference [docs/openapi.yaml]
+
+# Previous plan → inherit relevant items
+/session:plan-save v2 --reference [.claude/plans/v1/requirements.json]
+
+# Full stack with multiple references
+/session:plan-save full-stack --reference [schema.prisma, api.yaml, "designs/mockup.png"]
+
+# Reference entire folder of models
+/session:plan-save data-layer --reference [src/models/]
+
+# Combined: specific files + folder
+/session:plan-save feature --reference [api.yaml, src/types/, "docs/spec.md"]
 ```

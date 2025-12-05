@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.20.1] - 2025-12-05
+
+### Added
+
+- **Array syntax for `--reference`** - Pass multiple references in single flag
+  ```bash
+  --reference [api.yaml, schema.sql, types.ts]
+  ```
+
+- **Quoted paths** - Support paths with spaces
+  ```bash
+  --reference ["docs/api spec.yaml", src/schema.prisma]
+  ```
+
+- **Folder references** - Auto-expand folders to relevant files
+  ```bash
+  --reference [src/models/]  # Expands to all *.{json,yaml,sql,prisma,md,ts,js}
+  ```
+
+- **Max 10 limit** - Validation prevents excessive references (after folder expansion)
+
+### Changed
+
+- **plan-save.md Step 0** - New parsing logic for `[a, b, c]` array syntax
+- **plan-save.md Step 0.5a** - Added folder expansion before file analysis
+- Backward compatible: `--reference single.json` still works
+
+### Syntax Summary
+
+```bash
+# Single file (backward compat)
+--reference schema.prisma
+
+# Array of files
+--reference [api.yaml, schema.sql, types.ts]
+
+# Quoted paths (spaces)
+--reference ["docs/api spec.yaml", "my folder/file.json"]
+
+# Folder (auto-expands)
+--reference [src/models/]
+
+# Mixed
+--reference [api.yaml, "docs/", src/types/]
+```
+
+---
+
 ## [3.20.0] - 2025-12-05
 
 ### Added
