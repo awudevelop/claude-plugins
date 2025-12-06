@@ -127,6 +127,9 @@ class SignatureExtractor {
       deprecated: null,
       see: [],
       since: null,
+      category: null,
+      async: false,
+      component: false,
       tags: {}
     };
 
@@ -192,6 +195,21 @@ class SignatureExtractor {
             break;
           case 'since':
             result.since = value;
+            break;
+          case 'category':
+            result.category = value;
+            break;
+          case 'async':
+            result.async = true;
+            break;
+          case 'component':
+            result.component = true;
+            break;
+          case 'class':
+            result.tags.class = true;
+            break;
+          case 'internal':
+            result.tags.internal = true;
             break;
           default:
             result.tags[tag] = value;

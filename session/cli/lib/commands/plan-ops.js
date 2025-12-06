@@ -1058,6 +1058,231 @@ async function transformPlan(planName, breakdownData) {
   }
 }
 
+/**
+ * Get the next pending task for execution
+ * @param {string} planName - Plan name
+ * @returns {Promise<Object|null>} Next task or null if none pending
+ */
+async function getNextTask(planName) {
+  try {
+    const plan = await getPlan(planName, true);
+    if (!plan || !plan.phases) {
+      return null;
+    }
+
+    // Find first pending task respecting phase order and dependencies
+    for (const phase of plan.phases) {
+      for (const task of phase.tasks) {
+        if (task.status === 'pending') {
+          // Check if dependencies are met
+          const depsCompleted = !task.depends_on?.length ||
+            task.depends_on.every(depId => {
+              // Find the dependency task and check its status
+              for (const p of plan.phases) {
+                const dep = p.tasks.find(t => t.task_id === depId);
+                if (dep && dep.status === 'completed') return true;
+              }
+              return false;
+            });
+
+          if (depsCompleted) {
+            return {
+              success: true,
+              data: {
+                task_id: task.task_id,
+                description: task.description,
+                details: task.details,
+                phase_name: phase.phase_name,
+                phase_id: phase.id,
+                type: task.type,
+                file: task.file,
+                spec: task.spec,
+                confidence: task.confidence,
+                depends_on: task.depends_on,
+                docs: task.docs,
+                review: task.review
+              }
+            };
+          }
+        }
+      }
+    }
+
+    return {
+      success: true,
+      data: null,
+      message: 'No pending tasks available'
+    };
+
+  } catch (error) {
+    return handleCliError(error, { plan: planName });
+  }
+}
+
+/**
+ * Get confidence statistics for a plan
+ * @param {string} planName - Plan name
+ * @returns {Promise<Object>} Confidence statistics
+ */
+async function getConfidenceStats(planName) {
+  try {
+    const plan = await getPlan(planName, true);
+    if (!plan || !plan.phases) {
+      throw { code: 'PLAN_NOT_FOUND' };
+    }
+
+    const stats = {
+      total: 0,
+      high: 0,     // 70+
+      medium: 0,   // 40-69
+      low: 0,      // <40
+      unknown: 0,  // No confidence data
+      lowConfidenceTasks: []
+    };
+
+    for (const phase of plan.phases) {
+      for (const task of phase.tasks) {
+        stats.total++;
+
+        if (!task.confidence) {
+          stats.unknown++;
+          continue;
+        }
+
+        const score = task.confidence.score || 50;
+        if (score >= 70) {
+          stats.high++;
+        } else if (score >= 40) {
+          stats.medium++;
+        } else {
+          stats.low++;
+          stats.lowConfidenceTasks.push({
+            task_id: task.task_id,
+            description: task.description,
+            score: score,
+            level: task.confidence.level,
+            risks: task.confidence.risks,
+            mitigations: task.confidence.mitigations
+          });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      data: stats,
+      message: `Plan has ${stats.high} high, ${stats.medium} medium, ${stats.low} low confidence tasks`
+    };
+
+  } catch (error) {
+    return handleCliError(error, { plan: planName });
+  }
+}
+
+/**
+ * Get task context for code generation
+ * Loads reference files, patterns, and relevant project context
+ * @param {string} planName - Plan name
+ * @param {string} taskId - Task ID
+ * @returns {Promise<Object>} Task context
+ */
+async function getTaskContext(planName, taskId) {
+  try {
+    const plan = await getPlan(planName, true);
+    if (!plan || !plan.phases) {
+      throw { code: 'PLAN_NOT_FOUND' };
+    }
+
+    // Find the task
+    let task = null;
+    let phaseName = null;
+    for (const phase of plan.phases) {
+      const found = phase.tasks.find(t => t.task_id === taskId);
+      if (found) {
+        task = found;
+        phaseName = phase.phase_name;
+        break;
+      }
+    }
+
+    if (!task) {
+      throw { code: 'TASK_NOT_FOUND' };
+    }
+
+    const context = {
+      task,
+      phase_name: phaseName,
+      reference_files: [],
+      docs: task.docs || [],
+      patterns: task.spec?.patterns || []
+    };
+
+    // Load reference files content if patterns specified
+    if (task.spec?.patterns?.length) {
+      for (const pattern of task.spec.patterns) {
+        try {
+          const filePath = path.isAbsolute(pattern)
+            ? pattern
+            : path.join(workingDir, pattern);
+          const content = await fs.readFile(filePath, 'utf8');
+          context.reference_files.push({
+            path: pattern,
+            content: content.slice(0, 5000) // Limit size
+          });
+        } catch {
+          // File not found, skip
+        }
+      }
+    }
+
+    return {
+      success: true,
+      data: context,
+      message: 'Task context loaded'
+    };
+
+  } catch (error) {
+    return handleCliError(error, { plan: planName, taskId });
+  }
+}
+
+/**
+ * Mark multiple tasks as completed or skipped in batch
+ * @param {string} planName - Plan name
+ * @param {Array<{task_id: string, status: string, result?: string}>} updates - Task updates
+ * @returns {Promise<Object>} Batch update result
+ */
+async function batchUpdateTasks(planName, updates) {
+  try {
+    const results = [];
+    for (const update of updates) {
+      const result = await updateTaskStatus(planName, update.task_id, update.status, {
+        result: update.result
+      });
+      results.push({
+        task_id: update.task_id,
+        success: result.success,
+        error: result.error?.message
+      });
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    return {
+      success: successCount === results.length,
+      data: {
+        total: results.length,
+        successful: successCount,
+        failed: results.length - successCount,
+        results
+      },
+      message: `Updated ${successCount}/${results.length} tasks`
+    };
+
+  } catch (error) {
+    return handleCliError(error, { plan: planName });
+  }
+}
+
 module.exports = {
   createPlan,
   getPlan,
@@ -1075,5 +1300,10 @@ module.exports = {
   validateRequirements,
   loadRequirements,
   getPlanFormat,
-  transformPlan
+  transformPlan,
+  // New execution workflow functions (Phase 4)
+  getNextTask,
+  getConfidenceStats,
+  getTaskContext,
+  batchUpdateTasks
 };
