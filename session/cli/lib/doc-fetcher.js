@@ -408,8 +408,7 @@ class DocFetcher {
    * Extract keywords from text
    */
   _extractKeywords(text) {
-    return text
-      .match(/\b[a-z]{3,}\b/g) || []
+    return (text.match(/\b[a-z]{3,}\b/g) || [])
       .filter(word => !this._isStopWord(word));
   }
 

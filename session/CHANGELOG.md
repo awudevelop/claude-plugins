@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.22.0] - 2025-12-06
+
+### Added
+
+- **Phase 7: Testing & Validation** - Complete test suite for Plan System v2
+
+- **New test files:**
+  - `tests/confidence-detector.test.js` - 47 unit tests for confidence calculation
+    - Tests for WEIGHTS, KNOWN_PATTERNS, and DOMAIN_KEYWORDS constants
+    - Tests for isKnownPattern, requiresDomainExpertise, hasDocumentation
+    - Tests for calculateScore, scoreToLevel, identifyRisks, suggestMitigations
+    - Tests for analyze and analyzeAll methods
+    - Edge case handling for empty/null inputs
+
+  - `tests/spec-validator.test.js` - 41 unit tests for task spec validation
+    - Tests for REQUIRED_FIELDS and RECOMMENDED_FIELDS constants
+    - Type-specific validation for create_function, create_hook, create_component
+    - Type-specific validation for create_table, create_test, create_class
+    - Tests for validateAll and suggestion generation
+    - Edge case handling for malformed specs
+
+  - `tests/doc-fetcher.test.js` - 57 unit tests for documentation fetching
+    - Tests for markdown, JSON, YAML, and HTML parsing
+    - Tests for URL detection and file extension handling
+    - Tests for keyword extraction and stop word filtering
+    - Tests for caching and cache expiry
+    - Tests for local file fetching and relevant docs matching
+    - Edge case handling for empty/special content
+
+  - `tests/integration/plan-system.test.js` - 19 integration tests
+    - End-to-end confidence integration tests
+    - Spec validation integration with plans
+    - Documentation support integration
+    - Low confidence task handling
+    - Mixed confidence level scenarios
+    - Error handling for invalid plans
+
+### Fixed
+
+- **DocFetcher._extractKeywords() operator precedence bug** - Stop words were not being filtered
+  - Previous: `text.match(...) || [].filter(...)` returned unfiltered match result
+  - Now: `(text.match(...) || []).filter(...)` correctly applies stop word filter
+  - This improves keyword matching accuracy for documentation relevance
+
+### Changed
+
+- **upgrade-plan-impl.md** - Marked Phase 7 (Testing & Validation) as complete
+  - All 7 phases of Plan System v2 are now implemented and tested
+  - Status updated to "Complete (All 7 phases implemented and tested)"
+
+---
+
 ## [3.21.0] - 2025-12-06
 
 ### Added
