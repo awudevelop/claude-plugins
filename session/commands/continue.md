@@ -80,15 +80,15 @@ Extract the goal:
 
 **First, check if consolidation is needed:**
 
-Use the Read tool to check if the conversation log exists:
-- Path: `.claude/sessions/{session_name}/conversation-log.jsonl`
+Use the Glob tool to check if the conversation log exists (avoids reading content):
+- Pattern: `.claude/sessions/{session_name}/conversation-log.jsonl`
 
-**If file does NOT exist or is empty:**
+**If Glob returns empty array (file does NOT exist):**
 - Skip subagent entirely
 - Set consolidation_result = `{ "skipped": true, "reason": "No conversation log" }`
 - Continue to Step 5
 
-**If file EXISTS:**
+**If Glob returns the file path (file EXISTS):**
 
 Spawn a single subagent for consolidation:
 
@@ -266,16 +266,17 @@ What's next?
 
 ---
 
-**TOKEN OPTIMIZATION BENEFITS (v3.19.0):**
+**TOKEN OPTIMIZATION BENEFITS (v3.20.2):**
 - Previous (v3.7.0): ~22k tokens with 3 parallel subagents
-- Current (v3.19.0): ~10-12k tokens with inline + conditional subagent
-- **Savings: 50% token reduction**
+- Current (v3.20.2): ~8-10k tokens with inline + conditional subagent
+- **Savings: 55-60% token reduction**
 
 Key optimizations:
 1. **Inline git refresh**: CLI call instead of subagent (~5k tokens saved)
 2. **Inline goal extraction**: Read tool instead of subagent (~5k tokens saved)
 3. **Conditional consolidation**: Skip subagent if no log exists (common case!)
 4. **Lazy-loaded prompts**: Subagent reads its own prompt (~1.7k token savings)
+5. **Glob for existence check**: Use Glob instead of Read to check log existence (~3-4k tokens saved)
 
 **ERROR HANDLING:**
 - If consolidation fails: Still activate session, show generic message

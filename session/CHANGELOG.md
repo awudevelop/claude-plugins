@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.20.2] - 2025-12-06
+
+### Fixed
+
+- **Token optimization in `/session:continue`** - Use Glob instead of Read to check conversation log existence
+  - Previous: Read tool loaded log content (~3-4k tokens for existence check)
+  - Now: Glob returns only file path (zero content tokens)
+  - **Savings: ~3-4k tokens per session continue**
+
+### Changed
+
+- Updated continue.md Step 4 to use Glob tool for log existence check
+- Updated TOKEN OPTIMIZATION section to reflect v3.20.2 improvements
+- Total session continue now uses ~8-10k tokens (was ~10-12k in v3.19.0)
+
+---
+
 ## [3.20.1] - 2025-12-05
 
 ### Added
