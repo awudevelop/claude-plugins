@@ -166,7 +166,68 @@ const commands = {
     return await templateSelector.selectTemplate(workType);
   },
   // Project Maps operations
-  'project-maps': require('./lib/commands/project-maps')
+  'project-maps': require('./lib/commands/project-maps'),
+
+  // v2.0: Confidence and Spec operations
+  'analyze-confidence': async (args) => {
+    const { ConfidenceDetector } = require('./lib/confidence-detector');
+    const [taskJson, optionsJson] = args;
+    const task = JSON.parse(taskJson);
+    const options = optionsJson ? JSON.parse(optionsJson) : {};
+    const detector = new ConfidenceDetector(options);
+    return await detector.analyze(task);
+  },
+  'analyze-confidence-all': async (args) => {
+    const { ConfidenceDetector } = require('./lib/confidence-detector');
+    const [tasksJson, optionsJson] = args;
+    const tasks = JSON.parse(tasksJson);
+    const options = optionsJson ? JSON.parse(optionsJson) : {};
+    const detector = new ConfidenceDetector(options);
+    return await detector.analyzeAll(tasks);
+  },
+  'validate-spec': async (args) => {
+    const { SpecValidator } = require('./lib/spec-validator');
+    const [taskJson] = args;
+    const task = JSON.parse(taskJson);
+    const validator = new SpecValidator();
+    return await validator.validate(task);
+  },
+  'validate-specs-all': async (args) => {
+    const { SpecValidator } = require('./lib/spec-validator');
+    const [tasksJson] = args;
+    const tasks = JSON.parse(tasksJson);
+    const validator = new SpecValidator();
+    return await validator.validateAll(tasks);
+  },
+  'fetch-docs': async (args) => {
+    const { DocFetcher } = require('./lib/doc-fetcher');
+    const [sourcesJson, optionsJson] = args;
+    const sources = JSON.parse(sourcesJson);
+    const options = optionsJson ? JSON.parse(optionsJson) : {};
+    const fetcher = new DocFetcher(options);
+    return await fetcher.fetchAll(sources);
+  },
+  'get-next-task': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName] = args;
+    return await planOps.getNextTask(planName);
+  },
+  'get-confidence-stats': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName] = args;
+    return await planOps.getConfidenceStats(planName);
+  },
+  'get-task-context': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName, taskId] = args;
+    return await planOps.getTaskContext(planName, taskId);
+  },
+  'batch-update-tasks': async (args) => {
+    const planOps = require('./lib/commands/plan-ops');
+    const [planName, updatesJson] = args;
+    const updates = JSON.parse(updatesJson);
+    return await planOps.batchUpdateTasks(planName, updates);
+  }
 };
 
 /**

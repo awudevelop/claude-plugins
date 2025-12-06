@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.23.0] - 2025-12-06
+
+### Added
+
+- **Plan System v2 Integration** - Wire up all v2.0 modules that were built but not connected
+
+- **New CLI commands for v2.0 operations:**
+  - `analyze-confidence <task-json>` - Analyze confidence for a single task
+  - `analyze-confidence-all <tasks-json>` - Analyze confidence for multiple tasks
+  - `validate-spec <task-json>` - Validate a task's spec against schema
+  - `validate-specs-all <tasks-json>` - Validate multiple task specs
+  - `fetch-docs <sources-json>` - Fetch and parse external documentation
+  - `get-next-task <plan-name>` - Get next pending task respecting dependencies
+  - `get-confidence-stats <plan-name>` - Get confidence statistics for a plan
+  - `get-task-context <plan-name> <task-id>` - Load task context for code generation
+  - `batch-update-tasks <plan-name> <updates-json>` - Update multiple task statuses
+
+### Fixed
+
+- **requirement-transformer.js now preserves ALL v2.0 task fields** (CRITICAL)
+  - Previously lost: `type`, `file`, `spec`, `confidence`, `from_suggestion`, `verification`, `implementation_decision`, `review`
+  - Now preserved: All 16 v2.0 fields are correctly mapped to phase files
+  - Tasks now have full lean specs for code generation
+
+### Changed
+
+- **Integrated confidence-detector in transform-plan workflow**
+  - Automatically calculates confidence for tasks that don't have scores
+  - Updates confidence_summary in orchestration.json
+  - Identifies low-confidence tasks during finalization
+
+- **Integrated spec-validator in transform-plan workflow**
+  - Validates all task specs during transformation
+  - Reports errors and warnings for incomplete specs
+  - Returns validation result with transformation
+
+- **Orchestration.json now includes v2.0 metadata:**
+  - `confidence` - Summary of high/medium/low task counts
+  - `traceability` - Mapping from requirements to tasks
+  - `suggestion_usage` - Which suggestions were used/adapted/skipped
+  - `assumptions` - AI assumptions during breakdown
+  - `risks` - Identified implementation risks
+
+---
+
 ## [3.22.0] - 2025-12-06
 
 ### Added
