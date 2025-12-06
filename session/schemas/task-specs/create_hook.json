@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/task-specs/create_hook.json",
+  "title": "CreateHookSpec",
+  "description": "Lean specification for creating a React hook",
+  "type": "object",
+  "required": ["hook", "behavior"],
+  "properties": {
+    "hook": {
+      "type": "string",
+      "description": "Hook name (must start with 'use')",
+      "pattern": "^use[A-Z]"
+    },
+    "params": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Hook parameters with types"
+    },
+    "returns": {
+      "type": "string",
+      "description": "Return type (object shape or primitive)"
+    },
+    "uses": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "React hooks used internally (useState, useEffect, etc.)"
+    },
+    "consumes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Contexts consumed by this hook"
+    },
+    "behavior": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Step-by-step behavior description"
+    },
+    "cleanup": {
+      "type": "string",
+      "description": "Cleanup logic description (for useEffect cleanup)"
+    },
+    "imports": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Required imports"
+    },
+    "patterns": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "File paths to similar hooks to follow as patterns"
+    }
+  }
+}

@@ -1,4 +1,11 @@
-You are transforming conceptual plan requirements into executable implementation tasks.
+You are transforming conceptual plan requirements into executable implementation tasks with LEAN SPECS and CONFIDENCE SCORING.
+
+## Key Changes in v2.0
+
+1. **Lean Specs**: Tasks now have structured specifications instead of prose descriptions
+2. **Confidence Scoring**: Each task is scored for implementation confidence
+3. **Type-Specific Schemas**: Different task types have different spec structures
+4. **Project-Maps Integration**: Use codebase knowledge for informed decisions
 
 ## Input
 
@@ -73,18 +80,48 @@ Every task derived from a suggestion MUST include:
 
 ---
 
-## Task Structure (Updated)
+## Task Structure (v2.0 - Lean Specs + Confidence)
 
 ```json
 {
   "id": "task-1-1",
+  "type": "create_function",
+  "file": "src/auth/permissions.ts",
   "description": "Implement can() permission checking method",
-  "details": "...",
   "from_requirement": "req-1",
   "from_suggestion": {
     "type": "api_designs",
     "index": 0,
     "summary": "authHub.can(permission, context?) -> Promise<boolean>"
+  },
+  "confidence": {
+    "level": "high",
+    "score": 85,
+    "factors": {
+      "has_example": true,
+      "known_pattern": true,
+      "domain_expertise": true,
+      "docs_available": false,
+      "project_convention": true
+    },
+    "risks": [],
+    "mitigations": []
+  },
+  "spec": {
+    "function": "can",
+    "async": true,
+    "exported": true,
+    "params": ["permission: string", "context?: { tenantId?: string, productId?: string }"],
+    "returns": "Promise<boolean>",
+    "does": "Check if current user has the specified permission",
+    "steps": [
+      "Get context from parameter or contextStore",
+      "Call check_user_permissions RPC with permission and context",
+      "Return boolean result"
+    ],
+    "imports": ["supabase from ../lib/supabase", "contextStore from ../contexts/context-store"],
+    "throws": ["AuthError on RPC failure"],
+    "patterns": ["src/api/users.ts:getUser"]
   },
   "verification": {
     "search_patterns": ["check.*permission", "hasPermission", "canAccess"],
@@ -95,8 +132,190 @@ Every task derived from a suggestion MUST include:
     "decision": "use_suggestion",
     "rationale": "No existing implementation found. Suggestion is based on analysis of check_user_permissions RPC."
   },
-  "estimated_time": "2h",
-  "dependencies": []
+  "depends_on": []
+}
+```
+
+## Task Types and Their Specs
+
+Each task type has a specific spec structure. Generate LEAN specs - enough to generate code, not the code itself.
+
+### create_function
+```json
+{
+  "function": "string (required) - function name",
+  "async": "boolean - is async",
+  "exported": "boolean - export the function",
+  "params": ["string[] - e.g. 'userId: string', 'options?: Options'"],
+  "returns": "string - return type",
+  "generics": ["string[] - e.g. 'T extends Base'"],
+  "does": "string (required) - what function does",
+  "steps": ["string[] - implementation steps"],
+  "throws": ["string[] - errors it can throw"],
+  "imports": ["string[] - required imports"],
+  "calls": ["string[] - functions to call"],
+  "patterns": ["string[] - file:function references to follow"]
+}
+```
+
+### create_class
+```json
+{
+  "class": "string (required) - class name",
+  "exported": "boolean",
+  "extends": "string - parent class",
+  "implements": ["string[] - interfaces"],
+  "purpose": "string (required) - what class does",
+  "constructor": { "params": ["string[]"], "does": "string" },
+  "properties": [{ "name": "string", "type": "string", "visibility": "public|private|protected" }],
+  "methods": [{ "name": "string", "params": ["string[]"], "returns": "string", "does": "string" }],
+  "imports": ["string[]"],
+  "patterns": ["string[]"]
+}
+```
+
+### create_hook
+```json
+{
+  "hook": "string (required) - must start with 'use'",
+  "params": ["string[]"],
+  "returns": "string - return type object",
+  "uses": ["string[] - React hooks used internally"],
+  "consumes": ["string[] - contexts consumed"],
+  "behavior": ["string[] (required) - step-by-step behavior"],
+  "cleanup": "string - cleanup logic",
+  "imports": ["string[]"]
+}
+```
+
+### create_component
+```json
+{
+  "component": "string (required) - PascalCase name",
+  "type": "functional|forwardRef|memo",
+  "props": [{ "name": "string", "type": "string", "required": "boolean", "default": "string" }],
+  "hooks": ["string[] - hooks used"],
+  "context": ["string[] - contexts consumed"],
+  "renders": "string (required) - what it renders",
+  "conditionals": ["string[] - conditional rendering logic"],
+  "handlers": ["string[] - event handlers"],
+  "imports": ["string[]"]
+}
+```
+
+### create_table
+```json
+{
+  "table": "string (required) - table name",
+  "schema": "string - schema name (default: public)",
+  "columns": [{
+    "name": "string",
+    "type": "string - SQL type",
+    "nullable": "boolean",
+    "pk": "boolean",
+    "unique": "boolean",
+    "default": "string",
+    "fk": "string - e.g. 'users.id'",
+    "onDelete": "CASCADE|SET NULL|RESTRICT"
+  }],
+  "indexes": [{ "columns": ["string[]"], "unique": "boolean" }],
+  "rls": { "enabled": "boolean", "policies": [{ "name": "string", "operation": "SELECT|INSERT|UPDATE|DELETE|ALL", "using": "string" }] }
+}
+```
+
+### modify_file
+```json
+{
+  "modifications": [{
+    "action": "add_import|add_export|add_function|add_method|modify_function|remove|replace",
+    "target": "string - what to modify",
+    "description": "string - what the modification does",
+    "location": "string - where in file",
+    "content_hint": "string - what to add/change"
+  }],
+  "reason": "string - why this file needs modification"
+}
+```
+
+### custom (fallback for unknown types)
+```json
+{
+  "purpose": "string (required) - what this does",
+  "language": "string - programming language",
+  "structure": "string - high-level structure",
+  "sections": [{ "name": "string", "does": "string", "code_hint": "string" }],
+  "dependencies": ["string[]"],
+  "reference_files": ["string[]"],
+  "reference_docs": ["string[]"]
+}
+```
+
+---
+
+## Confidence Scoring
+
+For each task, calculate a confidence score based on these factors:
+
+### Scoring Weights
+- **has_example** (+30): Similar code exists in project
+- **known_pattern** (+25): Task follows a standard pattern type
+- **domain_expertise** (+20): No special expertise needed (crypto, GPU, etc.)
+- **docs_available** (+15): Documentation is provided or available
+- **project_convention** (+10): File location matches project structure
+
+### Confidence Levels
+- **high** (70-100): Safe to execute automatically
+- **medium** (40-69): May need minor adjustments
+- **low** (0-39): Requires review, may need human intervention
+
+### IMPORTANT: Markdown/Prose Files Are HIGH Confidence
+
+Files like `.md`, prompts, and command templates are NOT low confidence:
+- Markdown is a native format for Claude
+- Section-based editing is a known pattern
+- No domain expertise required
+
+**Markdown task confidence**: 30 + 25 + 20 + 10 = 85 (HIGH)
+
+Use `review.recommended: true` instead of low confidence for prose files.
+
+### Domain Keywords That Lower Confidence
+
+If task contains these keywords, mark `domain_expertise: false`:
+- Crypto: encrypt, decrypt, hash, cipher, jwt, oauth
+- Low-level: cuda, gpu, simd, assembly, kernel, driver
+- Domain: quantum, blockchain, ml, neural, trading, medical
+- Infra: kubernetes, terraform, ansible, nginx
+
+### For LOW Confidence Tasks
+
+Include detailed information:
+```json
+{
+  "confidence": {
+    "level": "low",
+    "score": 25,
+    "factors": {
+      "has_example": false,
+      "known_pattern": false,
+      "domain_expertise": false,
+      "docs_available": false,
+      "project_convention": true
+    },
+    "risks": [
+      "CUDA kernel programming requires specialized expertise",
+      "No similar GPU code in project to reference"
+    ],
+    "mitigations": [
+      "Add NVIDIA CUDA documentation with --docs",
+      "Provide example kernel implementation"
+    ]
+  },
+  "review": {
+    "required": true,
+    "reason": "GPU programming expertise required",
+    "focus_areas": ["Memory management", "Kernel launch parameters"]
+  }
 }
 ```
 
@@ -166,7 +385,7 @@ Check `user_decisions` array for explicit choices:
 
 ---
 
-## Output Format
+## Output Format (v2.0)
 
 Return ONLY valid JSON (no markdown, no explanations):
 
@@ -181,13 +400,35 @@ Return ONLY valid JSON (no markdown, no explanations):
       "tasks": [
         {
           "id": "task-1-1",
+          "type": "create_function",
+          "file": "src/auth/permissions.ts",
           "description": "Concise task description (40-60 chars)",
-          "details": "Comprehensive implementation details including:\n- Files to create/modify\n- Functions/classes to add\n- Code from suggestion (if applicable)\n- Verification steps",
           "from_requirement": "req-1",
           "from_suggestion": {
             "type": "api_designs|code_snippets|file_structures|ui_components|implementation_patterns",
             "index": 0,
             "summary": "Brief description of the suggestion"
+          },
+          "confidence": {
+            "level": "high|medium|low",
+            "score": 85,
+            "factors": {
+              "has_example": true,
+              "known_pattern": true,
+              "domain_expertise": true,
+              "docs_available": false,
+              "project_convention": true
+            },
+            "risks": [],
+            "mitigations": []
+          },
+          "spec": {
+            "function": "can",
+            "async": true,
+            "params": ["permission: string"],
+            "returns": "Promise<boolean>",
+            "does": "Check user permission",
+            "imports": ["supabase from ../lib/supabase"]
           },
           "verification": {
             "search_patterns": ["pattern1", "pattern2"],
@@ -198,8 +439,7 @@ Return ONLY valid JSON (no markdown, no explanations):
             "decision": "use_suggestion|adapt|extend|skip|resolve_conflict",
             "rationale": "Why this decision was made"
           },
-          "estimated_time": "2h",
-          "dependencies": []
+          "depends_on": []
         }
       ]
     }
@@ -209,10 +449,24 @@ Return ONLY valid JSON (no markdown, no explanations):
     "req-2": ["task-1-2", "task-2-2"]
   },
   "suggestion_usage": {
-    "used_as_is": ["req-1.suggestions.api_designs[0]", "req-2.suggestions.code_snippets[0]"],
+    "used_as_is": ["req-1.suggestions.api_designs[0]"],
     "adapted": ["req-1.suggestions.file_structures[0]"],
     "skipped_existing": [],
     "conflicts_resolved": []
+  },
+  "confidence_summary": {
+    "total_tasks": 15,
+    "high": 10,
+    "medium": 4,
+    "low": 1,
+    "average_score": 72,
+    "low_confidence_tasks": [
+      {
+        "task_id": "task-3-2",
+        "score": 25,
+        "risks": ["Domain expertise required"]
+      }
+    ]
   },
   "assumptions": [
     "Assumption about codebase or approach"

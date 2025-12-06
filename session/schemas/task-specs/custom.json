@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/task-specs/custom.json",
+  "title": "CustomSpec",
+  "description": "Fallback specification for non-standard task types",
+  "type": "object",
+  "required": ["purpose"],
+  "properties": {
+    "purpose": {
+      "type": "string",
+      "description": "What this file/code does"
+    },
+    "language": {
+      "type": "string",
+      "description": "Programming language or file type"
+    },
+    "structure": {
+      "type": "string",
+      "description": "High-level structure description"
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "does"],
+        "properties": {
+          "name": { "type": "string" },
+          "does": { "type": "string" },
+          "code_hint": {
+            "type": "string",
+            "description": "Pseudo-code or pattern hint"
+          }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "External dependencies required"
+    },
+    "environment": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Required environment variables"
+    },
+    "reference_files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Files to look at for patterns"
+    },
+    "reference_docs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Documentation URLs to reference"
+    }
+  }
+}

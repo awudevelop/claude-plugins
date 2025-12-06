@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/task-specs/create_table.json",
+  "title": "CreateTableSpec",
+  "description": "Lean specification for creating a database table",
+  "type": "object",
+  "required": ["table", "columns"],
+  "properties": {
+    "table": {
+      "type": "string",
+      "description": "Table name"
+    },
+    "schema": {
+      "type": "string",
+      "default": "public",
+      "description": "Schema name"
+    },
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": {
+            "type": "string",
+            "description": "SQL type (uuid, text, integer, jsonb, etc.)"
+          },
+          "nullable": { "type": "boolean", "default": true },
+          "pk": { "type": "boolean", "default": false },
+          "unique": { "type": "boolean", "default": false },
+          "default": { "type": "string" },
+          "fk": {
+            "type": "string",
+            "description": "Foreign key reference, e.g. 'users.id'"
+          },
+          "onDelete": {
+            "type": "string",
+            "enum": ["CASCADE", "SET NULL", "RESTRICT", "NO ACTION"]
+          },
+          "check": {
+            "type": "string",
+            "description": "CHECK constraint expression"
+          }
+        }
+      }
+    },
+    "indexes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["columns"],
+        "properties": {
+          "name": { "type": "string" },
+          "columns": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "unique": { "type": "boolean", "default": false },
+          "where": {
+            "type": "string",
+            "description": "Partial index condition"
+          }
+        }
+      }
+    },
+    "rls": {
+      "type": "object",
+      "description": "Row Level Security configuration",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "policies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "operation"],
+            "properties": {
+              "name": { "type": "string" },
+              "operation": {
+                "type": "string",
+                "enum": ["SELECT", "INSERT", "UPDATE", "DELETE", "ALL"]
+              },
+              "using": { "type": "string" },
+              "with_check": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

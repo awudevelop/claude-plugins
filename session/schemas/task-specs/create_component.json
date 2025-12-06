@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/task-specs/create_component.json",
+  "title": "CreateComponentSpec",
+  "description": "Lean specification for creating a React component",
+  "type": "object",
+  "required": ["component", "renders"],
+  "properties": {
+    "component": {
+      "type": "string",
+      "description": "Component name (PascalCase)"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["functional", "forwardRef", "memo"],
+      "default": "functional",
+      "description": "Component type"
+    },
+    "props": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "required": { "type": "boolean", "default": true },
+          "default": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "hooks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Hooks used in this component"
+    },
+    "context": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Contexts consumed"
+    },
+    "renders": {
+      "type": "string",
+      "description": "What the component renders (high-level description)"
+    },
+    "conditionals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Conditional rendering logic"
+    },
+    "handlers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Event handlers (onClick, onSubmit, etc.)"
+    },
+    "imports": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Required imports"
+    },
+    "patterns": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "File paths to similar components to follow as patterns"
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/task-specs/create_class.json",
+  "title": "CreateClassSpec",
+  "description": "Lean specification for creating a class",
+  "type": "object",
+  "required": ["class", "purpose"],
+  "properties": {
+    "class": {
+      "type": "string",
+      "description": "Class name"
+    },
+    "exported": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to export the class"
+    },
+    "extends": {
+      "type": "string",
+      "description": "Parent class to extend"
+    },
+    "implements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Interfaces to implement"
+    },
+    "purpose": {
+      "type": "string",
+      "description": "What the class does"
+    },
+    "constructor": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Constructor parameters with types"
+        },
+        "does": {
+          "type": "string",
+          "description": "What constructor does"
+        }
+      }
+    },
+    "properties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "visibility": {
+            "type": "string",
+            "enum": ["public", "private", "protected"],
+            "default": "private"
+          },
+          "readonly": { "type": "boolean", "default": false },
+          "default": { "type": "string" }
+        }
+      }
+    },
+    "methods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "does"],
+        "properties": {
+          "name": { "type": "string" },
+          "visibility": {
+            "type": "string",
+            "enum": ["public", "private", "protected"],
+            "default": "public"
+          },
+          "async": { "type": "boolean", "default": false },
+          "static": { "type": "boolean", "default": false },
+          "params": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "returns": { "type": "string" },
+          "does": { "type": "string" }
+        }
+      }
+    },
+    "imports": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Required imports"
+    },
+    "patterns": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "File paths to similar classes to follow as patterns"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "session",
-  "version": "3.20.2",
+  "version": "3.21.0",
   "description": "• v3.16.0: Plan Update Feature - atomic operations for modifying plans with execution safety modes\n• v3.15.6: Skipped phase progress calculation fix\n• v3.15.5: Plan progress data inconsistency fix\n• v3.15.4: Documentation path references migration\n• v3.15.3: Global plans directory path correction\n• v3.15.2: Enhanced snapshot summary visibility",
   "author": {
     "name": "AutomateWith.Us",
@@ -101,8 +101,8 @@
     ]
   },
   "versionMetadata": {
-    "lastUpdateCommit": "8c15442ebc38a364f38409c34717f3410db46701",
-    "lastUpdateDate": "2025-12-06T03:05:20.696Z",
-    "lastBumpType": "patch"
+    "lastUpdateCommit": "f05be61aa9f4eb5ebbced01f5ce586ea67937e94",
+    "lastUpdateDate": "2025-12-06T03:59:04.475Z",
+    "lastBumpType": "minor"
   }
 }

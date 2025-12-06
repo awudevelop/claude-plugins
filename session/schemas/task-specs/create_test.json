@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/task-specs/create_test.json",
+  "title": "CreateTestSpec",
+  "description": "Lean specification for creating a test file",
+  "type": "object",
+  "required": ["describes"],
+  "properties": {
+    "framework": {
+      "type": "string",
+      "enum": ["jest", "vitest", "mocha", "ava", "playwright", "cypress"],
+      "description": "Test framework to use"
+    },
+    "describes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "tests"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Describe block name"
+          },
+          "tests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "should"],
+              "properties": {
+                "name": { "type": "string" },
+                "should": {
+                  "type": "string",
+                  "description": "What this test should verify"
+                },
+                "setup": {
+                  "type": "string",
+                  "description": "Test setup/arrange"
+                },
+                "assertion": {
+                  "type": "string",
+                  "description": "What to assert"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "imports": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Modules to import for testing"
+    },
+    "mocks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Modules/functions to mock"
+    },
+    "fixtures": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Test fixtures to use or create"
+    },
+    "patterns": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Similar test files to reference"
+    }
+  }
+}

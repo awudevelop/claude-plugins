@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.21.0] - 2025-12-06
+
+### Added
+
+- **Phase 4: Plan-Execute Upgrade** - Complete code generation workflow from lean specs
+
+- **New modules for execution:**
+  - `code-generator.js` - Orchestrates code generation from task specifications
+  - `file-writer.js` - Safe file writing with directory creation and change tracking
+  - `verifier.js` - TypeScript, ESLint, and test verification
+  - `doc-verifier.js` - JSDoc documentation verification (checks @param, @returns, @example, @category)
+  - `parallel-executor.js` - Parallel task execution with dependency-aware batching
+
+- **New prompt template:**
+  - `generate-code.md` - Code generation prompt with mandatory JSDoc requirements
+
+- **New CLI options for plan-execute:**
+  - `--parallel <n>` - Execute up to N tasks concurrently
+  - `--dry-run` - Preview execution without writing files
+  - `--review-mode` - Pause after each task for review
+  - `--auto` - No confirmations (for CI/automation)
+  - `--skip-low-confidence` - Skip tasks with confidence < 40
+
+- **New plan-ops.js functions:**
+  - `getNextTask()` - Get next pending task respecting dependencies
+  - `getConfidenceStats()` - Aggregate confidence statistics across plan
+  - `getTaskContext()` - Load reference files and context for code generation
+  - `batchUpdateTasks()` - Update multiple task statuses atomically
+
+- **Enhanced signature-extractor.js:**
+  - Explicit `@category` extraction for module organization
+  - `@async`, `@component`, `@class`, `@internal` tag support
+
+### Changed
+
+- **plan-execute.md** - Complete rewrite with:
+  - Pre-execution confidence checks
+  - Code generation from lean specs with project context
+  - Verification pipeline (typecheck, lint, tests, docs)
+  - Low-confidence task handling with user prompts
+  - Parallel execution batching
+  - Comprehensive error handling
+
+---
+
 ## [3.20.2] - 2025-12-06
 
 ### Fixed

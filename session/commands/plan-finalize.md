@@ -17,7 +17,13 @@ ARGUMENTS: {name}
 
 ## Purpose
 
-This is the TRANSFORMATION step that bridges conceptual planning and execution:
+This is the TRANSFORMATION step that bridges conceptual planning and execution.
+
+### v2.0 Features
+- **Lean Specs**: Tasks have structured specifications (not just descriptions)
+- **Confidence Scoring**: Each task is scored for implementation confidence
+- **Confidence Alerts**: Warns when too many low-confidence tasks
+- **Doc Support**: External documentation can be attached via --docs
 
 **Before (Conceptual - requirements.json):**
 ```
@@ -29,21 +35,19 @@ Requirements (WHAT):
 **After (Implementation - orchestration.json + phases/):**
 ```
 Phase 1: Database Layer
-  ✓ task-1-1: Add restriction_level column to public.new_product table
-  ✓ task-1-2: Create migration script for ALTER TABLE
-  ✓ task-1-3: Add created_by column with foreign key to users
+  ✓ task-1-1: Add restriction_level column [HIGH: 85]
+  ✓ task-1-2: Create migration script [HIGH: 80]
+  ✓ task-1-3: Add created_by column [HIGH: 85]
 
 Phase 2: API Layer
-  ✓ task-2-1: Add validation in POST /api/products endpoint
-  ✓ task-2-2: Add validation in PUT /api/products/:id endpoint
-  ✓ task-2-3: Return 403 error for restricted products
+  ✓ task-2-1: Add validation in POST endpoint [HIGH: 75]
+  ✓ task-2-2: Add validation in PUT endpoint [HIGH: 75]
+  ⚠ task-2-3: Implement OAuth callback [LOW: 35]
 
-Phase 3: UI Layer
-  ✓ task-3-1: Add restriction checkbox in product form
-  ✓ task-3-2: Show error message when restriction fails
+Confidence: 5 high, 0 medium, 1 low ⚠️
 ```
 
-**This step uses AI to break down requirements into concrete, actionable tasks.**
+**This step uses AI to break down requirements into concrete, actionable tasks with lean specs and confidence scoring.**
 
 ## Workflow
 
@@ -175,9 +179,9 @@ The subagent will analyze requirements and return structured breakdown:
 }
 ```
 
-### Step 7: Show Transformation Preview
+### Step 7: Show Transformation Preview with Confidence
 
-Display the AI-generated breakdown for user review:
+Display the AI-generated breakdown for user review, including confidence scores:
 
 ```
 ✓ AI Analysis Complete
@@ -190,18 +194,18 @@ Implementation Goal:
 {implementation_goal}
 
 Phase 1: {phase_1_name}
-  • task-1-1: {description}
-  • task-1-2: {description}
-  • task-1-3: {description}
+  • task-1-1: {description} [HIGH: 85]
+  • task-1-2: {description} [HIGH: 80]
+  • task-1-3: {description} [MEDIUM: 55]
   [{task_count} tasks]
 
 Phase 2: {phase_2_name}
-  • task-2-1: {description}
-  • task-2-2: {description}
+  • task-2-1: {description} [HIGH: 75]
+  ⚠ task-2-2: {description} [LOW: 35]
   [{task_count} tasks]
 
 Phase 3: {phase_3_name}
-  • task-3-1: {description}
+  • task-3-1: {description} [HIGH: 90]
   [{task_count} tasks]
 
 [Show all phases]
@@ -215,6 +219,11 @@ Summary:
 • Tasks: {task_count}
 • Traceability: Complete (all tasks mapped to requirements)
 
+Confidence Summary:
+  🟢 High (70+):    {high_count} tasks ({high_percent}%)
+  🟡 Medium (40-69): {medium_count} tasks ({medium_percent}%)
+  🔴 Low (<40):      {low_count} tasks ({low_percent}%)
+
 Assumptions:
   - {assumption_1}
   - {assumption_2}
@@ -227,6 +236,50 @@ Risks:
 
 Does this breakdown look good? (yes/edit/cancel)
 ```
+
+### Step 7.5: Confidence Alert (If Low Confidence Tasks >= 3)
+
+If there are 3 or more low-confidence tasks, show an alert:
+
+```
+⚠️  CONFIDENCE ALERT
+
+{N} tasks have low confidence scores:
+
+  task-2-2: Implement OAuth callback (score: 35)
+    Risks:
+      - Domain expertise required (OAuth)
+      - No similar auth code in project
+    Mitigation: Add OAuth documentation with --docs
+
+  task-4-1: Configure legacy mainframe sync (score: 15)
+    Risks:
+      - Undocumented system
+      - Custom protocol required
+    Mitigation: Provide reference implementation
+
+  task-7-2: Setup CUDA kernels (score: 30)
+    Risks:
+      - GPU expertise required
+      - No GPU code in project
+    Mitigation: Add NVIDIA CUDA documentation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Options:
+  [C] Continue anyway (tasks flagged for review)
+  [S] Skip low-confidence tasks (mark as manual)
+  [D] Add documentation and retry
+  [A] Abort finalization
+
+Your choice:
+```
+
+Use AskUserQuestion to get the user's choice:
+- **Continue**: Proceed with all tasks, low-confidence ones marked for review
+- **Skip**: Mark low-confidence tasks as "manual" status, proceed with others
+- **Add docs**: Prompt user for documentation URLs, then re-run analysis
+- **Abort**: Cancel finalization
 
 ### Step 8: Handle User Response
 
@@ -296,6 +349,16 @@ Output:
   • Tasks: {task_count}
   • Structure: Optimized for parallel execution
 
+Confidence Summary:
+  🟢 High (70+):    {high_count} tasks ({high_percent}%)
+  🟡 Medium (40-69): {medium_count} tasks ({medium_percent}%)
+  🔴 Low (<40):      {low_count} tasks ({low_percent}%)
+
+{If low_count > 0:}
+Low Confidence Tasks (review recommended):
+  - task-{id}: {description} (score: {score})
+  - task-{id}: {description} (score: {score})
+
 Files Created:
   • orchestration.json (coordinator)
   • phases/phase-1-{name}.json
@@ -316,7 +379,8 @@ Next Steps:
 2. Start execution:
    /session:plan-execute {plan_name}
 
-3. Track progress as you implement each task
+{If low_count > 0:}
+3. Review low-confidence tasks before executing
 
 🎯 Ready for implementation!
 ```

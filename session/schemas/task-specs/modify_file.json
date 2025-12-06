@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/task-specs/modify_file.json",
+  "title": "ModifyFileSpec",
+  "description": "Lean specification for modifying an existing file",
+  "type": "object",
+  "required": ["modifications"],
+  "properties": {
+    "modifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["action", "description"],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["add_import", "add_export", "add_function", "add_method", "modify_function", "add_property", "remove", "replace"],
+            "description": "Type of modification"
+          },
+          "target": {
+            "type": "string",
+            "description": "What to modify (function name, class name, etc.)"
+          },
+          "description": {
+            "type": "string",
+            "description": "What the modification does"
+          },
+          "location": {
+            "type": "string",
+            "description": "Where in the file (after X, before Y, at end, etc.)"
+          },
+          "content_hint": {
+            "type": "string",
+            "description": "Hint about what to add/change"
+          }
+        }
+      }
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why this file needs modification"
+    },
+    "patterns": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Similar modifications to reference"
+    }
+  }
+}

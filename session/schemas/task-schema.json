@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://claude.ai/session-plugin/schemas/task.json",
+  "title": "ConcreteTask",
+  "description": "Executable task with lean specs and confidence scoring",
+  "type": "object",
+  "required": ["id", "type", "file", "confidence", "spec"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Task identifier in format task-{phase}-{index}",
+      "pattern": "^task-\\d+-\\d+$"
+    },
+    "type": {
+      "type": "string",
+      "description": "Task type determining spec structure",
+      "enum": [
+        "create_directory",
+        "create_file",
+        "create_class",
+        "create_function",
+        "create_interface",
+        "create_hook",
+        "create_component",
+        "create_context",
+        "create_table",
+        "create_migration",
+        "create_rpc",
+        "create_trigger",
+        "create_cli",
+        "create_cli_command",
+        "create_config",
+        "create_package_json",
+        "create_barrel",
+        "create_readme",
+        "create_test",
+        "run_command",
+        "add_dependency",
+        "modify_file",
+        "modify_markdown",
+        "custom"
+      ]
+    },
+    "file": {
+      "type": "string",
+      "description": "Target file path relative to project root"
+    },
+    "create": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to create the file (false = modify existing)"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Brief task description for display"
+    },
+    "from_requirement": {
+      "type": "string",
+      "pattern": "^req-\\d+$",
+      "description": "Source requirement ID for traceability"
+    },
+    "from_suggestion": {
+      "type": "object",
+      "description": "Reference to the suggestion that informed this task",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["api_designs", "code_snippets", "file_structures", "ui_components", "implementation_patterns"]
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^task-\\d+-\\d+$"
+      },
+      "description": "Task IDs this task depends on"
+    },
+    "confidence": {
+      "type": "object",
+      "required": ["level", "score"],
+      "description": "Confidence assessment for this task",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "Confidence level: high (70+), medium (40-69), low (<40)"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Numeric confidence score"
+        },
+        "factors": {
+          "type": "object",
+          "description": "Factors that contributed to the score",
+          "properties": {
+            "has_example": {
+              "type": "boolean",
+              "description": "Similar code exists in project"
+            },
+            "known_pattern": {
+              "type": "boolean",
+              "description": "Task follows a known pattern type"
+            },
+            "domain_expertise": {
+              "type": "boolean",
+              "description": "No special domain expertise required"
+            },
+            "docs_available": {
+              "type": "boolean",
+              "description": "Documentation is available for this task"
+            },
+            "project_convention": {
+              "type": "boolean",
+              "description": "Matches project file structure conventions"
+            }
+          }
+        },
+        "risks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Identified risks for this task"
+        },
+        "mitigations": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Suggested mitigations for risks"
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "description": "Type-specific lean specification (see task-specs/ schemas)"
+    },
+    "docs": {
+      "type": "array",
+      "description": "Documentation references for this task",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Remote documentation URL"
+          },
+          "local": {
+            "type": "string",
+            "description": "Local file path"
+          },
+          "section": {
+            "type": "string",
+            "description": "Specific section to reference"
+          },
+          "purpose": {
+            "type": "string",
+            "description": "Why this doc is relevant"
+          }
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "description": "Review requirements for this task",
+      "properties": {
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether human review is required"
+        },
+        "recommended": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether review is recommended (non-blocking)"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why review is needed"
+        },
+        "focus_areas": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific areas to focus review on"
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "description": "Verification steps before implementing",
+      "properties": {
+        "search_patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Patterns to search for existing code"
+        },
+        "search_locations": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Directories to search in"
+        },
+        "existing_found": {
+          "type": ["string", "null"],
+          "description": "Path to existing implementation if found"
+        },
+        "verified": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether verification has been performed"
+        }
+      }
+    },
+    "implementation_decision": {
+      "type": "object",
+      "description": "Decision on implementation approach",
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": ["use_suggestion", "adapt", "extend", "skip", "resolve_conflict"],
+          "description": "The implementation approach chosen"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why this decision was made"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "in_progress", "completed", "failed", "skipped", "blocked"],
+      "default": "pending"
+    },
+    "output": {
+      "type": "object",
+      "description": "Task execution output",
+      "properties": {
+        "files_created": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "files_modified": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "verification_result": {
+          "type": "object",
+          "properties": {
+            "typecheck": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+            "lint": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+            "tests": { "type": "string" }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
