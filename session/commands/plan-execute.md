@@ -333,28 +333,142 @@ Files Created: {files_created}
 Files Modified: {files_modified}
 Tests Generated: {tests_generated}
 Tests Passing: {tests_passing}
+```
 
-{if review_needed > 0}
-Low-Confidence Tasks (review recommended):
-  - {file_path} ({task_id})
-  - {file_path} ({task_id})
+---
+
+## Step 9: Auto-Review (Spec Validation)
+
+**IMPORTANT:** This step runs AUTOMATICALLY after all tasks complete.
+
+After execution completes, validate all completed tasks against their specifications:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js plan-review {plan_name}
+```
+
+This returns JSON with review results:
+```json
+{
+  "success": true,
+  "data": {
+    "tasksReviewed": 5,
+    "findings": [...],
+    "summary": {
+      "totalErrors": 2,
+      "totalWarnings": 3,
+      "pass": false
+    },
+    "pass": false
+  }
+}
+```
+
+### Display Review Results
+
+**If review PASSED (0 errors):**
+
+```
+───────────────────────────────────────
+📋 SPEC REVIEW: PASSED
+───────────────────────────────────────
+
+Tasks Reviewed: {tasksReviewed}
+Errors: 0
+Warnings: {totalWarnings}
+
+{if totalWarnings > 0}
+Warnings (non-blocking):
+{for each warning}
+  ⚠️ [{task_id}] {description}
+     {location.file}:{location.line}
+{endfor}
 {endif}
 
-{if failed > 0}
-Failed Tasks:
-  - {task_id}: {error_message}
+✓ All implementations match their specifications.
+```
+
+**If review FAILED (errors found):**
+
+```
+───────────────────────────────────────
+📋 SPEC REVIEW: FAILED
+───────────────────────────────────────
+
+Tasks Reviewed: {tasksReviewed}
+Errors: {totalErrors}
+Warnings: {totalWarnings}
+
+ERRORS (must fix):
+{for each error finding}
+  ❌ [{task_id}] {type}: {description}
+     File: {location.file}:{location.line}
+     Expected: {expected}
+     Actual: {actual}
+     Fix: {suggestion}
+{endfor}
+
+{if totalWarnings > 0}
+Warnings:
+{for each warning finding}
+  ⚠️ [{task_id}] {description}
+{endfor}
 {endif}
 
-Documentation Quality:
-  - Functions with full JSDoc: {percent}%
-  - Missing @example: {count}
-  - Missing @category: {count}
+───────────────────────────────────────
+
+⚠️  Implementation has spec violations!
+
+The code was generated but doesn't fully match specifications.
+Fix the errors above and re-run review:
+
+  /session:plan-review {plan_name}
+```
+
+### Review Finding Types
+
+| Type | Severity | Meaning |
+|------|----------|---------|
+| `missing_implementation` | error | Function in spec not found in code |
+| `signature_mismatch` | error | Params/async/export don't match spec |
+| `unspecified_addition` | error | Exported function not in spec |
+| `unspecified_addition` | warning | Internal helper not in spec |
+
+---
+
+## Step 10: Final Summary
+
+After review completes, show final status:
+
+```
+───────────────────────────────────────
+EXECUTION COMPLETE: {plan_name}
+───────────────────────────────────────
+
+Execution:
+  ✓ Completed: {completed} tasks
+  ⏭️ Skipped: {skipped} tasks
+  ❌ Failed: {failed} tasks
+
+Spec Review: {PASSED|FAILED}
+  Errors: {totalErrors}
+  Warnings: {totalWarnings}
+
+{if review passed}
+✓ Ready for commit and deployment!
 
 Next Steps:
-  1. Review flagged files
-  2. Run full test suite: npm test
-  3. Commit changes: git add . && git commit
-  4. Use /session:save to capture milestone
+  1. Run full test suite: npm test
+  2. Commit changes: git add . && git commit
+  3. Use /session:save to capture milestone
+{else}
+⚠️ Fix spec violations before committing.
+
+Next Steps:
+  1. Fix errors listed above
+  2. Re-run review: /session:plan-review {plan_name}
+  3. Then commit when review passes
+{endif}
 
 Use /session:plan-status {plan_name} to see detailed status.
 ```
