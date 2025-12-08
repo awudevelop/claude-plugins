@@ -70,6 +70,91 @@ If the format is "implementation", continue to next step.
 
 ---
 
+## Step 2.5: Validate Spec Completeness (BLOCKING)
+
+**CRITICAL:** Before executing ANY task, validate that specs are complete. Incomplete specs lead to implementation deviations.
+
+For each task in the plan, validate its spec against the required schema:
+
+### For `create_class` tasks:
+```json
+// REQUIRED structure (not just method names!)
+"spec": {
+  "class": "string (required)",
+  "exported": "boolean (required)",
+  "purpose": "string (required)",
+  "constructor": { "params": ["string[]"], "does": "string" },  // REQUIRED
+  "methods": [
+    {
+      "name": "string (required)",
+      "params": ["string[] (required)"],
+      "returns": "string (required)",
+      "does": "string (required)",
+      "static": "boolean (default: false)",
+      "async": "boolean (default: false)"
+    }
+  ]
+}
+```
+
+**INVALID (will cause deviations):**
+```json
+"methods": ["compareMetadata", "compareDependencies"]  // ❌ Just names!
+```
+
+**VALID:**
+```json
+"methods": [
+  { "name": "compareMetadata", "params": ["oldMap: object", "newMap: object"], "returns": "DiffResult", "does": "Compare metadata maps" }
+]
+```
+
+### For `create_function` tasks:
+```json
+"spec": {
+  "function": "string (required)",
+  "async": "boolean (required)",
+  "exported": "boolean (required)",
+  "params": ["string[] (required) - with types"],
+  "returns": "string (required)",
+  "does": "string (required)"
+}
+```
+
+### Validation Check
+
+Before showing execution overview, check each task's spec:
+
+```
+Validating spec completeness...
+
+❌ task-1-1: INCOMPLETE SPEC
+   Type: create_class
+   Issue: 'methods' is array of strings, should be array of objects with name/params/returns
+
+❌ task-2-2: INCOMPLETE SPEC
+   Type: create_function
+   Issue: Missing 'params' field
+
+⚠️ 2 tasks have incomplete specs
+
+Incomplete specs cause agents to make autonomous decisions about:
+- Method parameters and return types
+- Static vs instance methods
+- What to export
+
+Options:
+  [F] Fix specs now (re-run plan-finalize with stricter prompt)
+  [C] Continue anyway (accept potential deviations)
+  [A] Abort execution
+```
+
+Use AskUserQuestion to get user decision. If user chooses Continue, log warning but proceed.
+
+**DO NOT silently proceed with incomplete specs.**
+
+---
+
 ## Step 3: Load Plan & Execution Context
 
 Load the orchestration file and all phase files:
@@ -201,6 +286,66 @@ If NOT --dry-run:
 2. Write main file
 3. Write auxiliary files (types, tests)
 4. Track all created/modified files
+
+### 5d.5: Post-Generation Verification (MANDATORY)
+
+**CRITICAL:** After writing files, you MUST verify the generated code matches the spec.
+
+**DO NOT trust agent reports blindly. READ the actual file.**
+
+```
+1. READ the generated file using Read tool
+2. EXTRACT actual structure:
+   - For classes: class name, method names, method signatures, exports
+   - For functions: function name, params, return type, export status
+3. COMPARE against spec
+4. REPORT mismatches
+```
+
+**Verification Checklist:**
+
+For `create_class`:
+```
+□ Class name matches spec.class
+□ Exported matches spec.exported
+□ All methods in spec exist in code
+□ Method signatures match (params, returns, static/async)
+□ No unexpected exports (methods not in spec but exported)
+```
+
+For `create_function`:
+```
+□ Function name matches spec.function
+□ Exported matches spec.exported
+□ Async matches spec.async
+□ Parameters match spec.params (count and types)
+□ Return type matches spec.returns
+```
+
+**If Mismatch Found:**
+
+```
+⚠️ POST-GENERATION MISMATCH: task-{id}
+
+Spec says:
+  method: compareMetadata(oldMap: object, newMap: object) → DiffResult
+  static: false
+
+Code has:
+  method: static compareMetadata(oldMap, newMap) → object
+  static: true  ❌ MISMATCH
+
+Deviations:
+  1. Method is static but spec says instance method
+  2. Return type is 'object' but spec says 'DiffResult'
+
+Options:
+  [F] Fix now (regenerate with explicit correction)
+  [A] Accept deviation (document in task result)
+  [S] Skip task
+```
+
+Use AskUserQuestion for user decision. **DO NOT auto-accept deviations.**
 
 ### 5e. Verify
 
@@ -417,12 +562,47 @@ Warnings:
 
 ───────────────────────────────────────
 
-⚠️  Implementation has spec violations!
+⚠️  BLOCKING: Implementation has spec violations!
 
-The code was generated but doesn't fully match specifications.
-Fix the errors above and re-run review:
+Errors MUST be resolved before execution can complete.
 
-  /session:plan-review {plan_name}
+Options:
+  [F] Fix errors now - Re-run affected tasks with corrections
+  [C] Continue anyway - Accept deviations (REQUIRES explicit acknowledgment)
+  [A] Abort execution - Stop and fix manually
+```
+
+**CRITICAL:** Use AskUserQuestion to get user decision. DO NOT auto-continue.
+
+```javascript
+// Hard gate - require explicit user choice
+const decision = await askUserQuestion({
+  question: "Review found spec violations. How to proceed?",
+  header: "Review Failed",
+  options: [
+    { label: "Fix errors", description: "Re-generate affected tasks with explicit corrections" },
+    { label: "Continue anyway", description: "Accept deviations and mark execution complete" },
+    { label: "Abort", description: "Stop execution, fix manually" }
+  ]
+});
+
+if (decision === "Fix errors") {
+  // Re-run affected tasks with error context
+  for (const finding of errorFindings) {
+    await regenerateTask(finding.taskId, finding);
+  }
+  // Re-run review after fixes
+  await runReview(planName);
+} else if (decision === "Continue anyway") {
+  // Log explicit override
+  console.log("⚠️ User accepted spec deviations. Proceeding to final summary.");
+  // Continue to Step 10
+} else {
+  // Abort - do not proceed to Step 10
+  console.log("Execution aborted. Fix errors manually and re-run:");
+  console.log(`  /session:plan-execute ${planName}`);
+  return; // EXIT - do not show final summary
+}
 ```
 
 ### Review Finding Types
