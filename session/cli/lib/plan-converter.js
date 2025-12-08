@@ -246,6 +246,12 @@ function mergePhasesIntoPlan(orchestration, phaseFiles) {
     created_at: orchestration.metadata.created,
     updated_at: orchestration.metadata.modified,
     version: orchestration.metadata.version,
+    // v2.0 fix: Include status from orchestration metadata
+    status: orchestration.metadata.status,
+    // v2.0 fix: Include full metadata for fallback access
+    metadata: orchestration.metadata,
+    // v2.0 fix: Include confidence summary from orchestration
+    confidence: orchestration.confidence,
 
     phases: phaseFiles.map((phaseFile, idx) => {
       const phaseMeta = orchestration.phases[idx];
@@ -253,6 +259,8 @@ function mergePhasesIntoPlan(orchestration, phaseFiles) {
       return {
         phase_name: phaseFile.phase_name,  // Use top-level phase_name
         description: phaseFile.description,  // Use top-level description
+        // v2.0 fix: Use orchestration phase status (more up-to-date than phase file)
+        status: phaseMeta?.status || phaseFile.status || 'pending',
         tasks: phaseFile.tasks.map(task => ({
           // Core task fields
           task_id: task.task_id,

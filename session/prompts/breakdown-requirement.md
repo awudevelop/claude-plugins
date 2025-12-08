@@ -41,24 +41,49 @@ During the planning conversation, Claude likely:
 
 **You MUST follow this verification-first process for each suggestion:**
 
-### Step 1: SEARCH for Existing Implementation
+### Step 1: SEARCH for Existing Implementation (MANDATORY)
 
-Before creating any task from a suggestion, check if similar functionality already exists:
+Before creating any task from a suggestion, you MUST analyze the codebase using these commands:
 
+**1. Search for similar function signatures:**
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js project-maps search signature "<function-name-pattern>"
 ```
-VERIFICATION REQUIRED:
-- Search for: [function/method names from suggestion]
-- Search patterns: [regex patterns to find similar code]
-- Search locations: [likely directories]
-- Use project-maps if available
+
+**2. Search for files in the target directory:**
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js project-maps search file "<directory>/*.js"
 ```
+
+**3. Get module exports to understand return type conventions:**
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js project-maps query exports <project-name>
+```
+
+**What to look for in results:**
+- **Return type patterns**: Do existing functions return `{success, data}` objects or raw values?
+- **Parameter conventions**: Are parameters typed? What naming patterns are used?
+- **Error handling**: How do existing functions handle errors?
+- **Async patterns**: Are similar functions async? Do they use try/catch?
+
+**You MUST include findings in your specs:**
+```json
+{
+  "spec": {
+    "returns": "Match return type from similar functions (e.g., {success: boolean, data: object})",
+    "patterns": ["path/to/similar-file.js:existingFunction"]
+  }
+}
+```
+
+**If project-maps is unavailable**, use Grep/Read tools to analyze existing code patterns before generating specs.
 
 ### Step 2: EVALUATE the Suggestion
 
-Compare suggestion against codebase:
-- Does a similar function already exist?
+Compare suggestion against codebase findings:
+- Does a similar function already exist? (Check project-maps results)
 - Is the suggested signature compatible with existing patterns?
-- Does the code snippet follow codebase conventions?
+- Does the code snippet follow codebase conventions (return types, error handling)?
 
 ### Step 3: DECIDE Implementation Approach
 
