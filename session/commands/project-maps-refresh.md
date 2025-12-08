@@ -12,6 +12,7 @@ Refresh project context maps (full or incremental).
 
 - `--full`: Force full regeneration of all maps
 - `--incremental`: Only update changed files (faster)
+- `--verbose`: Show detailed file-by-file changes instead of summary
 - No options: Auto-detect best mode based on staleness
 
 ## Implementation
@@ -62,6 +63,23 @@ Time taken: {time}ms
 
 Staleness: 0/100 (fresh)
 ```
+
+## Diff Output
+
+After refresh, you'll see what changed:
+
+**Summary Mode (default):**
+```
+Changes: +5 files, -2 files, ~3 modified, 12 dep changes
+```
+
+**Verbose Mode (--verbose):**
+Shows detailed breakdown including:
+- Added/removed/modified files with sizes
+- Dependency changes
+- Component changes
+- Module changes
+- Anomaly warnings if mass changes detected
 
 ## When to Use
 

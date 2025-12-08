@@ -5,6 +5,9 @@ const MapGenerator = require('./map-generator');
 const MapLoader = require('./map-loader');
 const IncrementalUpdater = require('./incremental-updater');
 const StalenessChecker = require('./staleness-checker');
+const MapSnapshot = require('./map-snapshot');
+const MapDiffer = require('./map-differ');
+const { DiffFormatter } = require('./diff-formatter');
 
 /**
  * Project Maps Refresh CLI
@@ -15,6 +18,7 @@ class RefreshCLI {
   constructor() {
     this.projectRoot = process.cwd();
     this.mode = 'auto'; // auto, full, or incremental
+    this.verbose = false;
   }
 
   async run() {
@@ -88,6 +92,11 @@ class RefreshCLI {
       this.mode = 'auto';
     }
 
+    // Check for verbose flag
+    if (args.includes('--verbose')) {
+      this.verbose = true;
+    }
+
     // Override project root if specified
     const pathIndex = args.indexOf('--project');
     if (pathIndex >= 0 && args[pathIndex + 1]) {
@@ -125,13 +134,43 @@ class RefreshCLI {
   async performFullRefresh() {
     console.log('Performing full refresh...\n');
 
+    // Step 1: Load current maps for snapshot
+    const loader = new MapLoader(this.projectRoot);
+    const snapshot = new MapSnapshot(this.projectRoot, loader.getProjectHash());
+
+    // Step 2: Save snapshot of current state
+    let oldMaps = null;
+    if (await loader.exists()) {
+      try {
+        oldMaps = await loader.loadAll();
+        await snapshot.saveSnapshot(oldMaps, 'pre-refresh');
+        console.log('✓ Saved snapshot of current maps\n');
+      } catch (error) {
+        console.warn(`⚠️  Could not save snapshot: ${error.message}\n`);
+      }
+    }
+
+    // Step 3: Generate new maps
     const generator = new MapGenerator(this.projectRoot);
     const result = await generator.generateAll();
+
+    // Step 4: Generate diff if we had old maps
+    let diffReport = null;
+    if (oldMaps) {
+      try {
+        const newMaps = await loader.loadAll();
+        diffReport = MapDiffer.generateFullDiff(oldMaps, newMaps);
+        await snapshot.deleteSnapshot('pre-refresh');
+      } catch (error) {
+        console.warn(`⚠️  Could not generate diff: ${error.message}\n`);
+      }
+    }
 
     return {
       type: 'full',
       filesScanned: result.files,
-      mapsGenerated: 11
+      mapsGenerated: 11,
+      diffReport
     };
   }
 
@@ -148,6 +187,18 @@ class RefreshCLI {
       return await this.performFullRefresh();
     }
 
+    // Step 1: Save snapshot of current state
+    const snapshot = new MapSnapshot(this.projectRoot, projectHash);
+    let oldMaps = null;
+    try {
+      oldMaps = await loader.loadAll();
+      await snapshot.saveSnapshot(oldMaps, 'pre-refresh');
+      console.log('✓ Saved snapshot of current maps\n');
+    } catch (error) {
+      console.warn(`⚠️  Could not save snapshot: ${error.message}\n`);
+    }
+
+    // Step 2: Perform incremental update
     const updater = new IncrementalUpdater(this.projectRoot, projectHash);
     const result = await updater.performUpdate(lastCommitHash);
 
@@ -160,11 +211,24 @@ class RefreshCLI {
       throw new Error(result.error || result.message);
     }
 
+    // Step 3: Generate diff if we had old maps
+    let diffReport = null;
+    if (oldMaps) {
+      try {
+        const newMaps = await loader.loadAll();
+        diffReport = MapDiffer.generateFullDiff(oldMaps, newMaps);
+        await snapshot.deleteSnapshot('pre-refresh');
+      } catch (error) {
+        console.warn(`⚠️  Could not generate diff: ${error.message}\n`);
+      }
+    }
+
     return {
       type: 'incremental',
       filesScanned: result.filesScanned,
       mapsUpdated: result.mapsUpdated?.length || 0,
-      updateTime: result.updateTime
+      updateTime: result.updateTime,
+      diffReport
     };
   }
 
@@ -194,6 +258,31 @@ class RefreshCLI {
     console.log('Statistics:');
     console.log(`  Files processed: ${result.filesScanned}`);
     console.log(`  Time taken: ${totalTime}ms`);
+
+    // Show diff results if available
+    if (result.diffReport) {
+      this.showDiffResults(result.diffReport);
+    }
+  }
+
+  showDiffResults(diffReport) {
+    if (!diffReport || !diffReport.summary) {
+      return;
+    }
+
+    console.log('\n=== Changes Detected ===\n');
+
+    const formatter = new DiffFormatter({ projectRoot: this.projectRoot });
+
+    if (this.verbose) {
+      // Verbose mode: show detailed diff
+      const verboseOutput = formatter.formatVerbose(diffReport);
+      console.log(verboseOutput);
+    } else {
+      // Summary mode: show one-line summary
+      const summary = formatter.formatSummary(diffReport);
+      console.log(summary);
+    }
   }
 
   async verifyFreshness(loader) {

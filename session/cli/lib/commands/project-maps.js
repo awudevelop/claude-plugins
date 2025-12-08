@@ -196,6 +196,7 @@ async function refreshCommand(projectPath, options) {
     const refresher = new RefreshCLI();
     refresher.projectRoot = projectPath;
     refresher.mode = mode;
+    refresher.verbose = options.verbose || false;
 
     // Run refresh
     await refresher.run();
