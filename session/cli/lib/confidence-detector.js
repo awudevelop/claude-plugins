@@ -298,9 +298,11 @@ class ConfidenceDetector {
       '.sql', 'prisma', 'drizzle', 'knex'
     ];
 
-    return files.some(file =>
-      dbPatterns.some(pattern => file.toLowerCase().includes(pattern))
-    );
+    return files.some(file => {
+      // Handle both object format {name, path} and string format
+      const fileName = typeof file === 'string' ? file : (file.name || '');
+      return dbPatterns.some(pattern => fileName.toLowerCase().includes(pattern));
+    });
   }
 
   /**
@@ -316,7 +318,11 @@ class ConfidenceDetector {
     const dir = filePath.substring(0, filePath.lastIndexOf('/'));
 
     // Check if similar directory structure exists
-    return files.some(file => file.startsWith(dir));
+    return files.some(file => {
+      // Handle both object format {name, path} and string format
+      const fileName = typeof file === 'string' ? file : (file.name || '');
+      return fileName.startsWith(dir);
+    });
   }
 
   /**
@@ -383,8 +389,12 @@ class ConfidenceDetector {
       const files = tree.files || [];
 
       // Check if directory exists or similar files exist
+      // Handle both object format {name, path} and string format
       return directories.includes(dir) ||
-             files.some(f => f.startsWith(dir + '/'));
+             files.some(f => {
+               const fileName = typeof f === 'string' ? f : (f.name || '');
+               return fileName.startsWith(dir + '/');
+             });
     }
 
     return false;

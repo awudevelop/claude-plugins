@@ -254,13 +254,25 @@ function mergePhasesIntoPlan(orchestration, phaseFiles) {
         phase_name: phaseFile.phase_name,  // Use top-level phase_name
         description: phaseFile.description,  // Use top-level description
         tasks: phaseFile.tasks.map(task => ({
+          // Core task fields
           task_id: task.task_id,
           description: task.description,
           details: task.details,
           status: task.status,
-          dependencies: task.dependencies,
-          estimated_effort: task.estimatedEffort,
-          technical_notes: task.technical_notes
+          dependencies: task.dependencies || task.depends_on,
+          estimated_effort: task.estimatedEffort || task.estimated_tokens,
+          technical_notes: task.technical_notes,
+          // v2.0 fields - CRITICAL: preserve all lean spec fields
+          type: task.type,
+          file: task.file,
+          spec: task.spec,
+          confidence: task.confidence,
+          from_requirement: task.from_requirement,
+          from_suggestion: task.from_suggestion,
+          verification: task.verification,
+          implementation_decision: task.implementation_decision,
+          review: task.review,
+          result: task.result
         })),
         context: phaseFile.context
       };
