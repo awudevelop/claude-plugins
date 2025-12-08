@@ -123,6 +123,11 @@ const commands = {
     const planUpdate = require('./lib/commands/plan-update');
     return await planUpdate(args);
   },
+  'plan-review': async (args) => {
+    const planReview = require('./lib/commands/plan-review');
+    const [planName] = args;
+    return await planReview.reviewPlan(planName);
+  },
   // Requirements-based workflow operations
   'save-requirements': async (args) => {
     const planOps = require('./lib/commands/plan-ops');
