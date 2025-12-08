@@ -14,6 +14,7 @@
 
 const HooksManager = require('../hooks-manager');
 const path = require('path');
+const fs = require('fs');
 
 /**
  * Parse command arguments
@@ -158,6 +159,9 @@ function installHooks(manager, pluginRoot, dryRun, addPermissions) {
     // Write merged settings
     manager.writeSettings(merged);
 
+    // Install skills
+    const skillsResult = installSkills(manager.projectRoot, pluginRoot);
+
     return {
       success: true,
       action: 'installed',
@@ -168,6 +172,8 @@ function installHooks(manager, pluginRoot, dryRun, addPermissions) {
       permissionsCount: permissionsAdded.length,
       totalPermissions: totalPermissions,
       permissionsRequested: addPermissions,
+      skillsInstalled: skillsResult.installed,
+      skillsSkipped: skillsResult.skipped,
       backupPath: backupPath,
       settingsPath: manager.settingsPath
     };
@@ -219,12 +225,16 @@ function removeHooks(manager, pluginRoot, dryRun) {
     // Write cleaned settings
     manager.writeSettings(cleaned);
 
+    // Remove skills
+    const skillsResult = removeSkills(manager.projectRoot, pluginRoot);
+
     return {
       success: true,
       action: 'removed',
       message: 'Session plugin hooks removed successfully',
       hooksRemoved: status.configuredHooks,
       hookTypes: Object.keys(status.configuredHooks),
+      skillsRemoved: skillsResult.removed,
       backupPath: backupPath,
       settingsPath: manager.settingsPath
     };
@@ -261,6 +271,9 @@ function showStatus(manager, pluginRoot) {
     const configuredPermissionsCount = manager.countSessionPermissions(settings);
     const sessionPermissions = manager.getSessionPermissions();
 
+    // Get skills status
+    const skillsStatus = getSkillsStatus(manager.projectRoot, pluginRoot);
+
     return {
       success: true,
       action: 'status',
@@ -275,6 +288,7 @@ function showStatus(manager, pluginRoot) {
       permissionsCount: configuredPermissionsCount,
       totalPermissions: totalPermissions,
       sessionPermissions: sessionPermissions,
+      skillsStatus: skillsStatus,
       settingsPath: manager.settingsPath
     };
 
@@ -340,6 +354,135 @@ function cleanupOrphanedHooks(manager, pluginRoot, dryRun) {
       action: 'cleanup_failed',
       error: error.message
     };
+  }
+}
+
+/**
+ * Install skills from plugin to .claude/skills/
+ */
+function installSkills(projectRoot, pluginRoot) {
+  const pluginSkillsDir = path.join(pluginRoot, 'skills');
+  const localSkillsDir = path.join(projectRoot, '.claude', 'skills');
+  const installed = [];
+
+  if (!fs.existsSync(pluginSkillsDir)) {
+    return { installed: [], skipped: true, reason: 'No skills directory in plugin' };
+  }
+
+  // Get skill directories
+  const skills = fs.readdirSync(pluginSkillsDir, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name);
+
+  if (skills.length === 0) {
+    return { installed: [], skipped: true, reason: 'No skills found in plugin' };
+  }
+
+  // Ensure .claude/skills exists
+  if (!fs.existsSync(localSkillsDir)) {
+    fs.mkdirSync(localSkillsDir, { recursive: true });
+  }
+
+  // Copy each skill directory
+  for (const skill of skills) {
+    const src = path.join(pluginSkillsDir, skill);
+    const dest = path.join(localSkillsDir, skill);
+
+    // Copy skill directory (recursive)
+    copyDirSync(src, dest);
+    installed.push(skill);
+  }
+
+  return { installed, skipped: false };
+}
+
+/**
+ * Remove skills installed by plugin from .claude/skills/
+ */
+function removeSkills(projectRoot, pluginRoot) {
+  const pluginSkillsDir = path.join(pluginRoot, 'skills');
+  const localSkillsDir = path.join(projectRoot, '.claude', 'skills');
+  const removed = [];
+
+  if (!fs.existsSync(pluginSkillsDir) || !fs.existsSync(localSkillsDir)) {
+    return { removed: [], skipped: true };
+  }
+
+  // Get plugin skill names
+  const pluginSkills = fs.readdirSync(pluginSkillsDir, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name);
+
+  // Remove matching skills from local
+  for (const skill of pluginSkills) {
+    const localPath = path.join(localSkillsDir, skill);
+    if (fs.existsSync(localPath)) {
+      fs.rmSync(localPath, { recursive: true, force: true });
+      removed.push(skill);
+    }
+  }
+
+  return { removed, skipped: false };
+}
+
+/**
+ * Get status of installed skills
+ */
+function getSkillsStatus(projectRoot, pluginRoot) {
+  const pluginSkillsDir = path.join(pluginRoot, 'skills');
+  const localSkillsDir = path.join(projectRoot, '.claude', 'skills');
+
+  const status = {
+    pluginSkills: [],
+    installedSkills: [],
+    missingSkills: []
+  };
+
+  if (fs.existsSync(pluginSkillsDir)) {
+    status.pluginSkills = fs.readdirSync(pluginSkillsDir, { withFileTypes: true })
+      .filter(d => d.isDirectory())
+      .map(d => d.name);
+  }
+
+  if (fs.existsSync(localSkillsDir)) {
+    const localSkills = fs.readdirSync(localSkillsDir, { withFileTypes: true })
+      .filter(d => d.isDirectory())
+      .map(d => d.name);
+
+    // Check which plugin skills are installed
+    for (const skill of status.pluginSkills) {
+      if (localSkills.includes(skill)) {
+        status.installedSkills.push(skill);
+      } else {
+        status.missingSkills.push(skill);
+      }
+    }
+  } else {
+    status.missingSkills = status.pluginSkills;
+  }
+
+  return status;
+}
+
+/**
+ * Recursively copy directory
+ */
+function copyDirSync(src, dest) {
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyDirSync(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
   }
 }
 
