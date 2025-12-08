@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.25.0] - 2025-12-08
+
+### Added
+
+- **Skills support in setup command** - Plugin can now install skills to `.claude/skills/`
+  - New `project-maps` skill teaches Claude when to use maps over Glob
+  - Skill auto-installed during `setup-hooks` command
+  - Explicit triggers: `@map`, `map-ask`, `explore map`, `-map`
+  - Skill provides guidance for architecture queries
+  - `--status` shows installed/missing skills
+  - `--remove` cleans up installed skills
+
+- **project-maps skill** - Bundled skill for architecture questions
+  - Teaches Claude to use `/session:project-maps-*` commands
+  - Decision tree: when to use maps vs Glob
+  - Pre-computed maps are faster and more token-efficient
+
+---
+
 ## [3.24.1] - 2025-12-08
 
 ### Changed
