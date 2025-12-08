@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.24.0] - 2025-12-08
+
+### Added
+
+- **plan-review command** - Automated spec validation for completed tasks
+  - Detects function signature mismatches (params, async, export status)
+  - Detects missing implementations (specified in spec but not found)
+  - Detects unspecified additions (code not in spec - helpers, extra exports)
+  - Generates structured findings with severity levels (error/warning/info)
+  - Pass/fail based on error count (0 errors = pass)
+  - Saves review results to `{plan_dir}/review-results.json`
+  - New command template: `session/commands/plan-review.md`
+
+- **plan-summary command** - Export plans to readable markdown
+  - Shows goal, status, phases with task checkmarks
+  - Displays confidence statistics
+  - New command template: `session/commands/plan-summary.md`
+
+### Fixed
+
+- **plan-converter.js v2.0 fixes:**
+  - Include status from orchestration metadata
+  - Include full metadata for fallback access
+  - Include confidence summary from orchestration
+  - Use orchestration phase status (more up-to-date than phase file)
+
+- **breakdown-requirement.md prompt improvements:**
+  - Made codebase analysis MANDATORY with explicit project-maps CLI commands
+  - Specs must now include return type patterns from similar functions
+  - Forces verification before generating task specifications
+  - Addresses spec fidelity issues discovered during e2e testing
+
+---
+
 ## [3.23.0] - 2025-12-06
 
 ### Added
