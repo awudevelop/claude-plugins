@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.24.1] - 2025-12-08
+
+### Changed
+
+- **Auto-review integration in plan-execute** - plan-review now runs automatically after execution
+  - Added Step 9 (Auto-Review) to plan-execute.md workflow
+  - Added Step 10 (Final Summary) with pass/fail status
+  - Displays errors that must be fixed before commit
+  - Provides clear next steps based on review result
+  - No manual `/session:plan-review` invocation needed
+
+---
+
 ## [3.24.0] - 2025-12-08
 
 ### Added
