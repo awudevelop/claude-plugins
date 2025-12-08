@@ -14,8 +14,8 @@
     {
       "name": "session",
       "source": "./session",
-      "version": "3.25.0",
-      "description": "v3.25.0 - Advanced session management for Claude Code with intelligent context tracking, automatic snapshots, and git history capture. Features zero-blocking conversation logging, AI-powered analysis, and optimized parallel subagent architecture. Never lose context!",
+      "version": "3.26.0",
+      "description": "v3.26.0 - Advanced session management for Claude Code with intelligent context tracking, automatic snapshots, and git history capture. Features zero-blocking conversation logging, AI-powered analysis, and optimized parallel subagent architecture. Never lose context!",
       "author": {
         "name": "AutomateWith.Us",
         "email": "team@automatewith.us"

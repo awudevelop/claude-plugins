@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.26.0] - 2025-12-09
+
+### Added
+
+- **Map Diff/Change Tracking** - See what changed when project-maps are refreshed
+  - New `MapDiffer` class compares map snapshots
+  - New `MapSnapshot` class saves/loads map state
+  - New `DiffFormatter` for human-readable output
+  - New `MapHistory` for tracking multiple snapshots
+  - Use `--verbose` flag to see diff summary after refresh
+  - Shows added/removed/modified files, dependencies, components
+
+- **Plan-execute guardrails** - Three new safeguards against spec deviations
+  - **Step 2.5: Spec Validation (BLOCKING)** - Validates spec completeness before execution
+    - Catches incomplete specs (method names only vs full objects)
+    - Requires user decision: Fix/Continue/Abort
+  - **Step 5d.5: Post-Generation Verification (MANDATORY)** - Reads generated files after writing
+    - Compares actual code structure to spec
+    - Catches static/export/signature mismatches
+  - **Step 9: Hard Gate Review** - Review errors now require explicit user decision
+    - Changed from informational to blocking
+    - Cannot silently proceed past failures
+
+### Changed
+
+- **plan-save hybrid context** - Uses session.md + snapshot instead of subagent parsing
+  - ~90% reduction in token usage (2.7k vs 15-25k)
+  - Faster requirement extraction
+
+---
+
 ## [3.25.0] - 2025-12-08
 
 ### Added
