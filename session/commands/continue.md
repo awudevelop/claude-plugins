@@ -10,7 +10,7 @@ Use ONLY the exact command formats specified in this template.
 
 Parse the session name from the command arguments. The command format is: `/session:continue [name]`
 
-**OPTIMIZATION**: v3.19.0 uses inline execution for git/goal + conditional subagent for consolidation (50% token reduction vs v3.7.0).
+**OPTIMIZATION**: v3.26.1 uses inline execution for git/goal + BLOCKING subagent for consolidation. Consolidation MUST complete before showing summary.
 
 ### Step 1: Validate Session Exists (CLI)
 
@@ -90,11 +90,19 @@ Use the Glob tool to check if the conversation log exists (avoids reading conten
 
 **If Glob returns the file path (file EXISTS):**
 
-Spawn a single subagent for consolidation:
+**⚠️ BLOCKING OPERATION - You MUST wait for this to complete before Step 5!**
+
+First, show a brief message to the user:
+```
+📊 Consolidating previous session logs...
+```
+
+Then spawn a subagent for consolidation and **WAIT for its result**:
 
 - subagent_type: "general-purpose"
 - description: "Consolidate conversation log"
 - model: "haiku"
+- run_in_background: **false** (DEFAULT - do NOT set to true)
 - prompt: |
   You are working with session: {session_name}
 
@@ -108,10 +116,15 @@ Spawn a single subagent for consolidation:
   Replace all such placeholders with the actual values provided above.
   Then execute the resulting instructions.
 
-**Handle consolidation result:**
-- If `success: true` → Snapshot created successfully
-- If `skipped: true` → No conversation log found (OK, continue)
-- If `success: false` → Log error but continue
+**⚠️ CRITICAL: Wait for consolidation result before proceeding!**
+The subagent creates a NEW snapshot. You MUST wait for it to finish so Step 5 reads the NEW snapshot, not the old one.
+
+**Handle consolidation result (AFTER subagent completes):**
+- If `success: true` → Snapshot created successfully, proceed to Step 5
+- If `skipped: true` → No conversation log found (OK, proceed to Step 5)
+- If `success: false` → Log error but proceed to Step 5
+
+**DO NOT proceed to Step 5 until the consolidation subagent has returned its result.**
 
 ### Step 5: Extract Full Snapshot Summary (Complete Context)
 
@@ -266,9 +279,9 @@ What's next?
 
 ---
 
-**TOKEN OPTIMIZATION BENEFITS (v3.20.2):**
+**TOKEN OPTIMIZATION BENEFITS (v3.26.1):**
 - Previous (v3.7.0): ~22k tokens with 3 parallel subagents
-- Current (v3.20.2): ~8-10k tokens with inline + conditional subagent
+- Current (v3.26.1): ~8-10k tokens with inline + conditional BLOCKING subagent
 - **Savings: 55-60% token reduction**
 
 Key optimizations:
@@ -277,6 +290,7 @@ Key optimizations:
 3. **Conditional consolidation**: Skip subagent if no log exists (common case!)
 4. **Lazy-loaded prompts**: Subagent reads its own prompt (~1.7k token savings)
 5. **Glob for existence check**: Use Glob instead of Read to check log existence (~3-4k tokens saved)
+6. **BLOCKING consolidation (v3.26.1 fix)**: Summary now shows NEW snapshot data, not stale data
 
 **ERROR HANDLING:**
 - If consolidation fails: Still activate session, show generic message
