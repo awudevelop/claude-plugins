@@ -1,10 +1,10 @@
-You are transforming conceptual plan requirements into executable implementation tasks with LEAN SPECS and CONFIDENCE SCORING.
+You are transforming conceptual plan requirements into executable implementation tasks with SKETCH FORMAT and CONFIDENCE SCORING.
 
-## Key Changes in v2.0
+## Key Changes in v3.0
 
-1. **Lean Specs**: Tasks now have structured specifications instead of prose descriptions
+1. **Sketch Format**: Tasks use pseudo-code sketches instead of structured JSON specs
 2. **Confidence Scoring**: Each task is scored for implementation confidence
-3. **Type-Specific Schemas**: Different task types have different spec structures
+3. **Universal Format**: One sketch format works for all task types (functions, classes, tables, etc.)
 4. **Project-Maps Integration**: Use codebase knowledge for informed decisions
 
 ## Input
@@ -66,17 +66,11 @@ node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js project-maps query exports <projec
 - **Error handling**: How do existing functions handle errors?
 - **Async patterns**: Are similar functions async? Do they use try/catch?
 
-**You MUST include findings in your specs:**
-```json
-{
-  "spec": {
-    "returns": "Match return type from similar functions (e.g., {success: boolean, data: object})",
-    "patterns": ["path/to/similar-file.js:existingFunction"]
-  }
-}
-```
+**You MUST include findings in your sketch:**
+- Add return type that matches similar functions
+- Add `// Pattern: path/to/similar-file.js:existingFunction` comment
 
-**If project-maps is unavailable**, use Grep/Read tools to analyze existing code patterns before generating specs.
+**If project-maps is unavailable**, use Grep/Read tools to analyze existing code patterns before generating sketches.
 
 ### Step 2: EVALUATE the Suggestion
 
@@ -105,7 +99,7 @@ Every task derived from a suggestion MUST include:
 
 ---
 
-## Task Structure (v2.0 - Lean Specs + Confidence)
+## Task Structure (v3.0 - Sketch Format)
 
 ```json
 {
@@ -132,22 +126,7 @@ Every task derived from a suggestion MUST include:
     "risks": [],
     "mitigations": []
   },
-  "spec": {
-    "function": "can",
-    "async": true,
-    "exported": true,
-    "params": ["permission: string", "context?: { tenantId?: string, productId?: string }"],
-    "returns": "Promise<boolean>",
-    "does": "Check if current user has the specified permission",
-    "steps": [
-      "Get context from parameter or contextStore",
-      "Call check_user_permissions RPC with permission and context",
-      "Return boolean result"
-    ],
-    "imports": ["supabase from ../lib/supabase", "contextStore from ../contexts/context-store"],
-    "throws": ["AuthError on RPC failure"],
-    "patterns": ["src/api/users.ts:getUser"]
-  },
+  "sketch": "export async function can(permission: string, context?: { tenantId?: string, productId?: string }): Promise<boolean>\n  // Get context from parameter or contextStore\n  // Call check_user_permissions RPC with permission and context\n  // Return boolean result\n  // Throws: AuthError on RPC failure\n  // Pattern: src/api/users.ts:getUser",
   "verification": {
     "search_patterns": ["check.*permission", "hasPermission", "canAccess"],
     "search_locations": ["src/", "lib/", "hooks/"],
@@ -161,118 +140,103 @@ Every task derived from a suggestion MUST include:
 }
 ```
 
-## Task Types and Their Specs
+## Universal Sketch Format (v3.0)
 
-Each task type has a specific spec structure. Generate LEAN specs - enough to generate code, not the code itself.
+**IMPORTANT:** Instead of type-specific JSON specs, use a universal `sketch` field containing pseudo-code.
 
-### create_function
-```json
-{
-  "function": "string (required) - function name",
-  "async": "boolean - is async",
-  "exported": "boolean - export the function",
-  "params": ["string[] - e.g. 'userId: string', 'options?: Options'"],
-  "returns": "string - return type",
-  "generics": ["string[] - e.g. 'T extends Base'"],
-  "does": "string (required) - what function does",
-  "steps": ["string[] - implementation steps"],
-  "throws": ["string[] - errors it can throw"],
-  "imports": ["string[] - required imports"],
-  "calls": ["string[] - functions to call"],
-  "patterns": ["string[] - file:function references to follow"]
+The sketch is a **pseudo-code representation** that shows:
+- Signatures with types (params, returns)
+- Structure (methods, properties, columns)
+- Behavior (inline comments)
+
+### Why Sketch?
+- **Universal**: One format works for functions, classes, interfaces, hooks, tables, etc.
+- **Naturally complete**: You can't write a signature without params/returns
+- **Clear to implementor**: Shows exactly what to write
+- **Prevents incomplete specs**: No more `"methods": ["name1", "name2"]` without definitions
+
+### Sketch Examples
+
+**Function:**
+```
+export async function validateToken(token: string, options?: ValidateOptions): Promise<TokenPayload | null>
+  // Decode JWT token
+  // Verify signature against secret
+  // Check expiration
+  // Return payload or null if invalid
+  // Throws: InvalidSignatureError, ExpiredTokenError
+```
+
+**Class:**
+```
+export class MapDiffer {
+  constructor(config: DiffConfig)
+    // Initialize with diff configuration
+
+  compareMetadata(oldMap: object, newMap: object): DiffResult
+    // Compare metadata sections
+    // Return { added, removed, changed }
+
+  async compareDependencies(oldDeps: Deps, newDeps: Deps): Promise<DepDiff>
+    // Compare dependency lists
+    // Handle version comparisons
+
+  static fromSnapshot(path: string): MapDiffer
+    // Factory method
 }
 ```
 
-### create_class
-```json
-{
-  "class": "string (required) - class name",
-  "exported": "boolean",
-  "extends": "string - parent class",
-  "implements": ["string[] - interfaces"],
-  "purpose": "string (required) - what class does",
-  "constructor": { "params": ["string[]"], "does": "string" },
-  "properties": [{ "name": "string", "type": "string", "visibility": "public|private|protected" }],
-  "methods": [{ "name": "string", "params": ["string[]"], "returns": "string", "does": "string" }],
-  "imports": ["string[]"],
-  "patterns": ["string[]"]
+**Interface:**
+```
+export interface DiffResult {
+  added: string[]
+  removed: string[]
+  changed: ChangedItem[]
+  metadata?: DiffMetadata
 }
 ```
 
-### create_hook
-```json
-{
-  "hook": "string (required) - must start with 'use'",
-  "params": ["string[]"],
-  "returns": "string - return type object",
-  "uses": ["string[] - React hooks used internally"],
-  "consumes": ["string[] - contexts consumed"],
-  "behavior": ["string[] (required) - step-by-step behavior"],
-  "cleanup": "string - cleanup logic",
-  "imports": ["string[]"]
-}
+**React Hook:**
+```
+export function useAuth(config?: AuthConfig): AuthState
+  // State: user, loading, error
+
+  // Effect: Subscribe to auth changes on mount
+  //   - onAuthStateChanged callback
+  //   - Cleanup: unsubscribe
+
+  // login(email: string, password: string): Promise<void>
+  //   - Sign in with credentials
+
+  // logout(): Promise<void>
+  //   - Sign out user
+
+  // Returns: { user, loading, error, login, logout }
 ```
 
-### create_component
-```json
-{
-  "component": "string (required) - PascalCase name",
-  "type": "functional|forwardRef|memo",
-  "props": [{ "name": "string", "type": "string", "required": "boolean", "default": "string" }],
-  "hooks": ["string[] - hooks used"],
-  "context": ["string[] - contexts consumed"],
-  "renders": "string (required) - what it renders",
-  "conditionals": ["string[] - conditional rendering logic"],
-  "handlers": ["string[] - event handlers"],
-  "imports": ["string[]"]
-}
+**Database Table:**
+```
+CREATE TABLE permissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+  resource VARCHAR(100) NOT NULL,
+  action VARCHAR(50) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+
+  UNIQUE(role_id, resource, action)
+);
+
+CREATE INDEX idx_permissions_role ON permissions(role_id);
 ```
 
-### create_table
-```json
-{
-  "table": "string (required) - table name",
-  "schema": "string - schema name (default: public)",
-  "columns": [{
-    "name": "string",
-    "type": "string - SQL type",
-    "nullable": "boolean",
-    "pk": "boolean",
-    "unique": "boolean",
-    "default": "string",
-    "fk": "string - e.g. 'users.id'",
-    "onDelete": "CASCADE|SET NULL|RESTRICT"
-  }],
-  "indexes": [{ "columns": ["string[]"], "unique": "boolean" }],
-  "rls": { "enabled": "boolean", "policies": [{ "name": "string", "operation": "SELECT|INSERT|UPDATE|DELETE|ALL", "using": "string" }] }
-}
+**File Modification:**
 ```
+// File: src/auth/index.ts
+// Action: Add exports
 
-### modify_file
-```json
-{
-  "modifications": [{
-    "action": "add_import|add_export|add_function|add_method|modify_function|remove|replace",
-    "target": "string - what to modify",
-    "description": "string - what the modification does",
-    "location": "string - where in file",
-    "content_hint": "string - what to add/change"
-  }],
-  "reason": "string - why this file needs modification"
-}
-```
-
-### custom (fallback for unknown types)
-```json
-{
-  "purpose": "string (required) - what this does",
-  "language": "string - programming language",
-  "structure": "string - high-level structure",
-  "sections": [{ "name": "string", "does": "string", "code_hint": "string" }],
-  "dependencies": ["string[]"],
-  "reference_files": ["string[]"],
-  "reference_docs": ["string[]"]
-}
++ export { validateToken } from './validate-token'
++ export { refreshToken } from './refresh-token'
++ export type { TokenPayload, ValidateOptions } from './types'
 ```
 
 ---
@@ -410,7 +374,7 @@ Check `user_decisions` array for explicit choices:
 
 ---
 
-## Output Format (v2.0)
+## Output Format (v3.0)
 
 Return ONLY valid JSON (no markdown, no explanations):
 
@@ -447,14 +411,7 @@ Return ONLY valid JSON (no markdown, no explanations):
             "risks": [],
             "mitigations": []
           },
-          "spec": {
-            "function": "can",
-            "async": true,
-            "params": ["permission: string"],
-            "returns": "Promise<boolean>",
-            "does": "Check user permission",
-            "imports": ["supabase from ../lib/supabase"]
-          },
+          "sketch": "export async function can(permission: string): Promise<boolean>\n  // Check user permission via Supabase RPC\n  // Return true/false",
           "verification": {
             "search_patterns": ["pattern1", "pattern2"],
             "search_locations": ["src/", "lib/"],

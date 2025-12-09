@@ -70,88 +70,81 @@ If the format is "implementation", continue to next step.
 
 ---
 
-## Step 2.5: Validate Spec Completeness (BLOCKING)
+## Step 2.5: Validate Sketch Completeness (BLOCKING)
 
-**CRITICAL:** Before executing ANY task, validate that specs are complete. Incomplete specs lead to implementation deviations.
+**CRITICAL:** Before executing ANY task, validate that sketches are complete. Incomplete sketches lead to implementation deviations.
 
-For each task in the plan, validate its spec against the required schema:
+### Sketch Validation Rules
 
-### For `create_class` tasks:
-```json
-// REQUIRED structure (not just method names!)
-"spec": {
-  "class": "string (required)",
-  "exported": "boolean (required)",
-  "purpose": "string (required)",
-  "constructor": { "params": ["string[]"], "does": "string" },  // REQUIRED
-  "methods": [
-    {
-      "name": "string (required)",
-      "params": ["string[] (required)"],
-      "returns": "string (required)",
-      "does": "string (required)",
-      "static": "boolean (default: false)",
-      "async": "boolean (default: false)"
-    }
-  ]
-}
-```
+A complete sketch MUST have:
 
-**INVALID (will cause deviations):**
-```json
-"methods": ["compareMetadata", "compareDependencies"]  // ❌ Just names!
-```
+**For functions/methods:**
+- Function/method name
+- Parameters with types (parentheses with typed params)
+- Return type (after `:` or `->`)
+- Behavior comments (what it does)
 
-**VALID:**
-```json
-"methods": [
-  { "name": "compareMetadata", "params": ["oldMap: object", "newMap: object"], "returns": "DiffResult", "does": "Compare metadata maps" }
-]
-```
+**For classes:**
+- Class name with `class` keyword
+- Constructor (if needed)
+- Method signatures (not just names!)
+- Behavior comments for each method
 
-### For `create_function` tasks:
-```json
-"spec": {
-  "function": "string (required)",
-  "async": "boolean (required)",
-  "exported": "boolean (required)",
-  "params": ["string[] (required) - with types"],
-  "returns": "string (required)",
-  "does": "string (required)"
-}
-```
+**For interfaces/types:**
+- Interface/type name
+- Property names with types
+
+**For tables:**
+- CREATE TABLE statement
+- Column definitions with types
+- Primary key
 
 ### Validation Check
 
-Before showing execution overview, check each task's spec:
+Before showing execution overview, check each task's sketch:
 
 ```
-Validating spec completeness...
+Validating sketch completeness...
 
-❌ task-1-1: INCOMPLETE SPEC
+❌ task-1-1: INCOMPLETE SKETCH
    Type: create_class
-   Issue: 'methods' is array of strings, should be array of objects with name/params/returns
+   Issue: Methods listed without signatures
+   Sketch has: "compareMetadata, compareDependencies"
+   Should have: "compareMetadata(oldMap: object, newMap: object): DiffResult"
 
-❌ task-2-2: INCOMPLETE SPEC
+❌ task-2-2: INCOMPLETE SKETCH
    Type: create_function
-   Issue: Missing 'params' field
+   Issue: Missing return type
+   Sketch has: "function validate(token)"
+   Should have: "function validate(token: string): Promise<boolean>"
 
-⚠️ 2 tasks have incomplete specs
+⚠️ 2 tasks have incomplete sketches
 
-Incomplete specs cause agents to make autonomous decisions about:
+Incomplete sketches cause agents to make autonomous decisions about:
 - Method parameters and return types
 - Static vs instance methods
 - What to export
 
 Options:
-  [F] Fix specs now (re-run plan-finalize with stricter prompt)
+  [F] Fix sketches now (re-run plan-finalize)
   [C] Continue anyway (accept potential deviations)
   [A] Abort execution
 ```
 
 Use AskUserQuestion to get user decision. If user chooses Continue, log warning but proceed.
 
-**DO NOT silently proceed with incomplete specs.**
+**DO NOT silently proceed with incomplete sketches.**
+
+### Quick Validation Heuristics
+
+| Task Type | Must Contain |
+|-----------|--------------|
+| `create_function` | `(` params `)` and `:` or `->` return type |
+| `create_class` | `class` keyword, method signatures with `()` |
+| `create_interface` | `interface` keyword, property types |
+| `create_hook` | `use` prefix, return type |
+| `create_table` | `CREATE TABLE`, column types |
+| `create_component` | Component name, props interface |
 
 ---
 

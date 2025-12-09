@@ -1,15 +1,72 @@
 /**
  * Spec Validator
  *
- * Validates task specs against their type-specific schemas.
- * Provides clear error messages for missing or invalid fields.
+ * Validates task specs/sketches for completeness.
+ * Supports both legacy structured specs and new sketch format (v3.0).
  */
 
 const fs = require('fs').promises;
 const path = require('path');
 
 /**
- * Required fields for each task type
+ * Sketch validation heuristics by task type
+ */
+const SKETCH_HEURISTICS = {
+  create_function: {
+    required: [
+      { pattern: /\(.*\)/, message: 'Missing function parameters (parentheses)' },
+      { pattern: /:.*|->/, message: 'Missing return type' }
+    ],
+    recommended: [
+      { pattern: /\/\//, message: 'Consider adding behavior comments' }
+    ]
+  },
+  create_class: {
+    required: [
+      { pattern: /class\s+\w+/i, message: 'Missing class declaration' },
+      { pattern: /\w+\s*\(.*\)\s*:?/, message: 'Missing method signatures' }
+    ],
+    recommended: [
+      { pattern: /constructor/i, message: 'Consider adding constructor' }
+    ]
+  },
+  create_interface: {
+    required: [
+      { pattern: /interface\s+\w+/i, message: 'Missing interface declaration' },
+      { pattern: /\w+\s*:\s*\w+/, message: 'Missing property type annotations' }
+    ],
+    recommended: []
+  },
+  create_hook: {
+    required: [
+      { pattern: /use[A-Z]\w*/, message: 'Hook name must start with "use"' },
+      { pattern: /\(.*\)/, message: 'Missing hook parameters' }
+    ],
+    recommended: [
+      { pattern: /\/\/\s*(State|Effect|Returns)/i, message: 'Consider documenting state/effects/returns' }
+    ]
+  },
+  create_component: {
+    required: [
+      { pattern: /[A-Z]\w+/, message: 'Missing component name (PascalCase)' }
+    ],
+    recommended: [
+      { pattern: /props|Props/, message: 'Consider defining props interface' }
+    ]
+  },
+  create_table: {
+    required: [
+      { pattern: /CREATE\s+TABLE/i, message: 'Missing CREATE TABLE statement' },
+      { pattern: /\w+\s+(UUID|INT|VARCHAR|TEXT|BOOLEAN|TIMESTAMP)/i, message: 'Missing column type definitions' }
+    ],
+    recommended: [
+      { pattern: /PRIMARY\s+KEY/i, message: 'Consider adding primary key' }
+    ]
+  }
+};
+
+/**
+ * Required fields for each task type (legacy spec format)
  */
 const REQUIRED_FIELDS = {
   create_function: ['function', 'does'],
@@ -79,11 +136,116 @@ class SpecValidator {
   }
 
   /**
-   * Validate a task spec
-   * @param {Object} task - Task with type and spec
+   * Validate a task (supports both sketch and legacy spec formats)
+   * @param {Object} task - Task with type and sketch/spec
    * @returns {Promise<Object>} Validation result
    */
   async validate(task) {
+    const { type, spec, sketch, file } = task;
+
+    // Prefer sketch format if present
+    if (sketch) {
+      return this.validateSketch(task);
+    }
+
+    // Fall back to legacy spec validation
+    return this.validateSpec(task);
+  }
+
+  /**
+   * Validate a task sketch (v3.0 format)
+   * @param {Object} task - Task with type and sketch
+   * @returns {Object} Validation result
+   */
+  validateSketch(task) {
+    const errors = [];
+    const warnings = [];
+
+    const { type, sketch, file } = task;
+
+    // Check task has required top-level fields
+    if (!type) {
+      errors.push({ field: 'type', message: 'Task type is required' });
+    }
+
+    if (!file) {
+      errors.push({ field: 'file', message: 'Target file path is required' });
+    }
+
+    if (!sketch || typeof sketch !== 'string' || sketch.trim().length === 0) {
+      errors.push({ field: 'sketch', message: 'Task sketch is required (non-empty string)' });
+      return { valid: false, errors, warnings, format: 'sketch' };
+    }
+
+    // Get heuristics for this task type
+    const heuristics = SKETCH_HEURISTICS[type];
+
+    if (heuristics) {
+      // Check required patterns
+      for (const check of heuristics.required) {
+        if (!check.pattern.test(sketch)) {
+          errors.push({
+            field: 'sketch',
+            message: check.message,
+            suggestion: `Sketch should include: ${check.pattern.toString()}`
+          });
+        }
+      }
+
+      // Check recommended patterns
+      for (const check of heuristics.recommended) {
+        if (!check.pattern.test(sketch)) {
+          warnings.push({
+            field: 'sketch',
+            message: check.message
+          });
+        }
+      }
+    }
+
+    // Check for common incomplete sketch patterns
+    this._checkIncompletePatterns(sketch, type, errors, warnings);
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      format: 'sketch'
+    };
+  }
+
+  /**
+   * Check for common incomplete sketch patterns
+   */
+  _checkIncompletePatterns(sketch, type, errors, warnings) {
+    // Check for method names without signatures (the original lean format issue!)
+    // Pattern: word, word, word (comma-separated names without parentheses)
+    const commaListPattern = /^\s*\w+\s*,\s*\w+/m;
+    const hasSignature = /\w+\s*\([^)]*\)/;
+
+    if (commaListPattern.test(sketch) && !hasSignature.test(sketch)) {
+      errors.push({
+        field: 'sketch',
+        message: 'Sketch appears to be a list of names without signatures',
+        suggestion: 'Convert "methodA, methodB" to "methodA(params): ReturnType"'
+      });
+    }
+
+    // Check for missing behavior comments
+    if (!sketch.includes('//') && !sketch.includes('/*')) {
+      warnings.push({
+        field: 'sketch',
+        message: 'Sketch has no behavior comments - implementor may make assumptions'
+      });
+    }
+  }
+
+  /**
+   * Validate a task spec (legacy v2.0 format)
+   * @param {Object} task - Task with type and spec
+   * @returns {Promise<Object>} Validation result
+   */
+  async validateSpec(task) {
     const errors = [];
     const warnings = [];
 
@@ -100,7 +262,7 @@ class SpecValidator {
 
     if (!spec) {
       errors.push({ field: 'spec', message: 'Task spec is required' });
-      return { valid: false, errors, warnings };
+      return { valid: false, errors, warnings, format: 'spec' };
     }
 
     // Check required fields for this task type
@@ -132,7 +294,8 @@ class SpecValidator {
     return {
       valid: errors.length === 0,
       errors,
-      warnings
+      warnings,
+      format: 'spec'
     };
   }
 
@@ -348,4 +511,4 @@ class SpecValidator {
   }
 }
 
-module.exports = { SpecValidator, REQUIRED_FIELDS, RECOMMENDED_FIELDS };
+module.exports = { SpecValidator, REQUIRED_FIELDS, RECOMMENDED_FIELDS, SKETCH_HEURISTICS };

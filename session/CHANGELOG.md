@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.27.0] - 2025-12-09
+
+### Added
+
+- **Universal sketch format (v3.0)** - Replaces type-specific JSON specs with pseudo-code sketches
+  - One format works for all task types (functions, classes, interfaces, hooks, tables)
+  - Naturally prevents incomplete specs (can't write signature without params/returns)
+  - Shows implementor exactly what to write
+  - Eliminates the "method names without definitions" issue
+
+### Changed
+
+- **task-schema.json** - Added `sketch` field, made `spec` optional (backward compatible)
+- **breakdown-requirement.md** - Updated to v3.0, generates sketch format instead of structured specs
+- **plan-execute.md Step 2.5** - Updated validation rules for sketch completeness
+- **spec-validator.js** - Added heuristic-based sketch validation
+  - Validates signatures have params and return types
+  - Checks for behavior comments
+  - Detects incomplete patterns (comma-separated names without signatures)
+
+### Why This Change?
+
+Previously, specs could be incomplete like:
+```json
+"methods": ["compareMetadata", "compareDependencies"]  // Just names!
+```
+
+Now, sketches naturally include everything:
+```
+compareMetadata(oldMap: object, newMap: object): DiffResult
+  // Compare metadata sections
+```
+
+---
+
 ## [3.26.2] - 2025-12-09
 
 ### Fixed

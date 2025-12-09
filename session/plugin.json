@@ -1,7 +1,7 @@
 {
   "name": "session",
-  "version": "3.26.2",
-  "description": "• v3.16.0: Plan Update Feature - atomic operations for modifying plans with execution safety modes\n• v3.15.6: Skipped phase progress calculation fix\n• v3.15.5: Plan progress data inconsistency fix\n• v3.15.4: Documentation path references migration\n• v3.15.3: Global plans directory path correction\n• v3.15.2: Enhanced snapshot summary visibility",
+  "version": "3.27.0",
+  "description": "• v3.27.0: Universal sketch format replaces type-specific specs\n• v3.26.2: Remove plugin hooks to prevent duplicate execution\n• v3.26.1: Make consolidation BLOCKING in continue command\n• v3.26.0: Map Diff/Change Tracking for project-maps refresh\n• v3.25.0: Skills support for project-maps architecture queries\n• v3.24.0: Plan-review command for automated spec validation",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"
@@ -29,8 +29,8 @@
   "license": "MIT",
   "commands": "./commands",
   "versionMetadata": {
-    "lastUpdateCommit": "ef52efd3813d7ea32f031d08d62bbee71d84bf28",
-    "lastUpdateDate": "2025-12-09T05:40:58.441Z",
+    "lastUpdateCommit": "ba46c60e1abc8cdc875797fad38790782035593f",
+    "lastUpdateDate": "2025-12-09T07:08:56.841Z",
     "lastBumpType": "patch"
   }
 }

@@ -4,7 +4,7 @@
   "title": "ConcreteTask",
   "description": "Executable task with lean specs and confidence scoring",
   "type": "object",
-  "required": ["id", "type", "file", "confidence", "spec"],
+  "required": ["id", "type", "file", "confidence"],
   "properties": {
     "id": {
       "type": "string",
@@ -141,7 +141,11 @@
     },
     "spec": {
       "type": "object",
-      "description": "Type-specific lean specification (see task-specs/ schemas)"
+      "description": "Type-specific lean specification (DEPRECATED - use sketch instead)"
+    },
+    "sketch": {
+      "type": "string",
+      "description": "Pseudo-code sketch showing signatures, structure, and behavior. Universal format for all task types - replaces type-specific specs."
     },
     "docs": {
       "type": "array",
