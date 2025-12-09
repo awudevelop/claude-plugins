@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.26.2] - 2025-12-09
+
+### Fixed
+
+- **Removed plugin hooks to prevent duplicate execution**
+  - Claude Code plugin hooks have known bugs ([#12151](https://github.com/anthropics/claude-code/issues/12151), [#9708](https://github.com/anthropics/claude-code/issues/9708), [#10225](https://github.com/anthropics/claude-code/issues/10225))
+  - UserPromptSubmit and SessionStart hooks execute but output is silently discarded
+  - This caused duplicate hook execution when both plugin hooks and manual hooks were active
+  - **Solution**: Removed hooks from `plugin.json` - plugin system no longer registers hooks
+  - **Workaround**: Users must run `/session:setup` after install (writes hooks to settings.json)
+  - Once Claude Code fixes issue #12151, hooks will be re-enabled in plugin.json
+
+### Changed
+
+- **Setup is now REQUIRED** (temporary)
+  - Added "Why Is Setup Required?" section to README
+  - Updated setup.md with explanation of the workaround
+  - Added documentation in hooks-manager.js explaining the bug
+  - Added `_comment` in hooks.json explaining the temporary state
+
+---
+
 ## [3.26.1] - 2025-12-09
 
 ### Fixed
