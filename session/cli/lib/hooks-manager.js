@@ -5,6 +5,28 @@
  *
  * Utility library for managing hooks in .claude/settings.json
  * Provides safe read/write operations with atomic writes and backups
+ *
+ * IMPORTANT: Why Manual Hook Setup Instead of Plugin Hooks?
+ * =========================================================
+ * Claude Code's plugin hook system has known bugs where certain hooks
+ * (UserPromptSubmit, SessionStart, Notification) execute but their OUTPUT
+ * is silently discarded and never passed to the agent context.
+ *
+ * Affected Issues:
+ * - #12151: Plugin hook output not captured (UserPromptSubmit, SessionStart)
+ * - #9708: Notification hooks not executing
+ * - #10225: UserPromptSubmit plugin hooks never execute
+ *
+ * Workaround: We use /session:setup to write hooks directly to
+ * .claude/settings.json with absolute paths. This bypasses the plugin
+ * hook system and uses the manual hook approach which works correctly.
+ *
+ * TEMPORARY: Once these issues are fixed in Claude Code, we can:
+ * 1. Re-add hooks to plugin.json
+ * 2. Remove the setup requirement
+ * 3. Let the plugin system handle hook registration
+ *
+ * Track progress: https://github.com/anthropics/claude-code/issues/12151
  */
 
 const fs = require('fs');
@@ -229,7 +251,35 @@ class HooksManager {
   }
 
   /**
+   * Extract the hook script filename from a command string
+   * e.g., "node /path/to/hooks/user-prompt-submit.js" -> "user-prompt-submit.js"
+   *
+   * This enables duplicate detection regardless of installation path
+   * (marketplace vs dev repo vs different machines)
+   */
+  extractHookScriptName(command) {
+    if (!command || typeof command !== 'string') {
+      return null;
+    }
+
+    // Handle commands like "node /path/to/script.js" or "node ${VAR}/script.js"
+    // Extract the last path component (the script filename)
+    const match = command.match(/(?:^|\s|\/|\\)([^\/\\]+\.js)(?:\s|$)/);
+    if (match) {
+      return match[1];
+    }
+
+    // Fallback: try to get basename from the command
+    const parts = command.split(/[\s\/\\]+/).filter(p => p.endsWith('.js'));
+    return parts.length > 0 ? parts[parts.length - 1] : null;
+  }
+
+  /**
    * Check if two hook entries are equal (to avoid duplicates)
+   *
+   * IMPORTANT: Compares hook script NAMES, not full paths.
+   * This prevents duplicate hooks when the same plugin is set up from
+   * different locations (e.g., marketplace vs dev repo).
    */
   areEntriesEqual(entry1, entry2) {
     // Compare matcher
@@ -243,16 +293,90 @@ class HooksManager {
     }
 
     // Check if all hooks in entry1 exist in entry2
+    // Compare by script NAME, not full path (fixes duplicate detection bug)
     for (const hook1 of entry1.hooks) {
-      const found = entry2.hooks.some(hook2 =>
-        hook1.type === hook2.type && hook1.command === hook2.command
-      );
+      const scriptName1 = this.extractHookScriptName(hook1.command);
+
+      const found = entry2.hooks.some(hook2 => {
+        const scriptName2 = this.extractHookScriptName(hook2.command);
+
+        // Compare type and script name (not full command path)
+        return hook1.type === hook2.type &&
+               scriptName1 && scriptName2 &&
+               scriptName1 === scriptName2;
+      });
+
       if (!found) {
         return false;
       }
     }
 
     return true;
+  }
+
+  /**
+   * Deduplicate hooks in settings by script name
+   * Keeps the FIRST occurrence (or the one matching preferredPath if specified)
+   *
+   * Use this to clean up settings that have duplicate hooks from different paths
+   */
+  deduplicateHooks(settings, preferredPath = null) {
+    if (!settings.hooks) {
+      return settings;
+    }
+
+    const cleaned = { ...settings, hooks: {} };
+
+    for (const [hookType, entries] of Object.entries(settings.hooks)) {
+      const seenScripts = new Map(); // scriptName+matcher -> entry
+      const deduped = [];
+
+      for (const entry of entries) {
+        // Build a key from matcher + script names
+        const scriptNames = entry.hooks
+          .map(h => this.extractHookScriptName(h.command))
+          .filter(Boolean)
+          .sort()
+          .join(',');
+
+        const key = `${entry.matcher || ''}:${scriptNames}`;
+
+        if (!seenScripts.has(key)) {
+          // First occurrence - add it
+          seenScripts.set(key, entry);
+          deduped.push(entry);
+        } else if (preferredPath) {
+          // Check if this entry uses the preferred path
+          const usesPreferredPath = entry.hooks.some(h =>
+            h.command && h.command.includes(preferredPath)
+          );
+
+          if (usesPreferredPath) {
+            // Replace the existing entry with the preferred one
+            const existingIdx = deduped.findIndex(e => {
+              const eScriptNames = e.hooks
+                .map(h => this.extractHookScriptName(h.command))
+                .filter(Boolean)
+                .sort()
+                .join(',');
+              return `${e.matcher || ''}:${eScriptNames}` === key;
+            });
+
+            if (existingIdx >= 0) {
+              deduped[existingIdx] = entry;
+            }
+          }
+          // Otherwise skip this duplicate
+        }
+        // else: duplicate without preferred path - skip
+      }
+
+      if (deduped.length > 0) {
+        cleaned.hooks[hookType] = deduped;
+      }
+    }
+
+    return cleaned;
   }
 
   /**

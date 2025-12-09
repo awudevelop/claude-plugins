@@ -141,7 +141,7 @@ Edge Cases: Orphan detection          → Cleanup every 20 prompts
 - 🎯 **Acceptable Wait Times** - Users expect loading at session start/continue
 - 💾 **Auto-Cleanup** - Raw logs deleted after consolidation (98% space savings)
 - 🔄 **Same Quality as v3.4** - Full conversation understanding, zero cost
-- ✅ **No Setup Required** - Works out of the box with your Claude instance
+- ⚠️ **One-Time Setup Required** - Run `/session:setup` after install (see [Why Setup?](#why-is-setup-required))
 
 ### How It Works
 1. **During session**: Each interaction logged to conversation-log.jsonl (~1-2ms)
@@ -314,6 +314,28 @@ Simply paste this URL into Claude Code's plugin installation interface to get st
 ---
 
 ## ⚙️ Setup & Configuration
+
+### Why Is Setup Required?
+
+> **⚠️ TEMPORARY WORKAROUND** - This section explains why `/session:setup` is required.
+
+Claude Code's plugin hook system currently has **known bugs** where certain hooks execute but their output is silently discarded:
+
+| Issue | Affected Hooks | Status |
+|-------|---------------|--------|
+| [#12151](https://github.com/anthropics/claude-code/issues/12151) | UserPromptSubmit, SessionStart | **OPEN** |
+| [#9708](https://github.com/anthropics/claude-code/issues/9708) | Notification | **OPEN** |
+| [#10225](https://github.com/anthropics/claude-code/issues/10225) | UserPromptSubmit | Closed (dup) |
+
+**Impact on this plugin:**
+- `UserPromptSubmit` (conversation logging) - ❌ Broken via plugin hooks
+- `SessionStart` (/clear handling) - ❌ Broken via plugin hooks
+
+**Workaround:** The `/session:setup` command writes hooks directly to `.claude/settings.json` with absolute paths, bypassing the buggy plugin hook system. Manual hooks work correctly.
+
+**Once Fixed:** When Claude Code resolves issue #12151, we will re-enable plugin hooks and make `/session:setup` optional.
+
+---
 
 ### Quick Start: Setting Up Hooks
 

@@ -6,6 +6,32 @@ This command manages the automatic configuration of session plugin hooks that en
 
 **IMPORTANT:** This command uses the session CLI tool to perform hook management operations safely with atomic writes and backups.
 
+---
+
+### ⚠️ WHY IS SETUP REQUIRED? (Temporary Workaround)
+
+Claude Code's plugin hook system currently has known bugs where certain hooks execute but their output is **silently discarded** and never passed to the agent:
+
+- **Issue #12151**: UserPromptSubmit and SessionStart plugin hooks - output not captured
+- **Issue #9708**: Notification hooks not executing from plugins
+- **Issue #10225**: UserPromptSubmit plugin hooks never execute properly
+
+**Affected hooks in this plugin:**
+- `UserPromptSubmit` (conversation logging) - ❌ Broken via plugin
+- `SessionStart` (/clear handling) - ❌ Broken via plugin
+- `Stop`, `PostToolUse` - ✅ Work via plugin but we disable all for consistency
+
+**Workaround:** This `/session:setup` command writes hooks directly to `.claude/settings.json` with absolute paths, bypassing the buggy plugin hook system. Manual hooks work correctly.
+
+**TEMPORARY:** Once Claude Code fixes issue #12151, we will:
+1. Re-enable hooks in plugin.json
+2. Make `/session:setup` optional
+3. Plugin hooks will work automatically without setup
+
+Track progress: https://github.com/anthropics/claude-code/issues/12151
+
+---
+
 ### Parse Command Arguments
 
 Extract the operation from the command arguments. Format: `/session:setup [options]`

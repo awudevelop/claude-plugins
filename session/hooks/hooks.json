@@ -1,4 +1,5 @@
 {
+  "_comment": "IMPORTANT: These hooks are NOT registered in plugin.json. They are installed via /session:setup command which writes them to .claude/settings.json with absolute paths. This workaround exists because Claude Code plugin hooks have known bugs (Issues #12151, #9708, #10225) where UserPromptSubmit and SessionStart hooks execute but their output is NOT captured/passed to the agent. Once these issues are fixed, we can move hooks back to plugin.json and remove the setup requirement. Track: https://github.com/anthropics/claude-code/issues/12151",
   "SessionStart": [
     {
       "hooks": [
