@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.26.1] - 2025-12-09
+
+### Fixed
+
+- **Consolidation race condition in continue command** - Summary was showing stale snapshot data
+  - Root cause: v3.19.0 spawned consolidation subagent but didn't wait for completion
+  - Step 5 immediately read OLD snapshot while new one was being created
+  - Added explicit BLOCKING OPERATION warnings
+  - Added `run_in_background: false` explicitly
+  - Added hard gate: "DO NOT proceed to Step 5 until subagent completes"
+  - Added user-facing message: "📊 Consolidating previous session logs..."
+  - Summary now correctly shows freshly consolidated snapshot data
+
+---
+
 ## [3.26.0] - 2025-12-09
 
 ### Added
