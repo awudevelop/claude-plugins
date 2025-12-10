@@ -1,6 +1,6 @@
 {
   "name": "session",
-  "version": "3.27.0",
+  "version": "3.27.1",
   "description": "• v3.27.0: Universal sketch format replaces type-specific specs\n• v3.26.2: Remove plugin hooks to prevent duplicate execution\n• v3.26.1: Make consolidation BLOCKING in continue command\n• v3.26.0: Map Diff/Change Tracking for project-maps refresh\n• v3.25.0: Skills support for project-maps architecture queries\n• v3.24.0: Plan-review command for automated spec validation",
   "author": {
     "name": "AutomateWith.Us",
@@ -29,8 +29,8 @@
   "license": "MIT",
   "commands": "./commands",
   "versionMetadata": {
-    "lastUpdateCommit": "ba46c60e1abc8cdc875797fad38790782035593f",
-    "lastUpdateDate": "2025-12-09T07:08:56.841Z",
+    "lastUpdateCommit": "360a4277b8365a6ca9ffaad77965968169c8c671",
+    "lastUpdateDate": "2025-12-10T06:43:15.327Z",
     "lastBumpType": "patch"
   }
 }

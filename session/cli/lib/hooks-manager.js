@@ -191,6 +191,10 @@ class HooksManager {
     const processed = {};
 
     for (const [hookType, entries] of Object.entries(hooks)) {
+      // Skip non-array entries (like _comment field)
+      if (!Array.isArray(entries)) {
+        continue;
+      }
       processed[hookType] = entries.map(entry => {
         return {
           ...entry,
@@ -220,7 +224,8 @@ class HooksManager {
    * Avoids duplicates by checking command paths
    */
   mergeHooks(existingSettings, pluginHooks) {
-    const merged = { ...existingSettings };
+    // Deep clone to avoid mutating original settings
+    const merged = JSON.parse(JSON.stringify(existingSettings));
 
     if (!merged.hooks) {
       merged.hooks = {};
@@ -384,7 +389,8 @@ class HooksManager {
    * Removes entries that contain commands matching plugin paths (variable or absolute)
    */
   removePluginHooks(existingSettings, pluginRoot) {
-    const cleaned = { ...existingSettings };
+    // Deep clone to avoid mutating original settings
+    const cleaned = JSON.parse(JSON.stringify(existingSettings));
 
     if (!cleaned.hooks) {
       return cleaned;
@@ -541,7 +547,8 @@ class HooksManager {
    * Preserves all existing permissions, only adds missing ones
    */
   mergePermissions(existingSettings, sessionPermissions) {
-    const merged = { ...existingSettings };
+    // Deep clone to avoid mutating original settings
+    const merged = JSON.parse(JSON.stringify(existingSettings));
 
     // Initialize permissions structure if doesn't exist
     if (!merged.permissions) {

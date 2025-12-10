@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.27.1] - 2025-12-10
+
+### Fixed
+
+- **hooks-manager.js: Skip `_comment` field in hooks.json parsing**
+  - The `_comment` documentation field (a string) crashed `processPluginHooks()` which expected arrays
+  - Now skips non-array entries safely
+
+- **hooks-manager.js: Fix shallow copy mutations**
+  - `removePluginHooks()`: Shallow copy caused original settings object to be mutated
+  - `mergeHooks()`: Same shallow copy mutation issue
+  - `mergePermissions()`: Same shallow copy mutation issue
+  - All three functions now use deep cloning via `JSON.parse(JSON.stringify())`
+
+### Impact
+
+These bugs caused `/session:setup` to fail or behave incorrectly:
+- `--status` command crashed with "entries.map is not a function"
+- `--dry-run` showed empty settings because original object was mutated
+- Settings could be corrupted if operations were chained
+
+---
+
 ## [3.27.0] - 2025-12-09
 
 ### Added
