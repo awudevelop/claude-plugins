@@ -30,24 +30,6 @@ Then STOP.
 
 The JSON response contains metadata (status, started, snapshotCount, etc.).
 
-### Step 1.5: Close Previous Active Session (If Different)
-
-Before continuing the target session, close any currently active session if it's different:
-
-1. Check if `.claude/sessions/.active-session` exists
-2. If it exists:
-   - Read the current active session name
-   - If it's different from the target session {session_name}:
-     - Show: "📋 Closing previous session '{previous_session_name}'..."
-     - Close the previous session status:
-       ```bash
-       node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-status "{previous_session_name}" "closed"
-       ```
-     - This marks the previous session as closed in `.auto-capture-state`
-3. Continue to next step
-
-**Note**: This ensures clean session transitions with no abandoned active sessions.
-
 ### Step 2: Refresh Git History (Inline)
 
 Run the git capture CLI command directly (no subagent needed):
@@ -177,10 +159,17 @@ Run the CLI command to activate the session:
 node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js activate {session_name}
 ```
 
-This command now handles everything in one call:
+This command handles everything in one call (v3.29.0):
+- **Auto-closes previous session** if different (no manual check needed)
 - Sets the session as active (.active-session file + index.activeSession)
 - Updates status to "active" (.auto-capture-state + index.sessions[name].status)
 - Clears any closed timestamp if reopening a closed session
+- Returns `previousSession` and `previousSessionClosed` if a session was closed
+
+If `previousSessionClosed: true` in response, optionally show:
+```
+📋 Closed previous session '{previousSession}'
+```
 
 ### Step 7: Update Last Updated Timestamp
 
@@ -276,9 +265,9 @@ What's next?
 
 ---
 
-**TOKEN OPTIMIZATION BENEFITS (v3.28.0):**
+**TOKEN OPTIMIZATION BENEFITS (v3.29.0):**
 - Previous (v3.7.0): ~22k tokens with 3 parallel subagents
-- Current (v3.28.0): ~5-7k tokens with inline + conditional BLOCKING subagent
+- Current (v3.29.0): ~5-7k tokens with inline + conditional BLOCKING subagent
 - **Savings: 65-75% token reduction**
 
 Key optimizations:
@@ -290,6 +279,7 @@ Key optimizations:
 6. **BLOCKING consolidation (v3.26.1 fix)**: Summary now shows NEW snapshot data, not stale data
 7. **Merged activate + status (v3.27.2)**: Single CLI call instead of two (~500 tokens saved)
 8. **Summary in consolidation result (v3.28.0)**: Skip Step 5 Glob+Read when consolidation succeeds (~3k tokens saved)
+9. **Auto-close in activate (v3.29.0)**: CLI handles previous session close, eliminating Read + close steps (~500 tokens saved)
 
 **ERROR HANDLING:**
 - If consolidation fails: Still activate session, show generic message

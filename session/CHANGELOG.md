@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.29.0] - 2025-12-11
+
+### Added
+
+- **activate.js**: Auto-close previous session when activating a different one
+  - CLI now internally checks `.active-session` file
+  - If different session was active, closes it automatically (updates state to "closed")
+  - Returns `previousSession` and `previousSessionClosed` in response
+  - Eliminates need for command templates to manually check/close
+
+### Changed
+
+- **continue.md**: Removed Step 1.5 (manual previous session close)
+  - `activate` command now handles session transitions internally
+  - No more Read tool calls to check `.active-session` file
+  - No more separate `update-status "closed"` CLI calls
+
+### Performance
+
+- Saves ~500 tokens per `/session:continue` by eliminating file read + close operations
+- Total savings now 65-75% vs original v3.7.0 implementation
+
+---
+
 ## [3.28.0] - 2025-12-11
 
 ### Added
