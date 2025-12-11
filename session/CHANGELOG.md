@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.28.0] - 2025-12-11
+
+### Added
+
+- **consolidate-log.md**: Return summary data in consolidation result JSON
+  - Topics, decisions, tasks, and status now returned directly
+  - Allows main agent to skip redundant Glob+Read operations
+  - Titles only (not full descriptions) to minimize JSON size
+
+### Changed
+
+- **continue.md**: Step 5 now conditional (fallback only)
+  - If consolidation returns `summary` field → use it directly, skip Glob+Read
+  - If consolidation skipped/failed → fall back to Step 5 (read snapshot)
+  - Maintains backward compatibility with older plugin versions
+
+### Performance
+
+- Saves ~3000 tokens per `/session:continue` when consolidation runs
+- Total savings now 65-75% vs original v3.7.0 implementation
+- Happy path: consolidation succeeds → 0 extra tool calls for summary
+
+---
+
 ## [3.27.2] - 2025-12-11
 
 ### Changed

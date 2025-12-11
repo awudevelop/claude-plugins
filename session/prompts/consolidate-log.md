@@ -166,10 +166,26 @@ JSON with these exact fields (ONLY after all verifications pass):
   "snapshot_created": "[filename]",
   "timestamp": "[ISO timestamp]",
   "interaction_count": [number],
-  "summary_preview": "[first 100 chars of summary]",
   "log_deleted": true,
-  "state_reset": true
+  "state_reset": true,
+  "summary": {
+    "topics": ["Topic 1 title", "Topic 2 title", ...],
+    "decisions": ["Decision 1 title", "Decision 2 title", ...],
+    "tasks": ["Task 1 description", "Task 2 description", ...],
+    "status": {
+      "progress": "[Progress text from Current Status section]",
+      "nextSteps": "[Next Steps text from Current Status section]",
+      "blockers": "[Blockers text from Current Status section]"
+    }
+  }
 }
+
+**IMPORTANT**: The `summary` field allows the main agent to display results without
+re-reading the snapshot file. Extract TITLES ONLY (not full descriptions):
+- topics: Just the **[Category]** part (e.g., "FE-First Architecture", "Market Research")
+- decisions: Just the **[Decision]** part (e.g., "Use RBAC Model", "Composition Approach")
+- tasks: Full task line (they're already short)
+- status: Copy exact text from the 3 bullet points
 
 If any error occurs:
 {

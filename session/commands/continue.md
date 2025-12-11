@@ -120,15 +120,19 @@ Then spawn a subagent for consolidation and **WAIT for its result**:
 The subagent creates a NEW snapshot. You MUST wait for it to finish so Step 5 reads the NEW snapshot, not the old one.
 
 **Handle consolidation result (AFTER subagent completes):**
-- If `success: true` → Snapshot created successfully, proceed to Step 5
-- If `skipped: true` → No conversation log found (OK, proceed to Step 5)
-- If `success: false` → Log error but proceed to Step 5
+- If `success: true` WITH `summary` field → Use summary directly, skip to Step 6
+- If `success: true` WITHOUT `summary` field → Fallback to Step 5 (read snapshot)
+- If `skipped: true` → No conversation log found, proceed to Step 5 (check for existing snapshots)
+- If `success: false` → Log error, proceed to Step 5 (fallback)
 
-**DO NOT proceed to Step 5 until the consolidation subagent has returned its result.**
+**DO NOT proceed to Step 5/6 until the consolidation subagent has returned its result.**
 
-### Step 5: Extract Full Snapshot Summary (Complete Context)
+### Step 5: Extract Snapshot Summary (Fallback Only)
 
-Provide Claude with complete snapshot summary including all topics, decisions, and tasks for full context visibility.
+**SKIP THIS STEP if consolidation returned a `summary` field.** Only run this step when:
+- Consolidation was skipped (no log existed)
+- Consolidation failed
+- Consolidation succeeded but didn't return summary (old plugin version)
 
 **Implementation Steps:**
 
@@ -272,10 +276,10 @@ What's next?
 
 ---
 
-**TOKEN OPTIMIZATION BENEFITS (v3.27.2):**
+**TOKEN OPTIMIZATION BENEFITS (v3.28.0):**
 - Previous (v3.7.0): ~22k tokens with 3 parallel subagents
-- Current (v3.27.2): ~8-10k tokens with inline + conditional BLOCKING subagent
-- **Savings: 55-60% token reduction**
+- Current (v3.28.0): ~5-7k tokens with inline + conditional BLOCKING subagent
+- **Savings: 65-75% token reduction**
 
 Key optimizations:
 1. **Inline git refresh**: CLI call instead of subagent (~5k tokens saved)
@@ -285,6 +289,7 @@ Key optimizations:
 5. **Glob for existence check**: Use Glob instead of Read to check log existence (~3-4k tokens saved)
 6. **BLOCKING consolidation (v3.26.1 fix)**: Summary now shows NEW snapshot data, not stale data
 7. **Merged activate + status (v3.27.2)**: Single CLI call instead of two (~500 tokens saved)
+8. **Summary in consolidation result (v3.28.0)**: Skip Step 5 Glob+Read when consolidation succeeds (~3k tokens saved)
 
 **ERROR HANDLING:**
 - If consolidation fails: Still activate session, show generic message
