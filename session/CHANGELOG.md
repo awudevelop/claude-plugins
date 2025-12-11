@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.30.0] - 2025-12-11
+
+### Changed
+
+- **consolidate-log.md**: Complete rewrite - now handles ALL session preparation
+  - Handles conversation log consolidation (if log exists)
+  - Captures git history and includes in snapshot
+  - Updates session.md Last Updated timestamp
+  - Resets state counters
+  - Creates snapshot with new "## Recent Commits" section
+  - Returns plain text response instead of JSON (fewer tokens)
+  - Gracefully handles "no log" case (continues with git + timestamp)
+
+- **continue.md**: Simplified from 7 steps to 5 steps
+  - Step 1: Validate session (get CLI) - returns goal
+  - Step 2: Prepare session (ALWAYS spawns subagent)
+  - Step 3: Extract snapshot summary (FALLBACK only)
+  - Step 4: Activate session (CLI)
+  - Step 5: Display summary
+  - Removed: capture-git CLI call (moved to subagent)
+  - Removed: Glob check for log existence (subagent handles)
+  - Removed: Edit timestamp call (moved to subagent)
+
+- **Snapshot format v3.0**: Added "## Recent Commits" section
+  - Shows last 10 commits from git log
+  - Provides context about code changes during session
+
+### Performance
+
+- **Main agent tool calls reduced: 7+ → 3**
+  1. `Bash` - get session (validate + goal)
+  2. `Task` - spawn preparation subagent
+  3. `Bash` - activate session
+- **Token savings: ~75-80%** vs v3.7.0 (was 65-75% in v3.29.0)
+- Plain text response ~200 tokens smaller than JSON
+
+---
+
 ## [3.29.0] - 2025-12-11
 
 ### Added
@@ -24,9 +62,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No more Read tool calls to check `.active-session` file
   - No more separate `update-status "closed"` CLI calls
 
+- **continue.md**: Removed Step 3 (Extract Session Goal)
+  - Goal is already returned by `get` command in Step 1
+  - Eliminated redundant Read tool call to session.md
+  - Steps renumbered: 4→3, 5→4, 6→5, 7→6, 8→7
+
 ### Performance
 
-- Saves ~500 tokens per `/session:continue` by eliminating file read + close operations
+- Saves ~1000 tokens per `/session:continue`:
+  - ~500 tokens from eliminating file read + close operations
+  - ~500 tokens from eliminating redundant goal extraction
 - Total savings now 65-75% vs original v3.7.0 implementation
 
 ---

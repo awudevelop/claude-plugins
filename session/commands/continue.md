@@ -10,7 +10,7 @@ Use ONLY the exact command formats specified in this template.
 
 Parse the session name from the command arguments. The command format is: `/session:continue [name]`
 
-**OPTIMIZATION**: v3.26.1 uses inline execution for git/goal + BLOCKING subagent for consolidation. Consolidation MUST complete before showing summary.
+**OPTIMIZATION (v3.30.0)**: Consolidation agent handles EVERYTHING - log, git, timestamp. Main agent just validates, spawns consolidation, activates, displays.
 
 ### Step 1: Validate Session Exists (CLI)
 
@@ -28,63 +28,29 @@ If this returns an error (exit code 2), the session doesn't exist. Show:
 ```
 Then STOP.
 
-The JSON response contains metadata (status, started, snapshotCount, etc.).
+The JSON response contains metadata (status, started, snapshotCount, etc.) **including the goal**.
 
-### Step 2: Refresh Git History (Inline)
+**IMPORTANT**: Store the `goal` field from this response as `{extracted_goal}` - no separate read needed!
 
-Run the git capture CLI command directly (no subagent needed):
+### Step 2: Prepare Session (Subagent - ALWAYS runs)
 
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{session_name}"
+Show a brief message to the user:
+```
+📊 Preparing session...
 ```
 
-**Handle results:**
-- If `success: true` → Git history updated (continue)
-- If `success: false` → No git repo or error (OK, continue anyway)
+Spawn a subagent to prepare the session. This agent handles:
+- Consolidating conversation log (if exists)
+- Capturing git history
+- Updating session.md timestamp
+- Creating snapshot
+- Resetting state counters
 
-**Note**: The CLI handles all git operations internally. No AI analysis required.
-
-### Step 3: Extract Session Goal (Inline)
-
-Use the Read tool to read the session.md file:
-- Path: `.claude/sessions/{session_name}/session.md`
-
-Extract the goal:
-1. Find the line starting with `## Goal`
-2. Extract all text after that line until the next `##` header or end of file
-3. Trim whitespace and store as `{extracted_goal}`
-
-**Fallback**: If file missing or no goal section, use `"Session {session_name}"` as fallback.
-
-**Note**: This is simple text extraction. No AI analysis required.
-
-### Step 4: Consolidate Conversation Log (Conditional Subagent)
-
-**First, check if consolidation is needed:**
-
-Use the Glob tool to check if the conversation log exists (avoids reading content):
-- Pattern: `.claude/sessions/{session_name}/conversation-log.jsonl`
-
-**If Glob returns empty array (file does NOT exist):**
-- Skip subagent entirely
-- Set consolidation_result = `{ "skipped": true, "reason": "No conversation log" }`
-- Continue to Step 5
-
-**If Glob returns the file path (file EXISTS):**
-
-**⚠️ BLOCKING OPERATION - You MUST wait for this to complete before Step 5!**
-
-First, show a brief message to the user:
-```
-📊 Consolidating previous session logs...
-```
-
-Then spawn a subagent for consolidation and **WAIT for its result**:
-
+**Subagent configuration:**
 - subagent_type: "general-purpose"
-- description: "Consolidate conversation log"
+- description: "Prepare session"
 - model: "haiku"
-- run_in_background: **false** (DEFAULT - do NOT set to true)
+- run_in_background: **false** (BLOCKING - must wait for result)
 - prompt: |
   You are working with session: {session_name}
 
@@ -98,23 +64,26 @@ Then spawn a subagent for consolidation and **WAIT for its result**:
   Replace all such placeholders with the actual values provided above.
   Then execute the resulting instructions.
 
-**⚠️ CRITICAL: Wait for consolidation result before proceeding!**
-The subagent creates a NEW snapshot. You MUST wait for it to finish so Step 5 reads the NEW snapshot, not the old one.
+**⚠️ CRITICAL: Wait for subagent to complete before proceeding!**
 
-**Handle consolidation result (AFTER subagent completes):**
-- If `success: true` WITH `summary` field → Use summary directly, skip to Step 6
-- If `success: true` WITHOUT `summary` field → Fallback to Step 5 (read snapshot)
-- If `skipped: true` → No conversation log found, proceed to Step 5 (check for existing snapshots)
-- If `success: false` → Log error, proceed to Step 5 (fallback)
+**Handle result (plain text format):**
+The subagent returns plain text (NOT JSON). Parse the response:
 
-**DO NOT proceed to Step 5/6 until the consolidation subagent has returned its result.**
+- If starts with `SUCCESS`:
+  - Extract: Snapshot filename, Topics, Decisions, Tasks, Progress, Next, Blockers
+  - Topics/Decisions are pipe-separated: `Topic1 | Topic2 | Topic3`
+  - Proceed to Step 4
 
-### Step 5: Extract Snapshot Summary (Fallback Only)
+- If starts with `SUCCESS (no log)`:
+  - Git-only snapshot was created (no conversation log existed)
+  - Proceed to Step 4
 
-**SKIP THIS STEP if consolidation returned a `summary` field.** Only run this step when:
-- Consolidation was skipped (no log existed)
-- Consolidation failed
-- Consolidation succeeded but didn't return summary (old plugin version)
+- If starts with `FAILED`:
+  - Log the error, proceed to Step 3 (fallback)
+
+### Step 3: Extract Snapshot Summary (Fallback Only)
+
+**SKIP THIS STEP if Step 2 succeeded.** Only run when consolidation failed.
 
 **Implementation Steps:**
 
@@ -124,34 +93,21 @@ The subagent creates a NEW snapshot. You MUST wait for it to finish so Step 5 re
    - Take the first result as the latest snapshot
 
 2. **If snapshot exists, use Read tool to extract content:**
-   - Read the snapshot file (first 80 lines should contain all needed sections)
-   - Extract all snapshot items with titles only:
-     - **Topics Discussed**: Extract ALL topic titles from "## Topics Discussed" section
-       - Format: "1. **Category**: Description"
-       - Extract only the category/title (bold text between ** markers)
-       - Store as array of titles
-     - **Decisions Made**: Extract ALL decision titles from "## Decisions Made" section
-       - Format: "1. **Decision**: Rationale"
-       - Extract only the decision title (bold text between ** markers)
-       - Store as array of titles
-     - **Tasks Completed**: Extract ALL tasks from "## Tasks Completed" section
-       - Format: "1. Task description"
-       - Extract full task line (simple numbered list)
-       - Store as array of tasks
-     - **Current Status**: Extract status lines from "## Current Status" section
-       - Look for "- **Progress**:" line and extract text after it
-       - Look for "- **Next Steps**:" line and extract text after it
-       - Look for "- **Blockers**:" line and extract text after it
-       - Store as object with progress, nextSteps, blockers
+   - Read the snapshot file (first 100 lines should contain all needed sections)
+   - Extract:
+     - **Topics Discussed**: Category titles from `## Topics Discussed`
+     - **Decisions Made**: Decision titles from `## Decisions Made`
+     - **Tasks Completed**: Task items from `## Tasks Completed`
+     - **Recent Commits**: Commits from `## Recent Commits`
+     - **Current Status**: Progress, Next Steps, Blockers
 
-3. **Build full snapshot summary for display in Step 8**
+3. **Build summary for display in Step 5**
 
 **Graceful Handling**:
 - If no snapshot exists → Skip summary display (OK, fresh session)
 - If extraction fails → Show generic message "See snapshot for details"
-- If Read fails → Silent failure, continue (don't break resume)
 
-### Step 6: Activate Session (CLI)
+### Step 4: Activate Session (CLI)
 
 Run the CLI command to activate the session:
 
@@ -159,29 +115,20 @@ Run the CLI command to activate the session:
 node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js activate {session_name}
 ```
 
-This command handles everything in one call (v3.29.0):
+This command handles everything in one call:
 - **Auto-closes previous session** if different (no manual check needed)
 - Sets the session as active (.active-session file + index.activeSession)
 - Updates status to "active" (.auto-capture-state + index.sessions[name].status)
 - Clears any closed timestamp if reopening a closed session
-- Returns `previousSession` and `previousSessionClosed` if a session was closed
 
 If `previousSessionClosed: true` in response, optionally show:
 ```
 📋 Closed previous session '{previousSession}'
 ```
 
-### Step 7: Update Last Updated Timestamp
+### Step 5: Display Summary
 
-Update the "Last Updated" line in session.md to current time using the Edit tool:
-
-```
-**Last Updated**: {current ISO timestamp}
-```
-
-### Step 8: Display Summary with Full Snapshot Details
-
-Show session goal plus complete snapshot summary with all topics, decisions, and tasks.
+Show session goal plus snapshot summary with topics, decisions, tasks, and git info.
 
 **Display Format**:
 ```
@@ -189,27 +136,18 @@ Show session goal plus complete snapshot summary with all topics, decisions, and
 
 📋 Latest: {snapshot_filename}
 
-Topics Discussed ({count}):
-- {topic_1}
-- {topic_2}
-... (all topics)
+Topics ({count}): {topic1} | {topic2} | {topic3} | ...
 
-Decisions Made ({count}):
-- {decision_1}
-- {decision_2}
-... (all decisions)
+Decisions ({count}): {decision1} | {decision2} | ...
 
-Tasks Completed ({count}):
-- {task_1}
-- {task_2}
-... (all tasks)
+Tasks: {count} completed
+
+Git: {X} commits captured
 
 Current Status:
 • Progress: {progress_text}
-• Next Steps: {next_steps_text}
+• Next: {next_steps_text}
 • Blockers: {blockers_text}
-
-💡 Read {snapshot_path} for full details
 
 What's next?
 ```
@@ -218,43 +156,20 @@ What's next?
 ```
 ✓ Session ready: Implement product permission system
 
-📋 Latest: auto_2025-11-16_05-24.md
+📋 Latest: auto_2025-12-11_05-24.md
 
-Topics Discussed (8):
-- Database Schema Design
-- API Endpoint Implementation
-- Permission Middleware
-- Frontend Components
-- Testing Strategy
-- Deployment Planning
-- Documentation Updates
-- Performance Optimization
+Topics (5): Database Schema | API Endpoints | Permission Middleware | Testing | Deployment
 
-Decisions Made (3):
-- Use RBAC Model for Permission System
-- Implement Middleware-based Authorization
-- Store Permissions in PostgreSQL
+Decisions (3): Use RBAC Model | Middleware Authorization | PostgreSQL Storage
 
-Tasks Completed (12):
-- Created users, roles, permissions tables
-- Implemented role assignment API
-- Built permission checking middleware
-- Added frontend permission components
-- Wrote unit tests for permission logic
-- Created integration tests
-- Documented API endpoints
-- Updated deployment guide
-- Fixed TypeScript errors
-- Ran build successfully
-- Deployed to staging
-- Verified permission checks work
+Tasks: 12 completed
+
+Git: 8 commits captured
 
 Current Status:
-• Progress: 12 of 12 tasks completed (100%)
-• Next Steps: Deploy to production and monitor
+• Progress: All tasks completed (100%)
+• Next: Deploy to production and monitor
 • Blockers: None
-
-💡 Read .claude/sessions/product-permission/auto_2025-11-16_05-24.md for full details
 
 What's next?
 ```
@@ -262,27 +177,38 @@ What's next?
 **Notes**:
 - If no snapshot exists, only show "✓ Session ready: {goal}" and "What's next?"
 - Fallback gracefully if extraction fails (show generic pointer text)
+- Git info comes from consolidation agent's response
 
 ---
 
-**TOKEN OPTIMIZATION BENEFITS (v3.29.0):**
+**TOKEN OPTIMIZATION BENEFITS (v3.30.0):**
 - Previous (v3.7.0): ~22k tokens with 3 parallel subagents
-- Current (v3.29.0): ~5-7k tokens with inline + conditional BLOCKING subagent
-- **Savings: 65-75% token reduction**
+- Current (v3.30.0): ~4-5k tokens with single BLOCKING subagent
+- **Savings: 75-80% token reduction**
 
 Key optimizations:
-1. **Inline git refresh**: CLI call instead of subagent (~5k tokens saved)
-2. **Inline goal extraction**: Read tool instead of subagent (~5k tokens saved)
-3. **Conditional consolidation**: Skip subagent if no log exists (common case!)
-4. **Lazy-loaded prompts**: Subagent reads its own prompt (~1.7k token savings)
-5. **Glob for existence check**: Use Glob instead of Read to check log existence (~3-4k tokens saved)
-6. **BLOCKING consolidation (v3.26.1 fix)**: Summary now shows NEW snapshot data, not stale data
-7. **Merged activate + status (v3.27.2)**: Single CLI call instead of two (~500 tokens saved)
-8. **Summary in consolidation result (v3.28.0)**: Skip Step 5 Glob+Read when consolidation succeeds (~3k tokens saved)
-9. **Auto-close in activate (v3.29.0)**: CLI handles previous session close, eliminating Read + close steps (~500 tokens saved)
+1. **Goal from get response**: Use goal from Step 1, no separate Read
+2. **Single subagent handles all preparation**:
+   - Consolidation (if log exists)
+   - Git capture
+   - Timestamp update
+   - State reset
+   - Snapshot creation
+3. **No conditional checks in main agent**: Subagent handles log existence internally
+4. **Plain text response**: Less verbose than JSON
+5. **Auto-close in activate**: CLI handles previous session close
+6. **Lazy-loaded prompts**: Subagent reads its own prompt file
+
+**Main agent tool calls (happy path):**
+1. `Bash` - get session (validate + goal)
+2. `Task` - spawn preparation subagent
+3. `Bash` - activate session
+4. Output - display summary
+
+**Total: 3 tool calls** (down from 7+ in previous versions)
 
 **ERROR HANDLING:**
-- If consolidation fails: Still activate session, show generic message
+- If preparation fails: Still activate session, fall back to reading snapshot
 - If session.md missing: Show corrupted session warning
 - If CLI fails: Suggest rebuilding index with `/session:rebuild-index`
 

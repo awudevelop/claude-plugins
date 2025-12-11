@@ -1,7 +1,7 @@
 {
   "name": "session",
-  "version": "3.29.0",
-  "description": "• v3.28.0: Return summary from consolidation - skip redundant Glob+Read\n• v3.27.2: Merge activate + update-status into single command\n• v3.27.0: Universal sketch format replaces type-specific specs\n• v3.26.1: Make consolidation BLOCKING in continue command\n• v3.26.0: Map Diff/Change Tracking for project-maps refresh\n• v3.25.0: Skills support for project-maps architecture queries",
+  "version": "3.30.0",
+  "description": "• v3.30.0: consolidate-log.mdnow handles ALL session preparation, Main agent tool calls reduced: 7+ → 3**\n• v3.28.0: Return summary from consolidation - skip redundant Glob+Read\n• v3.27.2: Merge activate + update-status into single command\n• v3.27.0: Universal sketch format replaces type-specific specs\n• v3.26.1: Make consolidation BLOCKING in continue command\n• v3.26.0: Map Diff/Change Tracking for project-maps refresh",
   "author": {
     "name": "AutomateWith.Us",
     "email": "team@automatewith.us"
@@ -29,8 +29,8 @@
   "license": "MIT",
   "commands": "./commands",
   "versionMetadata": {
-    "lastUpdateCommit": "1ded90cd03e9a5fc94f0516c905a03a9e6d24f71",
-    "lastUpdateDate": "2025-12-11T03:45:39.928Z",
-    "lastBumpType": "patch"
+    "lastUpdateCommit": "73e40cf8283808abcddbf71e0343cc6ceef178b6",
+    "lastUpdateDate": "2025-12-11T04:15:29.341Z",
+    "lastBumpType": "minor"
   }
 }

@@ -5,198 +5,221 @@ Session: {session_name}
 - Plugin root: ${CLAUDE_PLUGIN_ROOT}
 - Working directory: {working_directory}
 
-Goal: Consolidate conversation log into auto-snapshot (if log exists)
+Goal: Prepare session for resumption - consolidate log (if exists), capture git, update timestamp
 
-Steps:
-1. Check if file exists: {session_path}/conversation-log.jsonl
-   (Use the Read tool to attempt reading this absolute path)
-2. If file does NOT exist:
-   - Return JSON: { "skipped": true, "reason": "No conversation log found" }
-   - STOP (do not proceed)
+## Step 1: Check Conversation Log
 
-3. If file exists - Read in chunks to handle large files:
+Check if file exists: {session_path}/conversation-log.jsonl
+(Use the Read tool to attempt reading this absolute path)
 
-   **Step 3a: Count total lines**
-   - Use Bash: wc -l {session_path}/conversation-log.jsonl
-   - Extract line count from output
+- If file does NOT exist: Set `has_log = false`, proceed to Step 5 (git capture)
+- If file exists: Set `has_log = true`, proceed to Step 2
 
-   **Step 3b: Read file in chunks if large**
-   - If line count <= 2000: Read entire file normally
-   - If line count > 2000: Read in chunks of 2000 lines
-     - Chunk 1: Read with offset=0, limit=2000
-     - Chunk 2: Read with offset=2000, limit=2000
-     - Chunk 3: Read with offset=4000, limit=2000
-     - Continue until all lines processed
+## Step 2: Read Conversation Log (only if has_log = true)
 
-   **Step 3c: Parse JSONL format (each line = JSON entry)**
-   - Extract entries from all chunks (COMPACT FORMAT v3.8.9+):
-     - Interaction entries (have "p" key = user prompt text)
-     - Response entries (have "r" key = Claude's response text)
-     - Timestamps: "ts" field = Unix timestamp in seconds (convert to date if needed)
-     - File status codes: 1=Modified, 2=Added, 3=Deleted, 4=Renamed
-     - Modified files: "f" = [[path, status_code], ...] array format
+**Step 2a: Count total lines**
+- Use Bash: wc -l {session_path}/conversation-log.jsonl
+- Extract line count from output
 
-   **Step 3d: Aggregate across chunks**
-   - Combine all topics from all chunks
-   - Combine all suggestions from all chunks
-   - Combine all decisions from all chunks
-   - Combine all tasks from all chunks
-   - Combine all file modifications from all chunks
+**Step 2b: Read file in chunks if large**
+- If line count <= 2000: Read entire file normally
+- If line count > 2000: Read in chunks of 2000 lines
+  - Chunk 1: Read with offset=0, limit=2000
+  - Chunk 2: Read with offset=2000, limit=2000
+  - Continue until all lines processed
 
-4. ⚠️ CRITICAL INSTRUCTION - Analyze the ENTIRE conversation from beginning to end:
+**Step 2c: Parse JSONL format (each line = JSON entry)**
+- Extract entries (COMPACT FORMAT v3.8.9+):
+  - Interaction entries: "p" = user prompt, "r" = response
+  - Timestamps: "ts" = Unix timestamp in seconds
+  - File status codes: 1=Modified, 2=Added, 3=Deleted, 4=Renamed
+  - Modified files: "f" = [[path, status_code], ...] array
 
-   **Anti-Recency Bias**: Do NOT focus only on recent messages. Topics from the start
-   of the conversation are EQUALLY important as topics from the end. You MUST ensure
-   comprehensive coverage of the complete timeline.
+## Step 3: Analyze Conversation (only if has_log = true)
 
-   - Extract ALL distinct topics discussed (enumerate each one, not just recent)
-   - Extract ALL suggestions and recommendations given with rationale
-   - Identify ALL key decisions made with rationale (no limit on count)
-   - List ALL completed tasks/todos
-   - Document ALL files modified with context (what changed and why)
-   - Assess current state (progress, next steps, blockers)
+⚠️ CRITICAL - Analyze ENTIRE conversation, not just recent messages:
 
-   **Coverage Requirements**:
-   - List topics in CHRONOLOGICAL order as they appeared
-   - Do NOT skip topics that were discussed briefly
-   - Do NOT merge related topics - list separately
-   - Do NOT summarize - enumerate explicitly
+**Anti-Recency Bias**: Topics from the START are EQUALLY important as topics from the END.
 
-5. Create consolidated snapshot with this exact format (use heredoc):
+Extract:
+- ALL distinct topics discussed (chronological order)
+- ALL suggestions and recommendations with rationale
+- ALL key decisions made with rationale
+- ALL completed tasks/todos
+- ALL files modified with context
+- Current state (progress, next steps, blockers)
 
+**Coverage Requirements**:
+- List topics in CHRONOLOGICAL order
+- Do NOT skip topics discussed briefly
+- Do NOT merge related topics
+- Do NOT summarize - enumerate explicitly
+
+## Step 4: Delete Conversation Log (only if has_log = true)
+
+```bash
+rm {session_path}/conversation-log.jsonl
+
+# Verify deletion
+if [ -f {session_path}/conversation-log.jsonl ]; then
+  echo "FAILED: Could not delete conversation log"
+  exit 1
+fi
+```
+
+## Step 5: Capture Git History (ALWAYS run)
+
+Run git capture CLI:
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js capture-git "{session_name}"
+```
+
+Then extract recent commits for snapshot (last 10 commits since session start):
+```bash
+cd {working_directory}
+git log --oneline -10 --no-decorate 2>/dev/null || echo "No git repo"
+```
+
+Store the commit list for inclusion in snapshot.
+
+## Step 6: Update Session Timestamp (ALWAYS run)
+
+Update the "Last Updated" line in session.md:
+
+Use Edit tool on file: {session_path}/session.md
+- Find line containing `**Last Updated**:`
+- Replace with: `**Last Updated**: [current ISO timestamp]`
+
+## Step 7: Reset State Counters (ALWAYS run)
+
+```bash
+TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-state "{session_name}" "{\"interactions_since_snapshot\": 0, \"interactions_since_context_update\": 0, \"last_snapshot_timestamp\": \"$TIMESTAMP\"}"
+```
+
+## Step 8: Create Snapshot (ALWAYS run)
+
+Create snapshot with this format (use heredoc):
+
+```bash
 cat <<'SNAPSHOT_EOF' | node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js write-snapshot "{session_name}" --stdin --type auto
 # Consolidated Snapshot: {session_name}
 **Timestamp**: [current ISO timestamp]
-**Method**: Claude Inline Analysis (Free)
-**Status**: Consolidated from conversation log
-**Format Version**: 2.0
+**Method**: Claude Inline Analysis
+**Status**: [Consolidated from conversation log | Git-only snapshot]
+**Format Version**: 3.0
 
 ## Topics Discussed
 
-1. **[Category]**: [Brief description of what was discussed]
-2. **[Category]**: [Brief description of what was discussed]
-3. **[Category]**: [Brief description of what was discussed]
+[If has_log = true, list all topics:]
+1. **[Category]**: [Brief description]
+2. **[Category]**: [Brief description]
 [Continue for ALL topics in chronological order]
 
-Examples of categories: Bug Fix, Feature, Architecture, Performance, Security,
-Testing, Documentation, Configuration, Deployment, Question, Investigation
+[If has_log = false:]
+No conversation log to consolidate.
 
 ## Suggestions & Recommendations
 
-1. **[Category]**: [Specific suggestion] - [Rationale for the suggestion]
-2. **[Category]**: [Specific suggestion] - [Rationale for the suggestion]
-3. **[Category]**: [Specific suggestion] - [Rationale for the suggestion]
-[Continue for ALL suggestions given during conversation]
+[If has_log = true, list all suggestions:]
+1. **[Category]**: [Suggestion] - [Rationale]
+[Continue for ALL suggestions]
 
-Format: Category (Architecture/Security/Performance/etc.) + Suggestion + Why
+[If has_log = false:]
+None documented.
 
 ## Decisions Made
 
-1. **[Decision]**: [Rationale and context for why this was decided]
-2. **[Decision]**: [Rationale and context for why this was decided]
-3. **[Decision]**: [Rationale and context for why this was decided]
-[Continue for ALL decisions - no limit on count]
+[If has_log = true, list all decisions:]
+1. **[Decision]**: [Rationale]
+[Continue for ALL decisions]
+
+[If has_log = false:]
+None documented.
 
 ## Tasks Completed
 
-1. [Action completed in past tense]
-2. [Action completed in past tense]
-3. [Action completed in past tense]
-[Continue for ALL tasks completed during conversation]
+[If has_log = true, list all tasks:]
+1. [Action completed]
+[Continue for ALL tasks]
+
+[If has_log = false:]
+None documented.
 
 ## Files Modified
 
-1. `[file_path]`: [What changed and why - be specific]
-2. `[file_path]`: [What changed and why - be specific]
-3. `[file_path]`: [What changed and why - be specific]
-[Continue for ALL files modified]
+[If has_log = true, list files from log:]
+1. `[file_path]`: [What changed and why]
+[Continue for ALL files]
+
+[If has_log = false:]
+See git history below.
+
+## Recent Commits
+
+[Include git log output from Step 5:]
+- `abc1234` Fix: resolve hook duplication issue
+- `def5678` Feat: add auto-close to activate command
+[Continue for recent commits, or "No commits found" if none]
 
 ## Current Status
 
-- **Progress**: [1-2 sentences describing where things stand - what's been accomplished]
-- **Next Steps**: [What should be done next - be specific]
-- **Blockers**: [Any blocking issues preventing progress, or write "None"]
-
-Do NOT use paragraphs. Use this exact 3-bullet structure.
+- **Progress**: [What's been accomplished]
+- **Next Steps**: [What should be done next]
+- **Blockers**: [Any blocking issues, or "None"]
 
 ## Notes
-Consolidated via Claude inline analysis at session boundary.
+[If has_log = true:] Consolidated from conversation log at session boundary.
+[If has_log = false:] Git-only snapshot created at session resume.
 SNAPSHOT_EOF
+```
 
-6. Delete conversation log (with error checking):
-   set -e  # Exit on any error
-   rm {session_path}/conversation-log.jsonl
+## Step 9: Return Result (Plain Text Format)
 
-   # Verify deletion
-   if [ -f {session_path}/conversation-log.jsonl ]; then
-     echo '{"success": false, "error": "Failed to delete conversation log", "step_failed": 6}'
-     exit 1
-   fi
+Return result in this EXACT plain text format (NOT JSON):
 
-7. Update state file (with correct JSON syntax):
-   TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-   node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-state "{session_name}" "{\"interactions_since_snapshot\": 0, \"interactions_since_context_update\": 0, \"last_snapshot_timestamp\": \"$TIMESTAMP\"}"
+**If successful with conversation log:**
+```
+SUCCESS
+Snapshot: [filename]
+Log: Consolidated and deleted
+Git: [X] commits captured
+Timestamp: Updated
 
-   if [ $? -ne 0 ]; then
-     echo '{"success": false, "error": "Failed to update state file", "step_failed": 7}'
-     exit 1
-   fi
+Topics ([count]): [Topic1] | [Topic2] | [Topic3] | ...
+Decisions ([count]): [Decision1] | [Decision2] | ...
+Tasks ([count]): [count] completed
+Progress: [Progress text]
+Next: [Next steps text]
+Blockers: [Blockers text or "None"]
+```
 
-8. Verify all steps completed successfully:
-   # Check snapshot exists (use Glob tool to find auto_*.md files in session path)
-   # If using bash: if [ ! -f {session_path}/auto_*.md ]; then
+**If successful without conversation log (git-only):**
+```
+SUCCESS (no log)
+Snapshot: [filename]
+Git: [X] commits captured
+Timestamp: Updated
 
-   # Check log deleted
-   if [ -f {session_path}/conversation-log.jsonl ]; then
-     echo '{"success": false, "error": "Log file still exists", "step_failed": 6}'
-     exit 1
-   fi
+Topics: None (no conversation log)
+Decisions: None
+Tasks: None
+Progress: Session resumed
+Next: Continue work
+Blockers: None
+```
 
-   # Verify state reset
-   STATE=$(node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js get-state "{session_name}")
-   if ! echo "$STATE" | grep -q '"interactions_since_snapshot":0'; then
-     echo '{"success": false, "error": "State counters not reset", "step_failed": 7}'
-     exit 1
-   fi
+**If failed:**
+```
+FAILED
+Step: [step number]
+Reason: [error description]
+```
 
-Return Format:
-JSON with these exact fields (ONLY after all verifications pass):
-{
-  "success": true,
-  "snapshot_created": "[filename]",
-  "timestamp": "[ISO timestamp]",
-  "interaction_count": [number],
-  "log_deleted": true,
-  "state_reset": true,
-  "summary": {
-    "topics": ["Topic 1 title", "Topic 2 title", ...],
-    "decisions": ["Decision 1 title", "Decision 2 title", ...],
-    "tasks": ["Task 1 description", "Task 2 description", ...],
-    "status": {
-      "progress": "[Progress text from Current Status section]",
-      "nextSteps": "[Next Steps text from Current Status section]",
-      "blockers": "[Blockers text from Current Status section]"
-    }
-  }
-}
+## Important Rules
 
-**IMPORTANT**: The `summary` field allows the main agent to display results without
-re-reading the snapshot file. Extract TITLES ONLY (not full descriptions):
-- topics: Just the **[Category]** part (e.g., "FE-First Architecture", "Market Research")
-- decisions: Just the **[Decision]** part (e.g., "Use RBAC Model", "Composition Approach")
-- tasks: Full task line (they're already short)
-- status: Copy exact text from the 3 bullet points
-
-If any error occurs:
-{
-  "success": false,
-  "error": "[error description]",
-  "step_failed": "[which step number]"
-}
-
-IMPORTANT:
-- Use exact CLI commands shown above
-- Do NOT read transcript files (log is self-contained)
-- Use set -e to halt on errors
-- Verify ALL steps before returning success
-- Return ONLY JSON, no additional commentary
+- ALWAYS run Steps 5-8 (git, timestamp, state, snapshot) regardless of log existence
+- Only run Steps 2-4 if conversation log exists
+- Use plain text response, NOT JSON
+- Separate topic/decision titles with ` | ` (pipe with spaces)
+- Keep titles short (extract category/decision name only, not full description)
