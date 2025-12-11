@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.27.2] - 2025-12-11
+
+### Changed
+
+- **activate.js**: Merged `update-status "active"` logic into `activate` command
+  - Single CLI call now handles both activation and status update
+  - Sets `.active-session` file and `index.activeSession`
+  - Updates `.auto-capture-state.session_status` to "active"
+  - Clears `session_closed` timestamp if reopening
+  - Sets `session_started` if missing
+  - Updates `index.sessions[name].status` to "active"
+
+- **continue.md**: Removed redundant Step 7 (update-status call)
+  - Step 6 (activate) now handles everything
+  - Renumbered Step 8 → Step 7, Step 9 → Step 8
+  - Added optimization note for merged command
+
+### Performance
+
+- Reduces CLI calls in `/session:continue` flow from 2 to 1
+- Saves ~500 tokens per session continue operation
+
+---
+
 ## [3.27.1] - 2025-12-10
 
 ### Fixed

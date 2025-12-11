@@ -158,7 +158,7 @@ Provide Claude with complete snapshot summary including all topics, decisions, a
        - Look for "- **Blockers**:" line and extract text after it
        - Store as object with progress, nextSteps, blockers
 
-3. **Build full snapshot summary for display in Step 9**
+3. **Build full snapshot summary for display in Step 8**
 
 **Graceful Handling**:
 - If no snapshot exists → Skip summary display (OK, fresh session)
@@ -173,19 +173,12 @@ Run the CLI command to activate the session:
 node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js activate {session_name}
 ```
 
-This updates both the .active-session file and the index.
+This command now handles everything in one call:
+- Sets the session as active (.active-session file + index.activeSession)
+- Updates status to "active" (.auto-capture-state + index.sessions[name].status)
+- Clears any closed timestamp if reopening a closed session
 
-### Step 7: Update Session Status to Active
-
-Update the session status in `.auto-capture-state` and index:
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js update-status "{session_name}" "active"
-```
-
-This ensures the session status matches its active state and prevents sync bugs.
-
-### Step 8: Update Last Updated Timestamp
+### Step 7: Update Last Updated Timestamp
 
 Update the "Last Updated" line in session.md to current time using the Edit tool:
 
@@ -193,7 +186,7 @@ Update the "Last Updated" line in session.md to current time using the Edit tool
 **Last Updated**: {current ISO timestamp}
 ```
 
-### Step 9: Display Summary with Full Snapshot Details
+### Step 8: Display Summary with Full Snapshot Details
 
 Show session goal plus complete snapshot summary with all topics, decisions, and tasks.
 
@@ -279,9 +272,9 @@ What's next?
 
 ---
 
-**TOKEN OPTIMIZATION BENEFITS (v3.26.1):**
+**TOKEN OPTIMIZATION BENEFITS (v3.27.2):**
 - Previous (v3.7.0): ~22k tokens with 3 parallel subagents
-- Current (v3.26.1): ~8-10k tokens with inline + conditional BLOCKING subagent
+- Current (v3.27.2): ~8-10k tokens with inline + conditional BLOCKING subagent
 - **Savings: 55-60% token reduction**
 
 Key optimizations:
@@ -291,6 +284,7 @@ Key optimizations:
 4. **Lazy-loaded prompts**: Subagent reads its own prompt (~1.7k token savings)
 5. **Glob for existence check**: Use Glob instead of Read to check log existence (~3-4k tokens saved)
 6. **BLOCKING consolidation (v3.26.1 fix)**: Summary now shows NEW snapshot data, not stale data
+7. **Merged activate + status (v3.27.2)**: Single CLI call instead of two (~500 tokens saved)
 
 **ERROR HANDLING:**
 - If consolidation fails: Still activate session, show generic message
