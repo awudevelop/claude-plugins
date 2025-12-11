@@ -174,7 +174,20 @@ See git history below.
 SNAPSHOT_EOF
 ```
 
-## Step 9: Return Result (Plain Text Format)
+## Step 9: Activate Session (ALWAYS run)
+
+Run the CLI command to activate the session:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js activate "{session_name}"
+```
+
+This handles:
+- Auto-closes previous session if different
+- Sets session as active
+- Updates status to "active"
+
+## Step 10: Return Result (Plain Text Format)
 
 Return result in this EXACT plain text format (NOT JSON):
 
@@ -184,14 +197,27 @@ SUCCESS
 Snapshot: [filename]
 Log: Consolidated and deleted
 Git: [X] commits captured
-Timestamp: Updated
 
-Topics ([count]): [Topic1] | [Topic2] | [Topic3] | ...
-Decisions ([count]): [Decision1] | [Decision2] | ...
-Tasks ([count]): [count] completed
-Progress: [Progress text]
-Next: [Next steps text]
-Blockers: [Blockers text or "None"]
+Topics Discussed ([count]):
+- [Topic1 title]
+- [Topic2 title]
+- [Topic3 title]
+[... all topics as bullet list]
+
+Decisions Made ([count]):
+- [Decision1 title]
+- [Decision2 title]
+[... all decisions as bullet list]
+
+Tasks Completed ([count]):
+- [Task1 description]
+- [Task2 description]
+[... all tasks as bullet list]
+
+Current Status:
+- Progress: [Progress text]
+- Next Steps: [Next steps text]
+- Blockers: [Blockers text or "None"]
 ```
 
 **If successful without conversation log (git-only):**
@@ -199,14 +225,15 @@ Blockers: [Blockers text or "None"]
 SUCCESS (no log)
 Snapshot: [filename]
 Git: [X] commits captured
-Timestamp: Updated
 
-Topics: None (no conversation log)
-Decisions: None
-Tasks: None
-Progress: Session resumed
-Next: Continue work
-Blockers: None
+Topics Discussed: None (no conversation log)
+Decisions Made: None
+Tasks Completed: None
+
+Current Status:
+- Progress: Session resumed
+- Next Steps: Continue work
+- Blockers: None
 ```
 
 **If failed:**
@@ -218,8 +245,8 @@ Reason: [error description]
 
 ## Important Rules
 
-- ALWAYS run Steps 5-8 (git, timestamp, state, snapshot) regardless of log existence
+- ALWAYS run Steps 5-10 (git, timestamp, state, snapshot, activate) regardless of log existence
 - Only run Steps 2-4 if conversation log exists
 - Use plain text response, NOT JSON
-- Separate topic/decision titles with ` | ` (pipe with spaces)
-- Keep titles short (extract category/decision name only, not full description)
+- List ALL topics/decisions/tasks as bullet points (one per line)
+- Include full task descriptions, not just counts

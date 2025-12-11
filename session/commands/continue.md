@@ -10,7 +10,7 @@ Use ONLY the exact command formats specified in this template.
 
 Parse the session name from the command arguments. The command format is: `/session:continue [name]`
 
-**OPTIMIZATION (v3.30.0)**: Consolidation agent handles EVERYTHING - log, git, timestamp. Main agent just validates, spawns consolidation, activates, displays.
+**OPTIMIZATION (v3.31.0)**: Consolidation agent handles EVERYTHING - log, git, timestamp, activate. Main agent just validates, spawns consolidation, displays.
 
 ### Step 1: Validate Session Exists (CLI)
 
@@ -45,6 +45,7 @@ Spawn a subagent to prepare the session. This agent handles:
 - Updating session.md timestamp
 - Creating snapshot
 - Resetting state counters
+- Activating the session
 
 **Subagent configuration:**
 - subagent_type: "general-purpose"
@@ -70,13 +71,13 @@ Spawn a subagent to prepare the session. This agent handles:
 The subagent returns plain text (NOT JSON). Parse the response:
 
 - If starts with `SUCCESS`:
-  - Extract: Snapshot filename, Topics, Decisions, Tasks, Progress, Next, Blockers
-  - Topics/Decisions are pipe-separated: `Topic1 | Topic2 | Topic3`
-  - Proceed to Step 4
+  - Extract: Snapshot filename, Topics list, Decisions list, Tasks list, Current Status
+  - Topics/Decisions/Tasks are bullet lists (one per line starting with `- `)
+  - Proceed to Step 4 (display)
 
 - If starts with `SUCCESS (no log)`:
   - Git-only snapshot was created (no conversation log existed)
-  - Proceed to Step 4
+  - Proceed to Step 4 (display)
 
 - If starts with `FAILED`:
   - Log the error, proceed to Step 3 (fallback)
@@ -107,28 +108,9 @@ The subagent returns plain text (NOT JSON). Parse the response:
 - If no snapshot exists → Skip summary display (OK, fresh session)
 - If extraction fails → Show generic message "See snapshot for details"
 
-### Step 4: Activate Session (CLI)
+### Step 4: Display Summary
 
-Run the CLI command to activate the session:
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js activate {session_name}
-```
-
-This command handles everything in one call:
-- **Auto-closes previous session** if different (no manual check needed)
-- Sets the session as active (.active-session file + index.activeSession)
-- Updates status to "active" (.auto-capture-state + index.sessions[name].status)
-- Clears any closed timestamp if reopening a closed session
-
-If `previousSessionClosed: true` in response, optionally show:
-```
-📋 Closed previous session '{previousSession}'
-```
-
-### Step 5: Display Summary
-
-Show session goal plus snapshot summary with topics, decisions, tasks, and git info.
+Show session goal plus full snapshot summary with all topics, decisions, and tasks.
 
 **Display Format**:
 ```
@@ -136,18 +118,30 @@ Show session goal plus snapshot summary with topics, decisions, tasks, and git i
 
 📋 Latest: {snapshot_filename}
 
-Topics ({count}): {topic1} | {topic2} | {topic3} | ...
+Topics Discussed ({count}):
+- {topic1}
+- {topic2}
+- {topic3}
+[... all topics]
 
-Decisions ({count}): {decision1} | {decision2} | ...
+Decisions Made ({count}):
+- {decision1}
+- {decision2}
+[... all decisions]
 
-Tasks: {count} completed
+Tasks Completed ({count}):
+- {task1}
+- {task2}
+[... all tasks]
 
 Git: {X} commits captured
 
 Current Status:
 • Progress: {progress_text}
-• Next: {next_steps_text}
+• Next Steps: {next_steps_text}
 • Blockers: {blockers_text}
+
+💡 Read .claude/sessions/{session_name}/{snapshot_filename} for full details
 
 What's next?
 ```
@@ -158,18 +152,36 @@ What's next?
 
 📋 Latest: auto_2025-12-11_05-24.md
 
-Topics (5): Database Schema | API Endpoints | Permission Middleware | Testing | Deployment
+Topics Discussed (5):
+- Database Schema Design
+- API Endpoint Implementation
+- Permission Middleware
+- Testing Strategy
+- Deployment Planning
 
-Decisions (3): Use RBAC Model | Middleware Authorization | PostgreSQL Storage
+Decisions Made (3):
+- Use RBAC Model for Permission System
+- Implement Middleware-based Authorization
+- Store Permissions in PostgreSQL
 
-Tasks: 12 completed
+Tasks Completed (8):
+- Created users, roles, permissions tables
+- Implemented role assignment API
+- Built permission checking middleware
+- Added frontend permission components
+- Wrote unit tests for permission logic
+- Created integration tests
+- Documented API endpoints
+- Updated deployment guide
 
-Git: 8 commits captured
+Git: 10 commits captured
 
 Current Status:
 • Progress: All tasks completed (100%)
-• Next: Deploy to production and monitor
+• Next Steps: Deploy to production and monitor
 • Blockers: None
+
+💡 Read .claude/sessions/product-permission/auto_2025-12-11_05-24.md for full details
 
 What's next?
 ```
@@ -177,38 +189,33 @@ What's next?
 **Notes**:
 - If no snapshot exists, only show "✓ Session ready: {goal}" and "What's next?"
 - Fallback gracefully if extraction fails (show generic pointer text)
-- Git info comes from consolidation agent's response
+- Display ALL topics, decisions, and tasks as bullet lists (not condensed)
 
 ---
 
-**TOKEN OPTIMIZATION BENEFITS (v3.30.0):**
-- Previous (v3.7.0): ~22k tokens with 3 parallel subagents
-- Current (v3.30.0): ~4-5k tokens with single BLOCKING subagent
-- **Savings: 75-80% token reduction**
+**OPTIMIZATION (v3.31.0):**
 
-Key optimizations:
+Key design:
 1. **Goal from get response**: Use goal from Step 1, no separate Read
-2. **Single subagent handles all preparation**:
+2. **Single subagent handles ALL preparation**:
    - Consolidation (if log exists)
    - Git capture
    - Timestamp update
    - State reset
    - Snapshot creation
-3. **No conditional checks in main agent**: Subagent handles log existence internally
-4. **Plain text response**: Less verbose than JSON
-5. **Auto-close in activate**: CLI handles previous session close
-6. **Lazy-loaded prompts**: Subagent reads its own prompt file
+   - Session activation
+3. **Full bullet list response**: Topics, decisions, tasks returned as complete lists
+4. **Lazy-loaded prompts**: Subagent reads its own prompt file
 
 **Main agent tool calls (happy path):**
 1. `Bash` - get session (validate + goal)
-2. `Task` - spawn preparation subagent
-3. `Bash` - activate session
-4. Output - display summary
+2. `Task` - spawn preparation subagent (handles everything including activate)
+3. Output - display summary
 
-**Total: 3 tool calls** (down from 7+ in previous versions)
+**Total: 2 tool calls** (down from 3 in v3.30.0)
 
 **ERROR HANDLING:**
-- If preparation fails: Still activate session, fall back to reading snapshot
+- If preparation fails: Fall back to reading snapshot manually
 - If session.md missing: Show corrupted session warning
 - If CLI fails: Suggest rebuilding index with `/session:rebuild-index`
 

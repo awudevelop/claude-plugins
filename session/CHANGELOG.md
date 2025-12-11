@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.31.0] - 2025-12-11
+
+### Changed
+
+- **consolidate-log.md**: Enhanced response format for richer display
+  - Now returns full bullet lists for topics, decisions, and tasks
+  - Each item on its own line (not pipe-separated condensed format)
+  - Added session activation step (moved from main agent)
+  - Steps now numbered 1-10 (was 1-9)
+
+- **continue.md**: Display format restored to v3.29.0 richness
+  - Topics Discussed: Full bullet list with all items
+  - Decisions Made: Full bullet list with all items
+  - Tasks Completed: Full bullet list with descriptions (was just count)
+  - Added `💡 Read .claude/sessions/{name}/{snapshot}` hint
+  - Removed inline activate call (moved to subagent)
+
+### Performance
+
+- **Main agent tool calls reduced: 3 → 2**
+  1. `Bash` - get session (validate + goal)
+  2. `Task` - spawn preparation subagent (now includes activate)
+- Session activation moved into subagent (one less main-thread call)
+
+### Fixed
+
+- Display regression from v3.30.0 that showed condensed pipe-separated format
+- Tasks now show full descriptions instead of just count
+
+---
+
 ## [3.30.0] - 2025-12-11
 
 ### Changed
