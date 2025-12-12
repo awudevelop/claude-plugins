@@ -1,0 +1,23 @@
+{
+  "name": "authhub",
+  "version": "1.0.0",
+  "description": "Multi-tenant authentication system for Supabase projects. Complete schema, API templates, and interactive setup wizard for implementing auth, organization management, team invitations, and RBAC in Next.js applications.",
+  "author": {
+    "name": "AutomateWith.Us",
+    "email": "team@automatewith.us",
+    "url": "https://github.com/awudevelop"
+  },
+  "homepage": "https://github.com/awudevelop/claude-plugins",
+  "repository": "https://github.com/awudevelop/claude-plugins",
+  "license": "MIT",
+  "keywords": [
+    "authentication",
+    "multi-tenant",
+    "supabase",
+    "organization-management",
+    "rbac",
+    "team-invitations",
+    "next-js",
+    "saas"
+  ]
+}
