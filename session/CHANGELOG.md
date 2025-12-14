@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.32.0] - 2025-12-14
+
+### Added
+
+- **`--formatted` flag for pre-rendered CLI output** - Major token optimization
+  - `list.js`: Added `formatOutput()`, `relativeTime()`, `getBadges()` helpers
+  - `plan-ops.js`: Added `formatPlanList()`, `formatPlanStatus()`, `loadPlanMetadata()`
+  - `stats.js`: Added `formatStats()`, `calculateDuration()`, `formatShortDate()`
+  - `project-maps.js`: Added `formatProjectList()`, `projectRelativeTime()`
+
+### Changed
+
+- **list.md**: Simplified to use `--formatted` flag (~75% token reduction)
+- **plan-list.md**: Simplified to use `--formatted` flag (~90% token reduction)
+- **plan-status.md**: Simplified to use `--formatted` flag (~75-80% token reduction)
+- **status.md**: Simplified to use `--formatted` flag (~60-70% token reduction)
+- **project-maps-list.md**: Simplified to use `--formatted` flag (~65% token reduction)
+- `session-cli.js`: Updated plan-status handler to pass full args array
+
+### Performance
+
+- **Average ~75% token reduction** across display commands
+- CLI now handles all formatting, eliminating Claude's parsing overhead
+- Command prompts reduced from 50-150 lines to 30-50 lines each
+- All JSON outputs preserved for programmatic use
+
+---
+
 ## [3.31.0] - 2025-12-11
 
 ### Changed
