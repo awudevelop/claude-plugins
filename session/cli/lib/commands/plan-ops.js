@@ -520,11 +520,202 @@ async function deletePlan(planName) {
 }
 
 /**
- * Lists all global plans
- * @returns {Promise<Array<string>>} - Plan names
+ * Calculate relative time string for plans
+ * @param {string} dateStr - Date string (ISO format)
+ * @returns {string} Relative time (e.g., "2h ago", "3d ago")
  */
-async function listPlans() {
+function planRelativeTime(dateStr) {
+  if (!dateStr) return 'unknown';
+
+  const parsed = new Date(dateStr);
+  const now = Date.now();
+  const then = parsed.getTime();
+  if (isNaN(then)) return 'unknown';
+
+  const diffMs = now - then;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  const diffWeeks = Math.floor(diffDays / 7);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${diffWeeks}w ago`;
+  return `${Math.floor(diffDays / 30)} months ago`;
+}
+
+/**
+ * Format progress bar
+ * @param {number} percent - Percentage complete (0-100)
+ * @param {number} width - Bar width in characters
+ * @returns {string} Progress bar string
+ */
+function formatProgressBar(percent, width = 20) {
+  const filled = Math.round((percent / 100) * width);
+  const empty = width - filled;
+  return '[' + '█'.repeat(filled) + '░'.repeat(empty) + ']';
+}
+
+/**
+ * Load plan metadata for display
+ * @param {string} plansDir - Plans directory path
+ * @param {string} planName - Plan name
+ * @returns {Promise<Object>} Plan metadata
+ */
+async function loadPlanMetadata(plansDir, planName) {
+  const planDir = path.join(plansDir, planName);
+  const orchestrationPath = path.join(planDir, 'orchestration.json');
+  const requirementsPath = path.join(planDir, 'requirements.json');
+  const executionStatePath = path.join(planDir, 'execution-state.json');
+
+  let metadata = {
+    name: planName,
+    format: 'unknown',
+    goal: '',
+    workType: '',
+    created: null,
+    updated: null,
+    progress: null,
+    status: 'unknown'
+  };
+
+  // Try orchestration.json first (implementation format)
   try {
+    const content = await fs.readFile(orchestrationPath, 'utf-8');
+    const orch = JSON.parse(content);
+    metadata.format = 'implementation';
+    metadata.goal = orch.goal || orch.metadata?.goal || '';
+    metadata.workType = orch.work_type || orch.metadata?.workType || '';
+    metadata.created = orch.metadata?.created || orch.created_at;
+    metadata.updated = orch.metadata?.modified || orch.updated_at;
+    metadata.totalTasks = orch.progress?.totalTasks || 0;
+    metadata.totalPhases = orch.phases?.length || 0;
+
+    // Try to load execution state for accurate progress
+    try {
+      const stateContent = await fs.readFile(executionStatePath, 'utf-8');
+      const state = JSON.parse(stateContent);
+      metadata.progress = state.globalProgress || null;
+      metadata.status = state.globalProgress?.percentage === 100 ? 'completed' :
+                       state.globalProgress?.tasksCompleted > 0 ? 'in_progress' : 'pending';
+      metadata.updated = state.lastUpdate || metadata.updated;
+    } catch {
+      // No execution state, use orchestration data
+      metadata.progress = orch.progress ? {
+        percentage: 0,
+        tasksCompleted: 0,
+        tasksTotal: orch.progress.totalTasks
+      } : null;
+      metadata.status = 'pending';
+    }
+  } catch {
+    // Try requirements.json (conceptual format)
+    try {
+      const content = await fs.readFile(requirementsPath, 'utf-8');
+      const req = JSON.parse(content);
+      metadata.format = 'conceptual';
+      metadata.goal = req.goal || '';
+      metadata.workType = req.work_type || '';
+      metadata.created = req.created_at;
+      metadata.updated = req.updated_at || req.created_at;
+      metadata.requirementsCount = req.requirements?.length || 0;
+      metadata.status = 'draft';
+    } catch {
+      // Neither file found
+      return null;
+    }
+  }
+
+  return metadata;
+}
+
+/**
+ * Format plan list for display (pre-formatted markdown)
+ * @param {Array} plans - Array of plan metadata objects
+ * @returns {string} Formatted markdown output
+ */
+function formatPlanList(plans) {
+  if (plans.length === 0) {
+    return `📋 **No plans found**
+
+You haven't created any plans yet.
+
+**Get started:**
+1. Have a conversation about what you want to build
+2. Run \`/session:save-plan {name}\` to capture requirements
+3. Run \`/session:plan-finalize {name}\` to create executable tasks
+4. Run \`/session:plan-execute {name}\` to start implementation
+
+💡 Plans are global and accessible from any session.`;
+  }
+
+  const conceptual = plans.filter(p => p.format === 'conceptual');
+  const implementation = plans.filter(p => p.format === 'implementation');
+
+  let out = `📋 **Global Plans (${plans.length} total)**\n\n`;
+
+  // Conceptual plans
+  if (conceptual.length > 0) {
+    out += `**Conceptual Plans** (Requirements Only):\n`;
+    conceptual.forEach((p, i) => {
+      const goal = p.goal.length > 60 ? p.goal.substring(0, 57) + '...' : p.goal;
+      out += `\n  ${i + 1}. **${p.name}** 📝\n`;
+      out += `     ├─ Goal: ${goal}\n`;
+      out += `     ├─ Requirements: ${p.requirementsCount || 0}\n`;
+      out += `     ├─ Created: ${planRelativeTime(p.created)}\n`;
+      out += `     └─ Next: \`/session:plan-finalize ${p.name}\`\n`;
+    });
+    out += '\n';
+  }
+
+  // Implementation plans
+  if (implementation.length > 0) {
+    out += `**Implementation Plans** (Executable):\n`;
+    implementation.forEach((p, i) => {
+      const goal = p.goal.length > 60 ? p.goal.substring(0, 57) + '...' : p.goal;
+      const idx = conceptual.length + i + 1;
+      const typeLabel = p.workType ? ` (${p.workType})` : '';
+
+      // Status badge
+      let statusBadge = '';
+      if (p.status === 'completed') statusBadge = ' ✅';
+      else if (p.status === 'in_progress') statusBadge = ' 🔄';
+      else statusBadge = ' ○';
+
+      out += `\n  ${idx}. **${p.name}**${typeLabel}${statusBadge}\n`;
+      out += `     ├─ Goal: ${goal}\n`;
+
+      if (p.progress) {
+        const pct = p.progress.percentage || 0;
+        const completed = p.progress.tasksCompleted || 0;
+        const total = p.progress.tasksTotal || p.totalTasks || 0;
+        out += `     ├─ Progress: ${formatProgressBar(pct)} ${pct}% (${completed}/${total} tasks)\n`;
+      } else {
+        out += `     ├─ Tasks: ${p.totalTasks || 0} | Phases: ${p.totalPhases || 0}\n`;
+      }
+
+      out += `     └─ Updated: ${planRelativeTime(p.updated)}\n`;
+    });
+    out += '\n';
+  }
+
+  out += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  out += `💡 \`/session:plan-status {name}\` - Show detailed status\n`;
+  out += `💡 \`/session:plan-execute {name}\` - Start/continue execution`;
+
+  return out;
+}
+
+/**
+ * Lists all global plans
+ * @param {Array} args - Command arguments (supports --formatted)
+ * @returns {Promise<Object>} - Plan list result
+ */
+async function listPlans(args = []) {
+  try {
+    const formatted = args.includes && args.includes('--formatted');
     const plansDir = getPlansDirectory();
 
     // Check if plans directory exists
@@ -532,6 +723,9 @@ async function listPlans() {
       await fs.access(plansDir);
     } catch {
       // No plans directory yet
+      if (formatted) {
+        return { formatted: formatPlanList([]) };
+      }
       return {
         success: true,
         data: {
@@ -546,32 +740,36 @@ async function listPlans() {
     const entries = await fs.readdir(plansDir, { withFileTypes: true });
     const planDirs = entries.filter(entry => entry.isDirectory());
 
-    // Validate each directory has orchestration.json OR requirements.json
-    const planNames = [];
+    // Load metadata for each plan
+    const planMetadata = [];
     for (const dir of planDirs) {
-      const orchestrationPath = path.join(plansDir, dir.name, 'orchestration.json');
-      const requirementsPath = path.join(plansDir, dir.name, 'requirements.json');
-      try {
-        await fs.access(orchestrationPath);
-        planNames.push(dir.name);
-      } catch {
-        // Try requirements.json (conceptual format)
-        try {
-          await fs.access(requirementsPath);
-          planNames.push(dir.name);
-        } catch {
-          // Skip directories without either file
-        }
+      const metadata = await loadPlanMetadata(plansDir, dir.name);
+      if (metadata) {
+        planMetadata.push(metadata);
       }
     }
 
+    // Sort by last updated (most recent first)
+    planMetadata.sort((a, b) => {
+      const dateA = new Date(a.updated || 0);
+      const dateB = new Date(b.updated || 0);
+      return dateB - dateA;
+    });
+
+    // Return pre-formatted output if requested
+    if (formatted) {
+      return { formatted: formatPlanList(planMetadata) };
+    }
+
+    // Return JSON for programmatic use
     return {
       success: true,
       data: {
-        plans: planNames,
-        count: planNames.length
+        plans: planMetadata.map(p => p.name),
+        count: planMetadata.length,
+        metadata: planMetadata  // Include full metadata
       },
-      message: `Found ${planNames.length} plan(s)`
+      message: `Found ${planMetadata.length} plan(s)`
     };
 
   } catch (error) {
@@ -718,14 +916,92 @@ async function finalizePlan(planName) {
 }
 
 /**
+ * Format plan status for display (pre-formatted markdown)
+ * @param {Object} data - Plan status data
+ * @returns {string} Formatted markdown output
+ */
+function formatPlanStatus(data) {
+  const d = data;
+  const goal = d.goal?.length > 80 ? d.goal.substring(0, 77) + '...' : (d.goal || 'No goal set');
+
+  // Status badge
+  let statusBadge = '';
+  switch (d.status) {
+    case 'completed': statusBadge = '✅ COMPLETED'; break;
+    case 'in_progress': statusBadge = '🔄 IN PROGRESS'; break;
+    case 'failed': statusBadge = '❌ FAILED'; break;
+    default: statusBadge = '○ PENDING';
+  }
+
+  let out = `📋 **Plan: ${d.plan_name}**\n\n`;
+  out += `**Goal:** ${goal}\n`;
+  out += `**Status:** ${statusBadge}\n`;
+  if (d.work_type) out += `**Type:** ${d.work_type}\n`;
+  out += '\n';
+
+  // Progress section
+  const prog = d.progress;
+  const pct = prog.percent_complete || 0;
+  out += `**Progress:** ${formatProgressBar(pct)} ${pct}% (${prog.completed}/${prog.total_tasks} tasks)\n`;
+  out += `├─ Completed: ${prog.completed}\n`;
+  out += `├─ In Progress: ${prog.in_progress}\n`;
+  out += `├─ Pending: ${prog.pending}\n`;
+  if (prog.blocked > 0) out += `├─ Blocked: ${prog.blocked} ⚠️\n`;
+  if (prog.skipped > 0) out += `├─ Skipped: ${prog.skipped}\n`;
+  out += '\n';
+
+  // Phases section
+  const phases = d.phases;
+  out += `**Phases:** ${phases.completed}/${phases.total} completed\n`;
+  if (phases.in_progress > 0) out += `├─ In Progress: ${phases.in_progress}\n`;
+  if (phases.skipped > 0) out += `├─ Skipped: ${phases.skipped}\n`;
+  out += '\n';
+
+  // Current task
+  if (d.current_task) {
+    out += `**Current Task:** ${d.current_task.task_id}\n`;
+    out += `└─ ${d.current_task.description}\n\n`;
+  } else if (d.current_phase) {
+    out += `**Current Phase:** ${d.current_phase}\n\n`;
+  }
+
+  // Timestamps
+  out += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  if (d.created_at) out += `Created: ${planRelativeTime(d.created_at)}\n`;
+  if (d.updated_at) out += `Updated: ${planRelativeTime(d.updated_at)}\n`;
+  if (d.completed_at) out += `Completed: ${planRelativeTime(d.completed_at)}\n`;
+
+  out += '\n';
+  out += `💡 \`/session:plan-execute ${d.plan_name}\` - Continue execution\n`;
+  out += `💡 \`/session:plan-list\` - View all plans`;
+
+  return out;
+}
+
+/**
  * Gets plan execution status
  * Uses progress-service (execution-state.json) as source of truth
  * Properly handles skipped phases/tasks in progress reporting
- * @param {string} planName - Plan name
+ * @param {Array|string} args - Command args or plan name for backwards compatibility
  * @returns {Promise<StatusResult>}
  */
-async function getPlanStatus(planName) {
+async function getPlanStatus(args) {
   try {
+    // Handle both array args and direct planName for backwards compatibility
+    let planName;
+    let formatted = false;
+
+    if (Array.isArray(args)) {
+      planName = args.find(arg => !arg.startsWith('--'));
+      formatted = args.includes('--formatted');
+    } else {
+      planName = args;
+    }
+
+    if (!planName) {
+      throw { code: 'INVALID_ARGUMENTS', message: 'Plan name required' };
+    }
+
     // Use progress service to get accurate status from execution-state.json
     const progress = await progressService.getProgress(planName);
 
@@ -735,46 +1011,53 @@ async function getPlanStatus(planName) {
       throw { code: 'PLAN_NOT_FOUND' };
     }
 
+    const statusData = {
+      plan_name: planName,
+      status: progress.status,
+      work_type: progress.workType || plan.work_type,
+      goal: progress.goal || plan.goal,
+      created_at: plan.created_at || plan.metadata?.created,
+      updated_at: progress.lastUpdated || plan.updated_at || plan.metadata?.modified,
+      progress: {
+        total_tasks: progress.totalTasks,
+        completed: progress.completedTasks,
+        in_progress: progress.inProgressTasks,
+        pending: progress.pendingTasks,
+        blocked: progress.blockedTasks,
+        skipped: progress.skippedTasks,
+        percent_complete: progress.percentComplete,
+        actual_work_percent: progress.actualWorkPercent
+      },
+      phases: {
+        total: progress.totalPhases,
+        completed: progress.completedPhases,
+        skipped: progress.skippedPhases,
+        in_progress: progress.inProgressPhases
+      },
+      current_phase: progress.currentPhase?.name || progress.currentTask?.phase_id || null,
+      current_task: progress.currentTask ? {
+        task_id: progress.currentTask.task_id,
+        description: progress.currentTask.description,
+        status: progress.currentTask.status
+      } : null,
+      completed_at: progress.completedAt || null,
+      skip_reason: progress.skipReason || null,
+      summary: progress.summary || null
+    };
+
+    // Return pre-formatted output if requested
+    if (formatted) {
+      return { formatted: formatPlanStatus(statusData) };
+    }
+
     return {
       success: true,
-      data: {
-        plan_name: planName,
-        status: progress.status,  // NEW: Include plan status (pending/in_progress/completed/failed)
-        work_type: progress.workType || plan.work_type,
-        goal: progress.goal || plan.goal,
-        created_at: plan.created_at || plan.metadata?.created,
-        updated_at: progress.lastUpdated || plan.updated_at || plan.metadata?.modified,
-        progress: {
-          total_tasks: progress.totalTasks,
-          completed: progress.completedTasks,
-          in_progress: progress.inProgressTasks,
-          pending: progress.pendingTasks,
-          blocked: progress.blockedTasks,
-          skipped: progress.skippedTasks,  // NEW: Include skipped tasks
-          percent_complete: progress.percentComplete,  // Effective progress (completed + skipped)
-          actual_work_percent: progress.actualWorkPercent  // NEW: Actual work done
-        },
-        phases: {
-          total: progress.totalPhases,
-          completed: progress.completedPhases,
-          skipped: progress.skippedPhases,  // NEW: Include skipped phases
-          in_progress: progress.inProgressPhases
-        },
-        current_phase: progress.currentPhase?.name || progress.currentTask?.phase_id || null,
-        current_task: progress.currentTask ? {
-          task_id: progress.currentTask.task_id,
-          description: progress.currentTask.description,
-          status: progress.currentTask.status
-        } : null,
-        // NEW: Include completion metadata
-        completed_at: progress.completedAt || null,
-        skip_reason: progress.skipReason || null,
-        summary: progress.summary || null
-      },
+      data: statusData,
       message: 'Plan status retrieved successfully'
     };
 
   } catch (error) {
+    const planName = Array.isArray(args) ? args.find(a => !a.startsWith('--')) : args;
     return handleCliError(error, { plan: planName });
   }
 }

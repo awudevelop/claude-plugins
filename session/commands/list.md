@@ -1,129 +1,38 @@
 You are managing a session memory system. The user wants to see all available sessions.
 
-## Task: List All Sessions (Enhanced with Interactive Selection)
+## Task: List All Sessions (Interactive Selection)
 
-Display all sessions with enhanced metadata in a clean, organized format. Optionally enable interactive selection mode.
-
-**OPTIMIZATION:** This command uses the lightweight CLI tool for instant metadata retrieval (< 10ms, < 200 tokens).
+**OPTIMIZATION:** Uses pre-formatted CLI output (~75% token reduction).
 
 ---
 
 ## Step 1: Detect Mode
 
 Check if user provided arguments:
-- If user provided a **number** (e.g., `/session:list 2`) → Jump to **Step 5: Handle Selection**
-- If user typed `/session:list` with no args → Continue to Step 2 (display mode)
+- If user provided a **number** (e.g., `/session:list 2`) → Jump to **Step 3: Handle Selection**
+- If user typed `/session:list` with no args → Continue to Step 2
 
 ---
 
-## Step 2: Get Session List from CLI
+## Step 2: Display Sessions (Pre-formatted)
 
-Run the CLI command to get all session metadata:
+Run the CLI command with `--formatted` flag for pre-rendered output:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js list
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js list --formatted
 ```
 
-This returns JSON with all session data from the index (no file reading needed).
+**Output the result directly** - no parsing or formatting needed. The CLI returns ready-to-display markdown with badges, relative times, and session details.
+
+Then **STOP and wait for user input**. Do not prompt further.
 
 ---
 
-## Step 3: Handle Empty Sessions
-
-If the JSON shows `totalSessions: 0`, display:
-```
-No sessions found.
-
-💡 Create your first session with:
-   /session:list [name]
-
-Example:
-   /session:start my-feature
-```
-Then STOP.
-
----
-
-## Step 4: Format and Display Sessions (Enhanced)
-
-Parse the JSON response and format with **enhanced visual design**:
-
-### Calculate Stats:
-- Count active vs closed sessions
-- Calculate relative times (use helper function below)
-- Determine activity status for badges
-
-### Display Format:
-
-```
-Available Sessions ({activeCount} active, {closedCount} closed):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-{for each session in sessions array:}
-
-{number}. {name} {badges}
-   📅 {relativeTime} (started {relativeStartTime})  📸 {snapshotCount} snapshots  📁 {filesInvolvedCount} files
-   🎯 {goal}
-   {if latestSnapshotSummary exists: show "💬 Last: \"{latestSnapshotSummary}\""}
-
-{Add TWO blank lines between sessions for clear visual separation}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 Select a session: /session:list [number]
-💡 Create new: /session:start [name]
-```
-
-### Badges Logic:
-- If `session.name === activeSession`: Show `[ACTIVE] 🔥`
-- If `status === "closed"`: Show `✅ CLOSED`
-- If last update > 7 days and not closed: Show `🧊 COLD`
-- If last update < 1 hour: Show `🔥 HOT`
-
-### Relative Time Helper:
-
-Calculate relative time for display:
-- < 1 minute: "just now"
-- < 60 minutes: "{n}m ago"
-- < 24 hours: "{n}h ago"
-- < 7 days: "{n}d ago"
-- < 30 days: "{n}w ago"
-- >= 30 days: "{n} months ago"
-
-### Example Output:
-
-```
-Available Sessions (2 active, 1 closed):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. feature-auth-system [ACTIVE] 🔥 HOT
-   📅 2h ago (started 3d ago)  📸 5 snapshots  📁 12 files
-   🎯 Implement OAuth2 authentication system
-   💬 Last: "Completed login flow, testing redirect logic"
-
-
-2. bugfix-login-issue ✅ CLOSED
-   📅 1d ago (started 2d ago)  📸 3 snapshots  📁 4 files
-   🎯 Fix session timeout bug in login flow
-
-
-3. refactor-api-layer 🧊 COLD
-   📅 14d ago (started 15d ago)  📸 8 snapshots  📁 23 files
-   🎯 Refactor REST API to GraphQL architecture
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 Select a session: /session:list [number]
-💡 Create new: /session:start [name]
-```
-
-After displaying, **STOP and wait for user input**. Do not prompt further.
-
----
-
-## Step 5: Handle Selection (Interactive Mode)
+## Step 3: Handle Selection (Interactive Mode)
 
 If user provided a number (e.g., `/session:list 2`), this is interactive selection mode.
 
-### 5.1: Validate Selection
+### 3.1: Validate Selection
 
 1. Get session list again (same CLI command)
 2. Check if number is valid (1 to totalSessions)
@@ -132,7 +41,7 @@ If user provided a number (e.g., `/session:list 2`), this is interactive selecti
    ❌ Invalid selection. Please choose 1-{totalSessions}.
    ```
 
-### 5.2: Show Session Details
+### 3.2: Show Session Details
 
 Display the selected session with full details:
 
@@ -156,7 +65,7 @@ Selected Session: {name}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### 5.3: Use AskUserQuestion Tool
+### 3.3: Use AskUserQuestion Tool
 
 Present action options using the AskUserQuestion tool:
 
@@ -198,7 +107,7 @@ Present action options using the AskUserQuestion tool:
 }
 ```
 
-### 5.4: Execute Selected Action
+### 3.4: Execute Selected Action
 
 Based on user's choice, execute the appropriate command:
 
@@ -225,7 +134,7 @@ If CLI command fails, show:
 
 ## Performance Benefits
 
-- **Display Mode:** < 200 tokens, < 50ms
+- **Display Mode:** ~100 tokens (pre-formatted), < 50ms
 - **Selection Mode:** ~300-500 tokens total
+- **~75% token reduction** from pre-formatted output
 - **No file reads** for list display (index only)
-- **95-98% token reduction** vs old approach

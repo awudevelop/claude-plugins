@@ -2,71 +2,33 @@
 
 List all projects with generated context maps.
 
+**OPTIMIZATION:** Uses pre-formatted CLI output (~60% token reduction).
+
 ## Usage
 
 ```
-/project-maps-list
+/session:project-maps-list
 ```
 
 ## Implementation
 
-### Step 1: Run List Command
+### Step 1: Get Pre-formatted List
 
-Execute the unified CLI:
+Run the CLI with `--formatted` flag:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js project-maps list
+node ${CLAUDE_PLUGIN_ROOT}/cli/session-cli.js project-maps list --formatted
 ```
 
-### Step 2: Parse and Display Results
+**Output the result directly** - no parsing or formatting needed. The CLI returns ready-to-display markdown with:
+- Project names and paths
+- File counts
+- Generation timestamps (relative time)
+- Staleness indicators
+- Stale project warnings
 
-The response includes:
-- `count`: Total number of projects
-- `projects`: Array of project info
-
-For each project show:
-- Project name
-- Project path
-- Hash
-- File count
-- Last generated timestamp
-- Staleness status
-
-### Step 3: Format Output
-
-```
-Project Maps
-
-Found {count} projects with generated maps:
-
-1. {name}
-   Path: {path}
-   Hash: {hash}
-   Files: {files}
-   Generated: {timestamp}
-   Staleness: {score}/100
-
-2. {name}
-   ...
-
-Total storage: Calculate from all projects
-```
-
-### Step 4: Highlight Stale Projects
-
-If any projects have high staleness scores (>60):
-```
-Projects needing refresh:
-  {name} - Staleness: {score}/100
-```
+Then STOP.
 
 ## Error Handling
 
-If no maps directory exists:
-```
-No project maps found
-Storage location: ~/.claude/project-maps/
-
-Generate maps for current project:
-  /project-maps-generate
-```
+If no maps directory exists, CLI returns formatted empty state message.

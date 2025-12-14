@@ -101,8 +101,7 @@ const commands = {
   },
   'plan-status': async (args) => {
     const planOps = require('./lib/commands/plan-ops');
-    const [planName] = args;
-    return await planOps.getPlanStatus(planName);
+    return await planOps.getPlanStatus(args);
   },
   'export-plan': async (args) => {
     const planOps = require('./lib/commands/plan-ops');

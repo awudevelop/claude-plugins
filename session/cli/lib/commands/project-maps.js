@@ -54,6 +54,8 @@ function parseArgs(args) {
       result.options.annotate = true;
     } else if (arg === '--verbose') {
       result.options.verbose = true;
+    } else if (arg === '--formatted') {
+      result.options.formatted = true;
     } else if (arg === '--path' && args[i + 1]) {
       result.projectPath = path.resolve(args[i + 1]);
       i++;
@@ -209,10 +211,73 @@ async function refreshCommand(projectPath, options) {
 }
 
 /**
+ * Format relative time for project maps
+ */
+function projectRelativeTime(dateStr) {
+  if (!dateStr || dateStr === 'Unknown') return 'unknown';
+
+  const parsed = new Date(dateStr);
+  const now = Date.now();
+  const then = parsed.getTime();
+  if (isNaN(then)) return 'unknown';
+
+  const diffMs = now - then;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return `${Math.floor(diffDays / 7)}w ago`;
+}
+
+/**
+ * Format project list for display
+ */
+function formatProjectList(projects) {
+  if (projects.length === 0) {
+    return `📁 **No project maps found**
+
+No projects have been mapped yet.
+
+**Get started:**
+\`/session:project-maps-generate\` - Generate maps for current project`;
+  }
+
+  let out = `📁 **Project Maps (${projects.length} projects)**\n\n`;
+
+  projects.forEach((p, i) => {
+    const staleBadge = p.staleness?.score > 60 ? ' 🔄 STALE' : '';
+    const name = p.name || path.basename(p.path) || 'Unknown';
+
+    out += `**${i + 1}. ${name}**${staleBadge}\n`;
+    out += `   📂 ${p.path}\n`;
+    out += `   📊 ${p.files} files | Generated: ${projectRelativeTime(p.generated)}\n`;
+    if (p.staleness?.score > 0) {
+      out += `   ⚡ Staleness: ${p.staleness.score}/100\n`;
+    }
+    out += '\n';
+  });
+
+  // Show stale projects warning
+  const staleProjects = projects.filter(p => p.staleness?.score > 60);
+  if (staleProjects.length > 0) {
+    out += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    out += `⚠️ **${staleProjects.length} project(s) need refresh**\n`;
+    out += `💡 \`/session:project-maps-refresh --full\` to update\n`;
+  }
+
+  return out;
+}
+
+/**
  * List all projects with maps
  */
 async function listCommand(options) {
   const mapsBaseDir = path.join(process.env.HOME, '.claude/project-maps');
+  const formatted = options.formatted;
 
   try {
     const entries = await fs.readdir(mapsBaseDir, { withFileTypes: true });
@@ -248,12 +313,20 @@ async function listCommand(options) {
       }
     }
 
+    // Return pre-formatted output if requested
+    if (formatted) {
+      return { formatted: formatProjectList(projects) };
+    }
+
     return {
       success: true,
       count: projects.length,
       projects
     };
   } catch (error) {
+    if (formatted) {
+      return { formatted: formatProjectList([]) };
+    }
     return {
       success: false,
       error: error.message
