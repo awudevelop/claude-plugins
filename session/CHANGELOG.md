@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.33.0] - 2025-12-15
+
+### Added
+
+- **`close` CLI command** - New command to properly close sessions
+  - `session-cli.js close [--name <name>] [--formatted]`
+  - Updates `.auto-capture-state` (session_status: "closed", session_closed: timestamp)
+  - Updates `session.md` Status field to "Closed" with timestamp
+  - Updates index (clears `activeSession`, sets session status to "closed")
+  - **Deletes `.active-session` file** - The critical missing piece that was breaking close
+  - Returns formatted stats for display
+
+### Fixed
+
+- **Session close functionality** - Previously broken because Claude cannot delete files
+  - Root cause: `close.md` template required Claude to delete `.active-session` file
+  - Solution: New CLI command handles all state updates and file deletion atomically
+  - Added graceful error handling for all edge cases:
+    - No active session
+    - Name mismatch validation
+    - Orphaned `.active-session` (points to non-existent session)
+    - Missing `session.md`
+    - Corrupted `.auto-capture-state`
+    - Empty `.active-session` file
+
+### Changed
+
+- **close.md**: Simplified from 188 lines (9 manual steps) to 75 lines (1 CLI call)
+  - Before: Claude had to manually read/write files and attempt to delete `.active-session`
+  - After: Single CLI call handles everything
+  - Tool calls reduced from 9+ to 1
+
+### Performance
+
+- **~90% reduction** in close command complexity
+- All state updates now atomic and reliable
+- Automatic cleanup of corrupted/orphaned session markers
+
+---
+
 ## [3.32.0] - 2025-12-14
 
 ### Added

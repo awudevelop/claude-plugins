@@ -13,6 +13,7 @@
  *   list                    List all sessions
  *   get <name>              Get session details
  *   activate <name>         Activate a session
+ *   close                   Close the currently active session
  *   delete <name>           Delete a session permanently
  *   update-index            Update metadata index
  *   update-status <name> <status>  Update session status (active/closed)
@@ -65,6 +66,7 @@ const commands = {
   'update-state': require('./lib/commands/update-state'),
   'setup-hooks': require('./lib/commands/setup-hooks'),
   'capture-git': require('./lib/commands/capture-git'),
+  close: require('./lib/commands/close'),
   // Plan operations
   'create-plan': require('./lib/commands/plan-ops').createPlan,
   'get-plan': async (args) => {
@@ -258,6 +260,11 @@ Commands:
 
   activate <session-name>
       Set a session as active
+
+  close [--name <name>] [--formatted]
+      Close the currently active session
+      --name: Validate active session matches this name (safety check)
+      --formatted: Output pre-rendered for display
 
   delete <session-name>
       Delete a session permanently (cannot be undone)
