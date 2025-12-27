@@ -8,27 +8,115 @@ const path = require('path');
  * 2. Key abbreviation (>5KB) - 30-40% additional reduction
  * 3. Value deduplication (>20KB) - 40-50% additional reduction
  * Target: 60-80% total size reduction
+ *
+ * Schema loading priority:
+ * 1. Project-local: {projectRoot}/.claude/project-maps/.compression-schema.json
+ * 2. Legacy global: ~/.claude/project-maps/schemas/.compression-schema.json
+ * 3. Embedded default schema
  */
+
+// Default embedded schema for key mappings
+const DEFAULT_SCHEMA = {
+  version: '1.0',
+  keyMappings: {
+    mappings: {
+      'p': 'path',
+      't': 'type',
+      'r': 'role',
+      'l': 'language',
+      's': 'size',
+      'ln': 'lines',
+      'e': 'exports',
+      'i': 'imports',
+      'd': 'dependencies',
+      'f': 'files',
+      'n': 'name',
+      'v': 'value',
+      'c': 'count',
+      'm': 'module',
+      'fn': 'functions',
+      'cl': 'classes',
+      'ex': 'extensions',
+      'mt': 'mtime',
+      'desc': 'description',
+      'sym': 'symbols',
+      'loc': 'location',
+      'ref': 'references',
+      'dep': 'dependsOn',
+      'rev': 'reverseDeps'
+    }
+  },
+  valueReferences: {
+    enabled: true
+  }
+};
 
 class CompressionUtility {
   constructor() {
-    this.schemaPath = path.join(process.env.HOME, '.claude/project-maps/schemas/.compression-schema.json');
+    // Legacy global schema path (for backward compatibility)
+    this.legacySchemaPath = path.join(process.env.HOME, '.claude/project-maps/schemas/.compression-schema.json');
     this.schema = null;
+    this.currentProjectRoot = null;
   }
 
   /**
-   * Load compression schema
+   * Get project-local schema path
+   * @param {string} projectRoot - Project root path
+   * @returns {string} Path to project-local schema
    */
-  async loadSchema() {
-    if (this.schema) return this.schema;
+  getProjectSchemaPath(projectRoot) {
+    return path.join(projectRoot, '.claude', 'project-maps', '.compression-schema.json');
+  }
 
-    try {
-      const schemaContent = await fs.readFile(this.schemaPath, 'utf8');
-      this.schema = JSON.parse(schemaContent);
+  /**
+   * Load compression schema with fallback chain
+   * @param {string} projectRoot - Optional project root for project-local schema
+   */
+  async loadSchema(projectRoot = null) {
+    // If schema is already loaded for this project, return it
+    if (this.schema && this.currentProjectRoot === projectRoot) {
       return this.schema;
-    } catch (error) {
-      throw new Error(`Failed to load compression schema: ${error.message}`);
     }
+
+    // Try loading from project-local first
+    if (projectRoot) {
+      try {
+        const projectSchemaPath = this.getProjectSchemaPath(projectRoot);
+        const schemaContent = await fs.readFile(projectSchemaPath, 'utf8');
+        this.schema = JSON.parse(schemaContent);
+        this.currentProjectRoot = projectRoot;
+        return this.schema;
+      } catch {
+        // Project-local schema not found, continue to fallbacks
+      }
+    }
+
+    // Try loading from legacy global path
+    try {
+      const schemaContent = await fs.readFile(this.legacySchemaPath, 'utf8');
+      this.schema = JSON.parse(schemaContent);
+      this.currentProjectRoot = projectRoot;
+      return this.schema;
+    } catch {
+      // Legacy schema not found, use embedded default
+    }
+
+    // Use embedded default schema
+    this.schema = DEFAULT_SCHEMA;
+    this.currentProjectRoot = projectRoot;
+    return this.schema;
+  }
+
+  /**
+   * Save schema to project-local path
+   * @param {string} projectRoot - Project root path
+   */
+  async saveSchemaToProject(projectRoot) {
+    const projectSchemaPath = this.getProjectSchemaPath(projectRoot);
+    const schemaDir = path.dirname(projectSchemaPath);
+
+    await fs.mkdir(schemaDir, { recursive: true });
+    await fs.writeFile(projectSchemaPath, JSON.stringify(this.schema || DEFAULT_SCHEMA, null, 2), 'utf8');
   }
 
   /**

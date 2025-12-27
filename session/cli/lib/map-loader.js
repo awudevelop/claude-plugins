@@ -3,18 +3,27 @@ const path = require('path');
 const crypto = require('crypto');
 const compression = require('./compression');
 const StalenessChecker = require('./staleness-checker');
+const { MapPaths } = require('./map-paths');
 
 /**
  * Map Loader
  * Loads project context maps with automatic staleness checking
  * Shows warnings when maps are outdated
+ *
+ * Supports backward-compatible path resolution:
+ * - Primary: Project-local at {projectRoot}/.claude/project-maps/
+ * - Fallback: Legacy global at ~/.claude/project-maps/{hash}/
  */
 
 class MapLoader {
   constructor(projectRoot, options = {}) {
     this.projectRoot = projectRoot;
-    this.projectHash = this.generateProjectHash(projectRoot);
-    this.mapsDir = path.join(process.env.HOME, '.claude/project-maps', this.projectHash);
+    // Use centralized path resolver with backward compatibility
+    this.mapPaths = new MapPaths(projectRoot, {
+      preferLegacy: options.preferLegacy || false
+    });
+    this.projectHash = this.mapPaths.getProjectHash();
+    this.mapsDir = this.mapPaths.getMapsDir();
 
     // Staleness thresholds
     this.options = {
@@ -25,14 +34,38 @@ class MapLoader {
     };
 
     this.stalenessResult = null;
+
+    // Show migration warning if using legacy path
+    if (this.mapPaths.isUsingLegacy() && options.verbose) {
+      const migration = this.mapPaths.getMigrationInfo();
+      console.warn('\n⚠️  Using legacy global storage');
+      console.warn(`   ${migration.recommendation}\n`);
+    }
   }
 
   /**
-   * Generate project hash
+   * Generate project hash (kept for backward compatibility)
+   * @deprecated Use MapPaths.getProjectHash() instead
    */
   generateProjectHash(projectPath) {
     const normalized = path.resolve(projectPath);
     return crypto.createHash('md5').update(normalized).digest('hex').substring(0, 16);
+  }
+
+  /**
+   * Check if using legacy global path
+   * @returns {boolean}
+   */
+  isUsingLegacy() {
+    return this.mapPaths.isUsingLegacy();
+  }
+
+  /**
+   * Get migration info if using legacy path
+   * @returns {Object|null}
+   */
+  getMigrationInfo() {
+    return this.mapPaths.getMigrationInfo();
   }
 
   /**

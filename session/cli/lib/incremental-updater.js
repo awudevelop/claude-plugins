@@ -4,18 +4,23 @@ const path = require('path');
 const FileScanner = require('./scanner');
 const DependencyParser = require('./parser');
 const compression = require('./compression');
+const { MapPaths } = require('./map-paths');
 
 /**
  * Incremental Updater
  * Updates project maps incrementally by scanning only changed files
  * Much faster than full rescan (target: <20% of full scan time)
+ *
+ * Storage: Uses centralized MapPaths for project-local or legacy paths
  */
 
 class IncrementalUpdater {
   constructor(projectRoot, projectHash) {
     this.projectRoot = projectRoot;
     this.projectHash = projectHash;
-    this.mapsDir = path.join(process.env.HOME, '.claude/project-maps', projectHash);
+    // Use centralized path resolver
+    this.mapPaths = new MapPaths(projectRoot);
+    this.mapsDir = this.mapPaths.getMapsDir();
     this.scanner = new FileScanner(projectRoot);
     this.parser = new DependencyParser(projectRoot);
   }

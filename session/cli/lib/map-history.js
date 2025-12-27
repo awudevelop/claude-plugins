@@ -2,19 +2,24 @@ const fs = require('fs').promises;
 const path = require('path');
 const compression = require('./compression');
 const MapDiffer = require('./map-differ');
+const { MapPaths } = require('./map-paths');
 
 /**
  * Map History Manager
  * Tracks and manages multiple map snapshot versions for cross-generation comparison
  * Enables historical analysis and trend tracking of project maps over time
+ *
+ * Storage: Uses centralized MapPaths for project-local or legacy paths
  */
 
 class MapHistory {
   constructor(projectRoot, projectHash) {
     this.projectRoot = projectRoot;
     this.projectHash = projectHash;
-    this.mapsDir = path.join(process.env.HOME, '.claude/project-maps', this.projectHash);
-    this.historyDir = path.join(this.mapsDir, '.history');
+    // Use centralized path resolver
+    this.mapPaths = new MapPaths(projectRoot);
+    this.mapsDir = this.mapPaths.getMapsDir();
+    this.historyDir = this.mapPaths.getHistoryDir();
   }
 
   /**

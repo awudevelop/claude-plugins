@@ -20,6 +20,7 @@ const compression = require('../compression');
 const IntentRouter = require('../intent-router');
 const { SearchAPI } = require('../search-api');
 const { OutputFormatter, formatForClaude } = require('../output-formatter');
+const { MapPaths, getLegacyBaseDir } = require('../map-paths');
 
 /**
  * Parse command arguments
@@ -56,6 +57,8 @@ function parseArgs(args) {
       result.options.verbose = true;
     } else if (arg === '--formatted') {
       result.options.formatted = true;
+    } else if (arg === '--delete-old') {
+      result.options.deleteOld = true;
     } else if (arg === '--path' && args[i + 1]) {
       result.projectPath = path.resolve(args[i + 1]);
       i++;
@@ -274,43 +277,79 @@ No projects have been mapped yet.
 
 /**
  * List all projects with maps
+ * Scans both project-local (.claude/project-maps/) and legacy global (~/.claude/project-maps/)
  */
 async function listCommand(options) {
-  const mapsBaseDir = path.join(process.env.HOME, '.claude/project-maps');
+  const legacyBaseDir = getLegacyBaseDir();
   const formatted = options.formatted;
+  const projects = [];
+  const seenPaths = new Set(); // Avoid duplicates
+
+  // Helper to load project info from a summary file
+  async function loadProjectInfo(summaryPath, source, hash = null) {
+    try {
+      const summary = await compression.loadAndDecompress(summaryPath);
+      const projectPath = summary.projectPath || summary.project?.path || 'Unknown';
+
+      // Skip if we've already seen this project path
+      if (seenPaths.has(projectPath)) return null;
+      seenPaths.add(projectPath);
+
+      return {
+        hash: hash || 'local',
+        name: summary.projectName || summary.project?.name || 'Unknown',
+        path: projectPath,
+        files: summary.statistics?.totalFiles || 0,
+        generated: summary.staleness?.lastRefresh || summary.generated || 'Unknown',
+        staleness: summary.staleness || null,
+        storage: source // 'project-local' or 'legacy-global'
+      };
+    } catch (error) {
+      return {
+        hash: hash || 'local',
+        name: 'Unknown',
+        path: 'Unknown',
+        error: error.message,
+        storage: source
+      };
+    }
+  }
 
   try {
-    const entries = await fs.readdir(mapsBaseDir, { withFileTypes: true });
-    const projects = [];
+    // 1. Check current project's local maps first
+    const currentProjectPath = options.projectPath || process.cwd();
+    const currentMapPaths = new MapPaths(currentProjectPath);
+    const currentLocalPath = path.join(currentProjectPath, '.claude', 'project-maps', 'summary.json');
 
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      if (['maps', 'schemas', 'temp'].includes(entry.name)) continue;
-
-      const projectHash = entry.name;
-      const summaryPath = path.join(mapsBaseDir, projectHash, 'summary.json');
-
-      try {
-        // Use loadAndDecompress which handles all compression formats
-        const summary = await compression.loadAndDecompress(summaryPath);
-
-        projects.push({
-          hash: projectHash,
-          name: summary.projectName || summary.project?.name || 'Unknown',
-          path: summary.projectPath || summary.project?.path || 'Unknown',
-          files: summary.statistics?.totalFiles || 0,
-          generated: summary.staleness?.lastRefresh || summary.generated || 'Unknown',
-          staleness: summary.staleness || null
-        });
-      } catch (error) {
-        // Skip projects with corrupt/missing summary
-        projects.push({
-          hash: projectHash,
-          name: 'Unknown',
-          path: 'Unknown',
-          error: error.message
-        });
+    try {
+      await fs.access(currentLocalPath);
+      const projectInfo = await loadProjectInfo(currentLocalPath, 'project-local');
+      if (projectInfo) {
+        projectInfo.current = true; // Mark as current project
+        projects.push(projectInfo);
       }
+    } catch {
+      // No local maps for current project
+    }
+
+    // 2. Scan legacy global directory for other projects
+    try {
+      const entries = await fs.readdir(legacyBaseDir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        if (['maps', 'schemas', 'temp'].includes(entry.name)) continue;
+
+        const projectHash = entry.name;
+        const summaryPath = path.join(legacyBaseDir, projectHash, 'summary.json');
+
+        const projectInfo = await loadProjectInfo(summaryPath, 'legacy-global', projectHash);
+        if (projectInfo) {
+          projects.push(projectInfo);
+        }
+      }
+    } catch {
+      // Legacy directory doesn't exist or can't be read
     }
 
     // Return pre-formatted output if requested
@@ -321,7 +360,10 @@ async function listCommand(options) {
     return {
       success: true,
       count: projects.length,
-      projects
+      projects,
+      note: projects.some(p => p.storage === 'legacy-global')
+        ? 'Some projects use legacy global storage. Run /project-maps migrate to move them.'
+        : null
     };
   } catch (error) {
     if (formatted) {
@@ -719,10 +761,9 @@ async function searchCommand(projectPath, options, args) {
     };
   }
 
-  // Find project maps directory
+  // Find project maps directory (uses backward-compatible path resolution)
   const loader = new MapLoader(projectPath);
-  const projectHash = loader.projectHash;
-  const mapDir = path.join(process.env.HOME, '.claude/project-maps', projectHash);
+  const mapDir = loader.getMapsDirectory(); // Use resolved path from loader
 
   // Check if maps exist
   const mapsExist = await loader.exists();
@@ -1117,7 +1158,12 @@ Subcommands:
   search <type> <pattern>        Search across maps (file, export, import, signature, class, type, all)
   deps [pattern]                 List npm dependencies (optionally filter by name)
   stack                          Show detected tech stack (framework, bundler, testing, etc.)
+  migrate [--delete-old]         Migrate maps from legacy global to project-local storage
   stats                          Show compression stats
+
+Storage:
+  Maps are stored in {project}/.claude/project-maps/ (project-local)
+  Legacy maps in ~/.claude/project-maps/{hash}/ are auto-detected
 
 Options:
   --path <path>      Specify project path
@@ -1175,9 +1221,93 @@ Examples:
   session-cli project-maps deps react              # Filter packages containing "react"
   session-cli project-maps stack                   # Show tech stack
   session-cli project-maps stack --verbose         # Show detailed tech stack
+  session-cli project-maps migrate                 # Move legacy maps to project-local
+  session-cli project-maps migrate --delete-old   # Migrate and delete legacy maps
   session-cli project-maps stats
 `.trim()
   };
+}
+
+/**
+ * Migrate maps from legacy global storage to project-local storage
+ */
+async function migrateCommand(projectPath, options) {
+  const mapPaths = new MapPaths(projectPath);
+  const pathsInfo = mapPaths.getPathsInfo();
+
+  // Check if already using project-local
+  if (!mapPaths.isUsingLegacy()) {
+    if (pathsInfo.mapsExist) {
+      return {
+        success: true,
+        message: 'Maps are already stored in project-local directory',
+        path: pathsInfo.projectLocalPath
+      };
+    } else {
+      return {
+        success: false,
+        error: 'No maps found for this project',
+        suggestion: 'Run: project-maps generate'
+      };
+    }
+  }
+
+  // Migrate from legacy to project-local
+  const legacyPath = pathsInfo.legacyGlobalPath;
+  const targetPath = pathsInfo.projectLocalPath;
+
+  try {
+    // Create target directory
+    await fs.mkdir(targetPath, { recursive: true });
+
+    // Copy all files from legacy to project-local
+    const entries = await fs.readdir(legacyPath, { withFileTypes: true });
+    let filesCopied = 0;
+
+    for (const entry of entries) {
+      const srcPath = path.join(legacyPath, entry.name);
+      const destPath = path.join(targetPath, entry.name);
+
+      if (entry.isDirectory()) {
+        // Recursively copy directories (.history, .snapshots)
+        await fs.mkdir(destPath, { recursive: true });
+        const subEntries = await fs.readdir(srcPath);
+        for (const subEntry of subEntries) {
+          await fs.copyFile(
+            path.join(srcPath, subEntry),
+            path.join(destPath, subEntry)
+          );
+          filesCopied++;
+        }
+      } else if (entry.isFile()) {
+        await fs.copyFile(srcPath, destPath);
+        filesCopied++;
+      }
+    }
+
+    // Optionally delete legacy directory
+    if (options.deleteOld) {
+      await fs.rm(legacyPath, { recursive: true, force: true });
+    }
+
+    return {
+      success: true,
+      message: `Migrated ${filesCopied} files to project-local storage`,
+      from: legacyPath,
+      to: targetPath,
+      deletedOld: options.deleteOld || false,
+      note: options.deleteOld
+        ? 'Legacy maps deleted'
+        : 'Legacy maps preserved. Use --delete-old to remove them.'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Migration failed: ${error.message}`,
+      from: legacyPath,
+      to: targetPath
+    };
+  }
 }
 
 /**
@@ -1208,6 +1338,8 @@ async function projectMapsCommand(args) {
         return await depsCommand(projectPath, options, args);
       case 'stack':
         return await stackCommand(projectPath, options);
+      case 'migrate':
+        return await migrateCommand(projectPath, options);
       case 'help':
       default:
         return helpCommand();

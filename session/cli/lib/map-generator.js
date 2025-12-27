@@ -11,6 +11,7 @@ const FrameworkDetector = require('./framework-detector');
 const ArchitectureDetector = require('./architecture-detector');
 const ArchitectureSynthesizer = require('./architecture-synthesizer');
 const { SignatureExtractor } = require('./extractors/signature-extractor');
+const { MapPaths } = require('./map-paths');
 
 /**
  * Map Generator for project context maps
@@ -18,13 +19,17 @@ const { SignatureExtractor } = require('./extractors/signature-extractor');
  * Level 1: Summary (~2KB) - always loaded
  * Level 2: Tree/Modules (~8KB) - loaded on demand
  * Level 3: Detailed metadata (~40KB) - loaded when needed
+ *
+ * Storage: Project-local at {projectRoot}/.claude/project-maps/
  */
 
 class MapGenerator {
   constructor(projectRoot) {
     this.projectRoot = projectRoot;
-    this.projectHash = this.generateProjectHash(projectRoot);
-    this.outputDir = path.join(process.env.HOME, '.claude/project-maps', this.projectHash);
+    // Use centralized path resolver - always generates to project-local
+    this.mapPaths = new MapPaths(projectRoot);
+    this.projectHash = this.mapPaths.getProjectHash();
+    this.outputDir = this.mapPaths.getOutputDir(true); // Force project-local for generation
     this.scanner = new FileScanner(projectRoot);
     this.configManager = new ConfigManager(projectRoot);
     this.parser = new DependencyParser(projectRoot);
@@ -39,7 +44,8 @@ class MapGenerator {
   }
 
   /**
-   * Generate unique hash for project
+   * Generate unique hash for project (kept for backward compatibility)
+   * @deprecated Use MapPaths.getProjectHash() instead
    */
   generateProjectHash(projectPath) {
     const normalized = path.resolve(projectPath);

@@ -1,19 +1,24 @@
 const fs = require('fs').promises;
 const path = require('path');
 const compression = require('./compression');
+const { MapPaths } = require('./map-paths');
 
 /**
  * Map Snapshot Manager
  * Handles saving and loading temporary map snapshots for diff comparison
  * during map refresh operations
+ *
+ * Storage: Uses centralized MapPaths for project-local or legacy paths
  */
 
 class MapSnapshot {
   constructor(projectRoot, projectHash) {
     this.projectRoot = projectRoot;
     this.projectHash = projectHash;
-    this.mapsDir = path.join(process.env.HOME, '.claude/project-maps', this.projectHash);
-    this.snapshotsDir = path.join(this.mapsDir, '.snapshots');
+    // Use centralized path resolver
+    this.mapPaths = new MapPaths(projectRoot);
+    this.mapsDir = this.mapPaths.getMapsDir();
+    this.snapshotsDir = this.mapPaths.getSnapshotsDir();
   }
 
   /**
