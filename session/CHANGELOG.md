@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.34.0] - 2025-12-27
+
+### Added
+
+- **Project-local map storage** - Maps now stored in `{project}/.claude/project-maps/` instead of `~/.claude/project-maps/{hash}/`
+  - Maps travel with project (git-committable)
+  - No hash collision risk
+  - Multiple developers share same maps
+  - Simpler path logic
+
+- **`map-paths.js` utility** - Centralized path resolver with backward compatibility
+  - Auto-detects project-local vs legacy global storage
+  - Provides migration info for legacy paths
+
+- **`migrate` command** - Move legacy maps to project-local storage
+  - `project-maps migrate` - Copy maps to project directory
+  - `project-maps migrate --delete-old` - Copy and delete legacy
+
+### Changed
+
+- **All map classes** updated to use `MapPaths` utility:
+  - `map-generator.js` - Generates to project-local
+  - `map-loader.js` - Loads with fallback to legacy
+  - `map-history.js` - Uses project-local history directory
+  - `map-snapshot.js` - Uses project-local snapshots directory
+  - `incremental-updater.js` - Uses resolved maps directory
+
+- **`compression.js`** - Embedded default schema with fallback chain:
+  1. Project-local schema
+  2. Legacy global schema
+  3. Embedded default
+
+- **`list` command** - Now shows `storage` type per project (`project-local` or `legacy-global`)
+
+### Backward Compatibility
+
+- Existing maps in `~/.claude/project-maps/{hash}/` continue to work
+- System checks project-local first, falls back to legacy
+- Use `migrate` command to move maps to project directory
+
+---
+
 ## [3.33.0] - 2025-12-15
 
 ### Added

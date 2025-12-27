@@ -1,6 +1,6 @@
 {
   "name": "session",
-  "version": "3.33.0",
+  "version": "3.34.0",
   "description": "• v3.30.0: consolidate-log.mdnow handles ALL session preparation, Main agent tool calls reduced: 7+ → 3**\n• v3.28.0: Return summary from consolidation - skip redundant Glob+Read\n• v3.27.2: Merge activate + update-status into single command\n• v3.27.0: Universal sketch format replaces type-specific specs\n• v3.26.1: Make consolidation BLOCKING in continue command\n• v3.26.0: Map Diff/Change Tracking for project-maps refresh",
   "author": {
     "name": "AutomateWith.Us",
@@ -29,8 +29,8 @@
   "license": "MIT",
   "commands": "./commands",
   "versionMetadata": {
-    "lastUpdateCommit": "53ce5afaaf3ed1bceb2e5962b7615710e6c822c2",
-    "lastUpdateDate": "2025-12-15T05:53:45.813Z",
+    "lastUpdateCommit": "9f89fe1e3993fdabc27cd130652e2cb6fb7130b2",
+    "lastUpdateDate": "2025-12-27T06:41:47.801Z",
     "lastBumpType": "minor"
   }
 }
