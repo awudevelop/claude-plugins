@@ -22,6 +22,7 @@ const { SearchAPI } = require('../search-api');
 const { OutputFormatter, formatForClaude } = require('../output-formatter');
 const { MapPaths, getLegacyBaseDir } = require('../map-paths');
 const { PostgresIntrospector, getErrorSuggestion } = require('../db-introspector');
+const { DatabaseSchemaSync } = require('../db-schema-sync');
 
 /**
  * Parse command arguments
@@ -488,11 +489,99 @@ async function queryCommand(projectPath, options) {
       };
     },
     'database': async () => {
-      const map = await loader.load('database-schema');
+      // Unified database query - uses sync system to merge live + code schemas
+      const schemaSync = new DatabaseSchemaSync(projectPath);
+      const { live, code, hasLive, hasCode } = await schemaSync.loadSchemas();
+
+      // If both exist, return merged/unified view
+      if (hasLive && hasCode) {
+        const merged = schemaSync.mergeSchemas(live, code);
+        return {
+          source: 'unified',
+          syncStatus: merged.syncStatus,
+          tables: merged.tables,
+          statistics: merged.statistics,
+          sources: merged.sources
+        };
+      }
+
+      // Prefer live schema if available
+      if (hasLive) {
+        return {
+          source: 'live',
+          note: 'Using live database schema (no code schema detected)',
+          tables: live.tables || [],
+          statistics: live.statistics
+        };
+      }
+
+      // Fallback to code schema
+      if (hasCode) {
+        return {
+          source: 'code',
+          note: 'Using code schema (run /session:project-maps-introspect for live DB)',
+          detection: code.detection?.summary,
+          tables: code.tables || [],
+          statistics: code.statistics
+        };
+      }
+
+      // No schemas
       return {
-        detection: map.detection?.summary,
-        tables: map.tables || [],
-        statistics: map.statistics
+        source: 'none',
+        error: 'No database schemas found',
+        suggestion: 'Run /session:project-maps-generate for code schema, /session:project-maps-introspect for live schema'
+      };
+    },
+    'database-sync': async () => {
+      // Detailed sync report between live and code schemas
+      const schemaSync = new DatabaseSchemaSync(projectPath);
+      const status = await schemaSync.getSyncStatus();
+      const report = await schemaSync.generateSyncReport();
+
+      return {
+        ...status,
+        report
+      };
+    },
+    'database-live': async () => {
+      // Raw live schema only
+      const schemaSync = new DatabaseSchemaSync(projectPath);
+      const { live, hasLive } = await schemaSync.loadSchemas();
+
+      if (!hasLive) {
+        return {
+          error: 'No live database schema found',
+          suggestion: 'Run /session:project-maps-introspect to introspect your database'
+        };
+      }
+
+      return {
+        source: 'live',
+        generated: live.generated,
+        introspectionSource: live.introspectionSource,
+        tables: live.tables || [],
+        statistics: live.statistics
+      };
+    },
+    'database-code': async () => {
+      // Raw code/ORM schema only
+      const schemaSync = new DatabaseSchemaSync(projectPath);
+      const { code, hasCode } = await schemaSync.loadSchemas();
+
+      if (!hasCode) {
+        return {
+          error: 'No code database schema found',
+          suggestion: 'Run /session:project-maps-generate to parse ORM schema files'
+        };
+      }
+
+      return {
+        source: 'code',
+        generated: code.generated,
+        detection: code.detection?.summary,
+        tables: code.tables || [],
+        statistics: code.statistics
       };
     },
     'data-flow': async () => {
@@ -1210,7 +1299,10 @@ Query Types (Extended - from dedicated map files):
   module-deps        Show module dependencies & coupling
   components         Show frontend components
   component-meta     Show component metadata (hooks, state, exports)
-  database           Show database schema info
+  database           Unified DB schema (live + code merged, with drift warnings)
+  database-sync      Detailed sync report between live DB and code schema
+  database-live      Raw live database schema only
+  database-code      Raw code/ORM schema only
   data-flow          Show data flow patterns
   table-mapping      Show table-to-module mapping
   dependencies       Show file dependencies (forward & reverse)
