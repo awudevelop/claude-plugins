@@ -32,11 +32,6 @@ try {
 
   const IndexManager = require('../cli/lib/index-manager');
 
-  // Constants
-  const SESSIONS_DIR = '.claude/sessions';
-  const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
-  const indexManager = new IndexManager(SESSIONS_DIR);
-
   try {
     // Read input from stdin (provided by Claude Code)
     const input = fs.readFileSync(0, 'utf8').trim();
@@ -49,6 +44,16 @@ try {
       // If parsing fails, exit silently (no input provided)
       process.exit(0);
     }
+
+    // Extract cwd from event data for absolute path construction
+    const { cwd } = eventData;
+
+    // Construct absolute paths using cwd from event data
+    // This ensures hooks work regardless of Claude Code's working directory
+    const projectRoot = cwd || process.cwd();
+    const SESSIONS_DIR = path.join(projectRoot, '.claude/sessions');
+    const ACTIVE_SESSION_FILE = path.join(SESSIONS_DIR, '.active-session');
+    const indexManager = new IndexManager(SESSIONS_DIR);
 
     // Clean up active session marker
     let sessionName = null;

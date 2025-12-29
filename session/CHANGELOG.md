@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.35.0] - 2025-12-29
+
+### Added
+
+- **Schemock parser** - Database mapping now supports schemock schema-first framework
+  - Detects `schemock.config.ts/js` config files
+  - Detects `schemock` package.json dependency
+  - Parses `defineData()` entity definitions
+  - Extracts field types (uuid, string, number, boolean, date, enum, ref, object, array)
+  - Supports semantic fields (field.person.fullName, field.lorem.paragraph, etc.)
+  - Extracts modifiers (.nullable(), .unique(), .default())
+  - Parses enum values
+  - Detects references (field.ref)
+  - Extracts relationships (hasMany, belongsTo, hasOne) with foreign keys
+  - Auto-detects timestamps option
+
+- **Schema directory detection** - `/schemas/` directories now included in model file scanning
+
+---
+
 ## [3.34.0] - 2025-12-27
 
 ### Added
