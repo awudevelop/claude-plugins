@@ -60,6 +60,9 @@ class DatabaseDetector {
     // Analyze seed files
     this.detectSeedFiles(scannedFiles);
 
+    // Parse schemock config to find additional schema files
+    await this.parseSchemockConfig(scannedFiles);
+
     return {
       orms: this.detectedORMs,
       schemaFiles: this.schemaFiles,
@@ -175,7 +178,64 @@ class DatabaseDetector {
           type: 'schemock-config',
           orm: 'Schemock'
         });
+        // Parse config to find schema files location
+        this.schemockConfigPath = file.path;
+        this.schemockConfigDir = path.dirname(file.path);
       }
+    }
+  }
+
+  /**
+   * Parse schemock config to find schema file locations
+   * Called after initial detection to add schema files to modelFiles
+   */
+  async parseSchemockConfig(scannedFiles) {
+    if (!this.schemockConfigPath) return;
+
+    try {
+      const content = await fs.readFile(this.schemockConfigPath, 'utf8');
+
+      // Extract schemas path: schemas: './src/schemas/**/*.ts'
+      const schemasMatch = content.match(/schemas:\s*['"]([^'"]+)['"]/);
+      if (schemasMatch) {
+        const schemaPattern = schemasMatch[1];
+        // Convert glob pattern to directory path
+        // './src/schemas/**/*.ts' -> 'src/schemas'
+        const schemaDir = schemaPattern
+          .replace(/^\.\//, '')
+          .replace(/\/\*\*.*$/, '')
+          .replace(/\/\*.*$/, '');
+
+        // Find all files in the schema directory
+        const configRelDir = path.dirname(this.schemaFiles.find(f => f.type === 'schemock-config')?.path || '');
+        const fullSchemaDir = path.join(configRelDir, schemaDir).replace(/\\/g, '/');
+
+        // Add matching files to modelFiles
+        const schemaFiles = scannedFiles.filter(f => {
+          const relPath = f.relativePath.replace(/\\/g, '/');
+          return relPath.startsWith(fullSchemaDir + '/') &&
+                 (f.name.endsWith('.ts') || f.name.endsWith('.js')) &&
+                 !f.name.endsWith('.d.ts') &&
+                 f.name !== 'index.ts' && f.name !== 'index.js';
+        });
+
+        for (const file of schemaFiles) {
+          // Add to modelFiles if not already present
+          const exists = this.modelFiles.some(m => m.path === file.relativePath);
+          if (!exists) {
+            this.modelFiles.push({
+              path: file.relativePath,
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              lines: file.lines,
+              orm: 'Schemock'
+            });
+          }
+        }
+      }
+    } catch (error) {
+      // Silently ignore config parsing errors
     }
   }
 

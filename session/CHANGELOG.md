@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.38.0] - 2025-12-29
+
+### Fixed
+
+- **Schemock parser now extracts table schemas** - Database maps correctly parse schemock schema definitions
+  - Added `parseSchemockConfig()` in `db-detector.js` to extract schema file paths from schemock config
+  - Added schemock case to `extractTableSchemas()` in `map-generator.js`
+  - New robust field parser handles `field.category.method()` patterns (e.g., `field.person.fullName()`)
+  - Supports nested objects, enum arrays, reference types, and chained modifiers
+  - Helper methods: `parseSchemockFields()`, `parseSchemockFieldExpression()`, `convertSchemockFieldToColumn()`
+  - Result: 0 tables → 28 tables detected in launch_secure project
+
+---
+
 ## [3.37.0] - 2025-12-29
 
 ### Added

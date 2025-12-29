@@ -631,77 +631,17 @@ class DatabaseSchemaMethods {
         primaryKey: null
       };
 
-      // Parse field definitions - handle both simple and chained fields
-      // Pattern: fieldName: field.type() or field.category.subtype()
-      const fieldRegex = /(\w+)\s*:\s*field\.(\w+)(?:\.(\w+))?\s*\(([^)]*)\)([^,}\n]*)/g;
-      let fieldMatch;
+      // Parse field definitions using a more robust approach
+      // Handles: field.type(), field.category.method(), field.type().modifier()
+      const fields = this.parseSchemockFields(entityBlock);
 
-      while ((fieldMatch = fieldRegex.exec(entityBlock)) !== null) {
-        const [, fieldName, typeOrCategory, subtype, args, modifiers] = fieldMatch;
-
-        // Determine actual field type
-        const fieldType = subtype || typeOrCategory;
-
-        // Map schemock types to SQL-like types
-        const typeMap = {
-          'uuid': 'UUID',
-          'string': 'String',
-          'number': 'Number',
-          'boolean': 'Boolean',
-          'date': 'DateTime',
-          'email': 'String',
-          'url': 'String',
-          'enum': 'Enum',
-          'ref': 'Reference',
-          'array': 'Array',
-          'object': 'JSON',
-          // Semantic types (faker-based) - map to base types
-          'fullName': 'String',
-          'firstName': 'String',
-          'lastName': 'String',
-          'paragraph': 'String',
-          'sentence': 'String',
-          'word': 'String',
-          'paragraphs': 'String',
-          'name': 'String',
-          'catchPhrase': 'String',
-          'productName': 'String',
-          'price': 'Number',
-          'avatar': 'String'
-        };
-
-        const column = {
-          name: fieldName,
-          type: typeMap[fieldType] || typeMap[typeOrCategory] || 'String',
-          nullable: modifiers.includes('.nullable()'),
-          isPrimary: fieldName === 'id' && typeOrCategory === 'uuid',
-          isUnique: modifiers.includes('.unique()'),
-          hasDefault: modifiers.includes('.default('),
-          isArray: typeOrCategory === 'array'
-        };
-
-        // Extract enum values
-        if (typeOrCategory === 'enum') {
-          const enumMatch = args.match(/\[([^\]]+)\]/);
-          if (enumMatch) {
-            column.enumValues = enumMatch[1]
-              .split(',')
-              .map(v => v.trim().replace(/['"]/g, ''));
+      for (const fieldDef of fields) {
+        const column = this.convertSchemockFieldToColumn(fieldDef);
+        if (column) {
+          table.columns.push(column);
+          if (column.isPrimary) {
+            table.primaryKey = column.name;
           }
-        }
-
-        // Extract reference target
-        if (typeOrCategory === 'ref') {
-          const refMatch = args.match(/['"](\w+)['"]/);
-          if (refMatch) {
-            column.references = refMatch[1];
-          }
-        }
-
-        table.columns.push(column);
-
-        if (column.isPrimary) {
-          table.primaryKey = fieldName;
         }
       }
 
@@ -805,6 +745,216 @@ class DatabaseSchemaMethods {
     console.log(`✓ Generated table-module-mapping.json (${metadata.compressedSize} bytes, ${mapping.statistics.totalTables} tables)`);
 
     return { file: outputPath, metadata };
+  }
+
+  /**
+   * Parse schemock field definitions from an entity block
+   * Returns array of field objects with name, type info, and modifiers
+   */
+  parseSchemockFields(entityBlock) {
+    const fields = [];
+
+    // Split block into lines and find field definitions
+    // Match: fieldName: field.something
+    const lines = entityBlock.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Skip empty lines, comments, relationships
+      if (!line || line.startsWith('//') || line.startsWith('/*')) continue;
+      if (line.includes('hasMany(') || line.includes('belongsTo(') || line.includes('hasOne(')) continue;
+
+      // Match field definition start: fieldName: field.
+      const fieldStartMatch = line.match(/^(\w+)\s*:\s*field\./);
+      if (!fieldStartMatch) continue;
+
+      const fieldName = fieldStartMatch[1];
+
+      // Extract the full field expression (may span multiple lines for objects)
+      let fullExpression = line.substring(line.indexOf('field.'));
+
+      // Handle multi-line object definitions
+      if (fullExpression.includes('field.object(') && !this.isBalanced(fullExpression, '(', ')')) {
+        // Collect lines until balanced
+        let j = i + 1;
+        while (j < lines.length && !this.isBalanced(fullExpression, '(', ')')) {
+          fullExpression += '\n' + lines[j].trim();
+          j++;
+        }
+      }
+
+      // Remove trailing comma
+      fullExpression = fullExpression.replace(/,\s*$/, '');
+
+      // Parse the field expression
+      const fieldDef = this.parseSchemockFieldExpression(fieldName, fullExpression);
+      if (fieldDef) {
+        fields.push(fieldDef);
+      }
+    }
+
+    return fields;
+  }
+
+  /**
+   * Parse a single schemock field expression
+   * e.g., "field.uuid()", "field.person.fullName().nullable()", "field.enum(['a','b']).default('a')"
+   */
+  parseSchemockFieldExpression(fieldName, expression) {
+    // Pattern: field.type() or field.category.method()
+    // followed by optional modifiers: .nullable(), .unique(), .default(...)
+
+    const result = {
+      name: fieldName,
+      baseType: null,
+      category: null,
+      method: null,
+      args: null,
+      modifiers: {
+        nullable: false,
+        unique: false,
+        hasDefault: false,
+        defaultValue: null
+      }
+    };
+
+    // Extract base type/category/method
+    // field.uuid() -> baseType: uuid
+    // field.person.fullName() -> category: person, method: fullName
+    // field.enum(['a', 'b']) -> baseType: enum, args: ['a', 'b']
+
+    const baseMatch = expression.match(/^field\.(\w+)(?:\.(\w+))?\s*\(/);
+    if (!baseMatch) return null;
+
+    const [, first, second] = baseMatch;
+
+    // Determine if it's type or category.method
+    const simpleTypes = ['uuid', 'string', 'number', 'boolean', 'date', 'email', 'url', 'enum', 'ref', 'array', 'object'];
+
+    if (simpleTypes.includes(first)) {
+      result.baseType = first;
+    } else {
+      // It's a category like 'person', 'company', 'lorem'
+      result.category = first;
+      result.method = second;
+    }
+
+    // Extract arguments from the first parentheses
+    const argsStart = expression.indexOf('(');
+    if (argsStart !== -1) {
+      const argsEnd = this.findMatchingParen(expression, argsStart);
+      if (argsEnd !== -1) {
+        result.args = expression.substring(argsStart + 1, argsEnd);
+      }
+    }
+
+    // Check for modifiers
+    result.modifiers.nullable = expression.includes('.nullable()');
+    result.modifiers.unique = expression.includes('.unique()');
+    result.modifiers.hasDefault = expression.includes('.default(');
+
+    // Extract default value
+    const defaultMatch = expression.match(/\.default\(([^)]+)\)/);
+    if (defaultMatch) {
+      result.modifiers.defaultValue = defaultMatch[1].trim();
+    }
+
+    return result;
+  }
+
+  /**
+   * Convert parsed schemock field to column schema
+   */
+  convertSchemockFieldToColumn(fieldDef) {
+    // Map schemock types to SQL-like types
+    const typeMap = {
+      // Simple types
+      'uuid': 'UUID',
+      'string': 'String',
+      'number': 'Number',
+      'boolean': 'Boolean',
+      'date': 'DateTime',
+      'email': 'String',
+      'url': 'String',
+      'enum': 'Enum',
+      'ref': 'Reference',
+      'array': 'Array',
+      'object': 'JSON',
+      // Semantic types (faker categories) - map to base types
+      'person': 'String',
+      'company': 'String',
+      'lorem': 'String',
+      'internet': 'String',
+      'image': 'String',
+      'commerce': 'Number',
+      'finance': 'Number'
+    };
+
+    // Determine the SQL type
+    let sqlType = 'String';
+    if (fieldDef.baseType) {
+      sqlType = typeMap[fieldDef.baseType] || 'String';
+    } else if (fieldDef.category) {
+      sqlType = typeMap[fieldDef.category] || 'String';
+    }
+
+    const column = {
+      name: fieldDef.name,
+      type: sqlType,
+      nullable: fieldDef.modifiers.nullable,
+      isPrimary: fieldDef.name === 'id' && fieldDef.baseType === 'uuid',
+      isUnique: fieldDef.modifiers.unique,
+      hasDefault: fieldDef.modifiers.hasDefault,
+      isArray: fieldDef.baseType === 'array'
+    };
+
+    // Extract enum values
+    if (fieldDef.baseType === 'enum' && fieldDef.args) {
+      const enumMatch = fieldDef.args.match(/\[([^\]]+)\]/);
+      if (enumMatch) {
+        column.enumValues = enumMatch[1]
+          .split(',')
+          .map(v => v.trim().replace(/['"]/g, ''));
+      }
+    }
+
+    // Extract reference target
+    if (fieldDef.baseType === 'ref' && fieldDef.args) {
+      const refMatch = fieldDef.args.match(/['"](\w+)['"]/);
+      if (refMatch) {
+        column.references = refMatch[1];
+      }
+    }
+
+    return column;
+  }
+
+  /**
+   * Find matching closing parenthesis
+   */
+  findMatchingParen(str, start) {
+    let depth = 0;
+    for (let i = start; i < str.length; i++) {
+      if (str[i] === '(') depth++;
+      else if (str[i] === ')') {
+        depth--;
+        if (depth === 0) return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Check if parentheses are balanced
+   */
+  isBalanced(str, open, close) {
+    let count = 0;
+    for (const char of str) {
+      if (char === open) count++;
+      else if (char === close) count--;
+    }
+    return count === 0;
   }
 
   /**

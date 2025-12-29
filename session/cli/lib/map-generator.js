@@ -2601,8 +2601,13 @@ class MapGenerator {
           tableSchema = this.parseSQLAlchemyModel(content, modelFile);
         } else if (primary === 'ActiveRecord' && modelFile.path.endsWith('.rb')) {
           tableSchema = this.parseActiveRecordModel(content, modelFile);
+        } else if (primary === 'Schemock' ||
+                   content.includes('defineData') ||
+                   content.includes("from 'schemock") ||
+                   content.includes('from "schemock')) {
+          tableSchema = this.parseSchemockSchema(content, modelFile);
         }
-  
+
         if (tableSchema) {
           if (Array.isArray(tableSchema)) {
             tables.push(...tableSchema);
@@ -3035,7 +3040,292 @@ class MapGenerator {
   
     return table;
   }
-  
+
+  /**
+   * Parse Schemock schema definitions
+   * Schemock uses defineData() with field.type() patterns
+   */
+  parseSchemockSchema(content, modelFile) {
+    const tables = [];
+
+    // Check if this is a schemock file
+    if (!content.includes('defineData') && !content.includes('schemock')) {
+      return null;
+    }
+
+    // Match each defineData block
+    const defineDataPattern = /(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*defineData\s*\(\s*['"](\w+)['"]/g;
+    let entityMatch;
+    const entities = [];
+
+    while ((entityMatch = defineDataPattern.exec(content)) !== null) {
+      entities.push({
+        varName: entityMatch[1],
+        entityName: entityMatch[2],
+        startIndex: entityMatch.index
+      });
+    }
+
+    for (const entity of entities) {
+      // Extract the block for this entity
+      const startIdx = entity.startIndex;
+      let parenCount = 0;
+      let inBlock = false;
+      let endIdx = startIdx;
+
+      for (let i = startIdx; i < content.length; i++) {
+        if (content[i] === '(') {
+          if (!inBlock) inBlock = true;
+          parenCount++;
+        } else if (content[i] === ')') {
+          parenCount--;
+          if (inBlock && parenCount === 0) {
+            endIdx = i + 1;
+            break;
+          }
+        }
+      }
+
+      const entityBlock = content.substring(startIdx, endIdx);
+
+      const table = {
+        name: entity.varName,
+        tableName: entity.entityName,
+        source: modelFile.path,
+        orm: 'Schemock',
+        columns: [],
+        relationships: [],
+        indexes: [],
+        primaryKey: null
+      };
+
+      // Parse fields using line-by-line approach
+      const fields = this.parseSchemockFields(entityBlock);
+      for (const fieldDef of fields) {
+        const column = this.convertSchemockFieldToColumn(fieldDef);
+        if (column) {
+          table.columns.push(column);
+          if (column.isPrimary) {
+            table.primaryKey = column.name;
+          }
+        }
+      }
+
+      // Parse relationships: hasMany, belongsTo, hasOne
+      const relationshipRegex = /(\w+)\s*:\s*(hasMany|belongsTo|hasOne)\s*\(\s*['"](\w+)['"](?:\s*,\s*\{([^}]*)\})?\)/g;
+      let relMatch;
+
+      while ((relMatch = relationshipRegex.exec(entityBlock)) !== null) {
+        const [, relName, relType, targetEntity, options] = relMatch;
+
+        let foreignKey = null;
+        if (options) {
+          const fkMatch = options.match(/foreignKey\s*:\s*['"](\w+)['"]/);
+          if (fkMatch) foreignKey = fkMatch[1];
+        }
+
+        table.relationships.push({
+          name: relName,
+          type: relType,
+          targetTable: targetEntity.charAt(0).toUpperCase() + targetEntity.slice(1),
+          foreignKey: foreignKey
+        });
+      }
+
+      // Check for timestamps option
+      if (entityBlock.includes('timestamps: true') || entityBlock.includes('timestamps:true')) {
+        table.columns.push(
+          { name: 'created_at', type: 'DateTime', nullable: false, hasDefault: true },
+          { name: 'updated_at', type: 'DateTime', nullable: false, hasDefault: true }
+        );
+      }
+
+      if (table.columns.length > 0) {
+        tables.push(table);
+      }
+    }
+
+    return tables.length > 0 ? tables : null;
+  }
+
+  /**
+   * Parse schemock field definitions from an entity block
+   */
+  parseSchemockFields(entityBlock) {
+    const fields = [];
+    const lines = entityBlock.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      if (!line || line.startsWith('//') || line.startsWith('/*')) continue;
+      if (line.includes('hasMany(') || line.includes('belongsTo(') || line.includes('hasOne(')) continue;
+
+      const fieldStartMatch = line.match(/^(\w+)\s*:\s*field\./);
+      if (!fieldStartMatch) continue;
+
+      const fieldName = fieldStartMatch[1];
+      let fullExpression = line.substring(line.indexOf('field.'));
+
+      // Handle multi-line object definitions
+      if (fullExpression.includes('field.object(') && !this.isBalanced(fullExpression, '(', ')')) {
+        let j = i + 1;
+        while (j < lines.length && !this.isBalanced(fullExpression, '(', ')')) {
+          fullExpression += '\n' + lines[j].trim();
+          j++;
+        }
+      }
+
+      fullExpression = fullExpression.replace(/,\s*$/, '');
+
+      const fieldDef = this.parseSchemockFieldExpression(fieldName, fullExpression);
+      if (fieldDef) {
+        fields.push(fieldDef);
+      }
+    }
+
+    return fields;
+  }
+
+  /**
+   * Parse a single schemock field expression
+   */
+  parseSchemockFieldExpression(fieldName, expression) {
+    const result = {
+      name: fieldName,
+      baseType: null,
+      category: null,
+      method: null,
+      args: null,
+      modifiers: {
+        nullable: false,
+        unique: false,
+        hasDefault: false,
+        defaultValue: null
+      }
+    };
+
+    const baseMatch = expression.match(/^field\.(\w+)(?:\.(\w+))?\s*\(/);
+    if (!baseMatch) return null;
+
+    const [, first, second] = baseMatch;
+    const simpleTypes = ['uuid', 'string', 'number', 'boolean', 'date', 'email', 'url', 'enum', 'ref', 'array', 'object'];
+
+    if (simpleTypes.includes(first)) {
+      result.baseType = first;
+    } else {
+      result.category = first;
+      result.method = second;
+    }
+
+    const argsStart = expression.indexOf('(');
+    if (argsStart !== -1) {
+      const argsEnd = this.findMatchingParen(expression, argsStart);
+      if (argsEnd !== -1) {
+        result.args = expression.substring(argsStart + 1, argsEnd);
+      }
+    }
+
+    result.modifiers.nullable = expression.includes('.nullable()');
+    result.modifiers.unique = expression.includes('.unique()');
+    result.modifiers.hasDefault = expression.includes('.default(');
+
+    const defaultMatch = expression.match(/\.default\(([^)]+)\)/);
+    if (defaultMatch) {
+      result.modifiers.defaultValue = defaultMatch[1].trim();
+    }
+
+    return result;
+  }
+
+  /**
+   * Convert parsed schemock field to column schema
+   */
+  convertSchemockFieldToColumn(fieldDef) {
+    const typeMap = {
+      'uuid': 'UUID',
+      'string': 'String',
+      'number': 'Number',
+      'boolean': 'Boolean',
+      'date': 'DateTime',
+      'email': 'String',
+      'url': 'String',
+      'enum': 'Enum',
+      'ref': 'Reference',
+      'array': 'Array',
+      'object': 'JSON',
+      'person': 'String',
+      'company': 'String',
+      'lorem': 'String',
+      'internet': 'String',
+      'image': 'String',
+      'commerce': 'Number',
+      'finance': 'Number'
+    };
+
+    let sqlType = 'String';
+    if (fieldDef.baseType) {
+      sqlType = typeMap[fieldDef.baseType] || 'String';
+    } else if (fieldDef.category) {
+      sqlType = typeMap[fieldDef.category] || 'String';
+    }
+
+    const column = {
+      name: fieldDef.name,
+      type: sqlType,
+      nullable: fieldDef.modifiers.nullable,
+      isPrimary: fieldDef.name === 'id' && fieldDef.baseType === 'uuid',
+      isUnique: fieldDef.modifiers.unique,
+      hasDefault: fieldDef.modifiers.hasDefault,
+      isArray: fieldDef.baseType === 'array'
+    };
+
+    if (fieldDef.baseType === 'enum' && fieldDef.args) {
+      const enumMatch = fieldDef.args.match(/\[([^\]]+)\]/);
+      if (enumMatch) {
+        column.enumValues = enumMatch[1]
+          .split(',')
+          .map(v => v.trim().replace(/['"]/g, ''));
+      }
+    }
+
+    if (fieldDef.baseType === 'ref' && fieldDef.args) {
+      const refMatch = fieldDef.args.match(/['"](\w+)['"]/);
+      if (refMatch) {
+        column.references = refMatch[1];
+      }
+    }
+
+    return column;
+  }
+
+  /**
+   * Find matching closing parenthesis
+   */
+  findMatchingParen(str, start) {
+    let depth = 0;
+    for (let i = start; i < str.length; i++) {
+      if (str[i] === '(') depth++;
+      else if (str[i] === ')') {
+        depth--;
+        if (depth === 0) return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Check if parentheses are balanced
+   */
+  isBalanced(str, open, close) {
+    let count = 0;
+    for (const char of str) {
+      if (char === open) count++;
+      else if (char === close) count--;
+    }
+    return count === 0;
+  }
+
   /**
    * Task 7-4: Generate table-to-module mapping
    * Shows which modules use which tables
