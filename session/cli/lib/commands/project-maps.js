@@ -21,6 +21,7 @@ const IntentRouter = require('../intent-router');
 const { SearchAPI } = require('../search-api');
 const { OutputFormatter, formatForClaude } = require('../output-formatter');
 const { MapPaths, getLegacyBaseDir } = require('../map-paths');
+const { PostgresIntrospector, getErrorSuggestion } = require('../db-introspector');
 
 /**
  * Parse command arguments
@@ -1158,6 +1159,7 @@ Subcommands:
   search <type> <pattern>        Search across maps (file, export, import, signature, class, type, all)
   deps [pattern]                 List npm dependencies (optionally filter by name)
   stack                          Show detected tech stack (framework, bundler, testing, etc.)
+  introspect [options]           Introspect live database to generate schema map
   migrate [--delete-old]         Migrate maps from legacy global to project-local storage
   stats                          Show compression stats
 
@@ -1175,6 +1177,17 @@ Options:
   --format <type>    Output format: lean (default), claude, json
   --verbose          Use verbose/claude format (rich markdown output)
   --annotate         Add contextual annotations (dependency info, module info)
+
+Introspect Options:
+  --url <string>     PostgreSQL connection URL (postgres://user:pass@host:port/db)
+  --host <host>      Database host
+  --port <port>      Database port (default: 5432)
+  --database <name>  Database name
+  --user <user>      Database user
+  --password <pass>  Database password
+  --schema <name>    PostgreSQL schema (default: public)
+  --no-ssl           Disable SSL connection
+  --output <path>    Custom output file path
 
 Output Formats:
   lean (default)     Minimal output - file paths only, signature:line format
@@ -1224,6 +1237,12 @@ Examples:
   session-cli project-maps migrate                 # Move legacy maps to project-local
   session-cli project-maps migrate --delete-old   # Migrate and delete legacy maps
   session-cli project-maps stats
+
+Database Introspection Examples:
+  session-cli project-maps introspect --url "postgres://user:pass@localhost:5432/mydb"
+  session-cli project-maps introspect --host db.xxx.supabase.co --port 5432 --database postgres --user postgres
+  DATABASE_URL=postgres://... session-cli project-maps introspect
+  session-cli project-maps introspect --url "..." --schema my_schema
 `.trim()
   };
 }
@@ -1311,6 +1330,167 @@ async function migrateCommand(projectPath, options) {
 }
 
 /**
+ * Parse introspect command arguments
+ */
+function parseIntrospectArgs(args) {
+  const options = {
+    connectionString: null,
+    host: null,
+    port: 5432,
+    database: null,
+    user: null,
+    password: null,
+    schema: 'public',
+    ssl: true,
+    output: null
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+
+    switch (arg) {
+      case '--connection':
+      case '--url':
+        options.connectionString = args[++i];
+        break;
+      case '--host':
+        options.host = args[++i];
+        break;
+      case '--port':
+        options.port = parseInt(args[++i]) || 5432;
+        break;
+      case '--database':
+      case '--db':
+        options.database = args[++i];
+        break;
+      case '--user':
+        options.user = args[++i];
+        break;
+      case '--password':
+        options.password = args[++i];
+        break;
+      case '--schema':
+        options.schema = args[++i];
+        break;
+      case '--no-ssl':
+        options.ssl = false;
+        break;
+      case '--output':
+        options.output = args[++i];
+        break;
+    }
+  }
+
+  return options;
+}
+
+/**
+ * Introspect live database to generate schema map
+ */
+async function introspectCommand(projectPath, options, args) {
+  // Parse introspect-specific arguments
+  const introspectArgs = args.slice(1); // Remove 'introspect' subcommand
+  const introspectOptions = parseIntrospectArgs(introspectArgs);
+
+  // Create introspector
+  const introspector = new PostgresIntrospector({
+    projectRoot: projectPath,
+    schema: introspectOptions.schema,
+    timeout: 30000
+  });
+
+  // Resolve credentials from CLI args or environment
+  const credentials = introspector.resolveCredentials(introspectOptions);
+
+  if (!credentials) {
+    return {
+      success: false,
+      error: 'No database credentials provided',
+      suggestion: 'Provide credentials using one of these methods:\n' +
+        '  --url "postgres://user:pass@host:port/database"\n' +
+        '  --host localhost --port 5432 --database mydb --user admin --password secret\n' +
+        '  Set DATABASE_URL or SUPABASE_DB_URL environment variable',
+      examples: [
+        'project-maps introspect --url "postgres://user:pass@localhost:5432/mydb"',
+        'project-maps introspect --host db.xxx.supabase.co --port 5432 --database postgres --user postgres',
+        'DATABASE_URL=postgres://... project-maps introspect'
+      ]
+    };
+  }
+
+  try {
+    const startTime = Date.now();
+
+    // Perform introspection
+    const schema = await introspector.introspect(credentials);
+
+    const introspectionTime = Date.now() - startTime;
+
+    // Determine output path
+    const mapsDir = path.join(projectPath, '.claude', 'project-maps');
+    const outputPath = introspectOptions.output ||
+      path.join(mapsDir, 'database-schema-live.json');
+
+    // Ensure output directory exists
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+
+    // Save with compression
+    await compression.compressAndSave(schema, outputPath);
+
+    // Format success output
+    const stats = schema.statistics;
+
+    return {
+      success: true,
+      outputPath,
+      database: {
+        type: 'PostgreSQL',
+        schema: introspectOptions.schema
+      },
+      statistics: stats,
+      introspectionTime: `${introspectionTime}ms`,
+      formatted: formatIntrospectResult(stats, outputPath, introspectionTime),
+      message: `Introspected ${stats.totalTables} tables with ${stats.totalColumns} columns in ${introspectionTime}ms`
+    };
+
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      errorCode: error.code,
+      suggestion: getErrorSuggestion(error),
+      hint: 'Common issues:\n' +
+        '  - Check host/port are correct and DB is running\n' +
+        '  - Verify username/password\n' +
+        '  - Ensure user has SELECT on information_schema\n' +
+        '  - For Supabase, use port 5432 for direct or 6543 for pooler'
+    };
+  }
+}
+
+/**
+ * Format introspect result for display
+ */
+function formatIntrospectResult(stats, outputPath, time) {
+  const lines = [
+    '## Database Introspection Complete\n',
+    `**Tables:** ${stats.totalTables}`,
+    `**Columns:** ${stats.totalColumns}`,
+    `**Relationships:** ${stats.totalRelationships}`,
+    `**Indexes:** ${stats.totalIndexes}`,
+    '',
+    `**Output:** \`${outputPath}\``,
+    `**Time:** ${time}ms`,
+    '',
+    '### Next Steps',
+    '- `/session:project-maps-query database` - View schema details',
+    '- Load the schema in your code for reference'
+  ];
+
+  return lines.join('\n');
+}
+
+/**
  * Main command handler
  */
 async function projectMapsCommand(args) {
@@ -1340,6 +1520,8 @@ async function projectMapsCommand(args) {
         return await stackCommand(projectPath, options);
       case 'migrate':
         return await migrateCommand(projectPath, options);
+      case 'introspect':
+        return await introspectCommand(projectPath, options, args);
       case 'help':
       default:
         return helpCommand();
