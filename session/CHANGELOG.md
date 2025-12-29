@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.37.0] - 2025-12-29
+
+### Added
+
+- **Database schema sync system** - Detect drift between code (ORM) and live database schemas
+  - Compare tables, columns, relationships, indexes between sources
+  - Categorize issues by severity: critical (code will break), warning (may cause issues), info (drift detected)
+  - Merge schemas into unified view with per-table/column annotations
+  - Human-readable sync reports with actionable suggestions
+
+- **New query types for database commands:**
+  - `database` - Unified view (prefers live schema, shows drift warnings)
+  - `database-sync` - Detailed sync report with markdown output
+  - `database-live` - Raw live database schema only
+  - `database-code` - Raw code/ORM schema only
+
+- **`db-schema-sync.js`** - New schema comparison module
+  - `DatabaseSchemaSync` class for loading and comparing schemas
+  - Type compatibility checking (e.g., String compatible with Varchar)
+  - `compareSchemas()` - Returns detailed diff with severity levels
+  - `mergeSchemas()` - Creates unified view with source annotations
+  - `generateSyncReport()` - Markdown-formatted drift report
+
+---
+
 ## [3.36.0] - 2025-12-29
 
 ### Added
