@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.36.0] - 2025-12-29
+
+### Added
+
+- **Live database introspection** - New `/session:project-maps-introspect` command connects to live PostgreSQL/Supabase databases
+  - Extracts actual schema: tables, columns, relationships, indexes, enums
+  - Multiple credential methods: connection URL, env vars (DATABASE_URL, SUPABASE_DB_URL), individual params
+  - Supabase session pooler support (IPv4 compatible)
+  - Type mapping: PostgreSQL types → standard types (varchar→String, int4→Int, uuid→UUID, etc.)
+  - Output to `database-schema-live.json` (separate from ORM-parsed schema)
+  - Extensible architecture: `DatabaseIntrospector` base class for future MySQL, SQLite support
+
+- **`db-introspector.js`** - New introspection module
+  - `PostgresIntrospector` class using `pg` driver
+  - Queries `information_schema` and `pg_catalog` for complete schema
+  - SSL auto-enabled with Supabase pooler detection
+  - Comprehensive error handling with suggestions
+
+- **`pg` dependency** - PostgreSQL driver added to session/cli/package.json
+
+---
+
 ## [3.35.0] - 2025-12-29
 
 ### Added
