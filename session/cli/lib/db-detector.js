@@ -14,6 +14,7 @@ const path = require('path');
  * - SQLAlchemy (Python)
  * - Django ORM (Python)
  * - ActiveRecord (Ruby/Rails)
+ * - Schemock (Schema-first mocking framework)
  */
 
 class DatabaseDetector {
@@ -163,6 +164,18 @@ class DatabaseDetector {
           orm: 'Unknown'
         });
       }
+
+      // Schemock
+      if (fileName === 'schemock.config.ts' ||
+          fileName === 'schemock.config.js' ||
+          fileName === 'schemock.config.mjs') {
+        this.addORM('Schemock', 'file', file.relativePath);
+        this.schemaFiles.push({
+          path: file.relativePath,
+          type: 'schemock-config',
+          orm: 'Schemock'
+        });
+      }
     }
   }
 
@@ -211,6 +224,10 @@ class DatabaseDetector {
 
         if (allDeps['sqlite3'] || allDeps['better-sqlite3']) {
           this.addORM('SQLite', 'dependency', file.relativePath);
+        }
+
+        if (allDeps['schemock']) {
+          this.addORM('Schemock', 'dependency', file.relativePath);
         }
 
       } catch (error) {
@@ -320,6 +337,7 @@ class DatabaseDetector {
       return (
         relativePath.includes('/models/') ||
         relativePath.includes('/entities/') ||
+        relativePath.includes('/schemas/') || // Schemock schema files
         fileName.endsWith('.model.js') ||
         fileName.endsWith('.model.ts') ||
         fileName.endsWith('.entity.js') ||
@@ -382,6 +400,7 @@ class DatabaseDetector {
    */
   calculateConfidence(name, method) {
     if (method === 'file' && name === 'Prisma') return 'high';
+    if (method === 'file' && name === 'Schemock') return 'high'; // Config file is definitive
     if (method === 'file') return 'medium';
     if (method === 'dependency') return 'medium';
     return 'low';
